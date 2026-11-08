@@ -3,7 +3,9 @@
 const FONT = 'Vazirmatn, Tahoma, "Segoe UI", system-ui, sans-serif';
 const DEFAULT_HEAD = { name: 'نام شرکت نمونه', sub: 'Sample Company Co.', address: 'تهران، خیابان نمونه، پلاک ۱ — تلفن: ۰۲۱-۰۰۰۰۰۰۰۰', logo: '' };
 const DECISION_FA = { approved: 'تأیید شد', rejected: 'رد شد', revision: 'نیاز به اصلاح' };
-const DECISION_COLOR = { approved: '#047857', rejected: '#b91c1c', revision: '#b45309' };
+// Paper (white) colours: palette hues, with darker shades where the light ones would be unreadable on white.
+const PAPER = { ink: '#081528', brand: '#165EF6', mid: '#32568A', gold: '#BFA46F', ok: '#1F8F78', bad: '#D65959', warn: '#A8801F' };
+const DECISION_COLOR = { approved: PAPER.ok, rejected: PAPER.bad, revision: PAPER.warn };
 const $ = (id) => document.getElementById(id);
 
 const store = {
@@ -53,7 +55,7 @@ function wrap(ctx, text, maxW) {
 
 // letter = {no, rev, date, subject, body, head}; signed = {decision, note, sigImage, signerName, signedAt, fp, hash, verified}
 async function renderLetter({ letter, signed }) {
-  const W = 794, M = 56, SCALE = 2, LH = 28, INK = '#111';
+  const W = 794, M = 56, SCALE = 2, LH = 28, INK = PAPER.ink;
   const head = letter.head || DEFAULT_HEAD;
   const logo = head.logo ? await loadImg(head.logo) : null;
   const sigImg = signed?.sigImage ? await loadImg(signed.sigImage) : null;
@@ -77,13 +79,14 @@ async function renderLetter({ letter, signed }) {
   const text = (s, x, y, { size = 16, bold = false, align = 'right', color = INK } = {}) => {
     g.font = `${bold ? 'bold ' : ''}${size}px ${FONT}`; g.fillStyle = color; g.textAlign = align; g.fillText(s, x, y);
   };
-  const rule = (y, color = '#1d4ed8', w = 1.5) => { g.strokeStyle = color; g.lineWidth = w; g.beginPath(); g.moveTo(M, y); g.lineTo(R, y); g.stroke(); };
+  const rule = (y, color = PAPER.brand, w = 1.5) => { g.strokeStyle = color; g.lineWidth = w; g.beginPath(); g.moveTo(M, y); g.lineTo(R, y); g.stroke(); };
 
   let textRight = R;
   if (logo) { const s = 72 / Math.max(logo.width, logo.height); g.drawImage(logo, R - logo.width * s, 36, logo.width * s, logo.height * s); textRight = R - logo.width * s - 16; }
-  text(head.name, textRight, 64, { size: 24, bold: true, color: '#1d4ed8' });
-  text(head.sub, textRight, 92, { size: 14, color: '#555' });
+  text(head.name, textRight, 64, { size: 24, bold: true, color: PAPER.brand });
+  text(head.sub, textRight, 92, { size: 14, color: PAPER.mid });
   rule(122);
+  rule(127, PAPER.gold, 1);
 
   const rev = letter.rev > 1 ? `  (ویرایش ${letter.rev})` : '';
   text(`شماره: ${ltr(letter.no)}${rev}`, R, 156, { size: 14 });
@@ -94,7 +97,7 @@ async function renderLetter({ letter, signed }) {
   for (const l of body) { text(l, R, y); y += LH; }
 
   if (signed) {
-    y += 20; rule(y, '#bbb', 1); y += 34;
+    y += 20; rule(y, PAPER.gold, 1); y += 34;
     text(`نظر مدیر: ${DECISION_FA[signed.decision] || signed.decision}`, R, y, { size: 18, bold: true, color: DECISION_COLOR[signed.decision] || INK }); y += 30;
     for (const l of note) { text(l, R, y); y += 26; }
     y += 10;
@@ -104,14 +107,14 @@ async function renderLetter({ letter, signed }) {
     }
     const d = new Date(signed.signedAt);
     text(signed.signerName, M + 120, y + 112, { size: 14, bold: true, align: 'center' });
-    text(`${ltr(jalali(d))}  ${ltr(timeHM(d))}`, M + 120, y + 134, { size: 12, color: '#555', align: 'center' });
-    if (signed.verified) text('✔ امضای دیجیتال معتبر', R, y + 40, { size: 15, bold: true, color: '#047857' });
-    text(`شناسه سند: ${ltr(signed.hash)}`, R, y + 72, { size: 11, color: '#555' });
-    text(`اثرانگشت امضاکننده: ${ltr(signed.fp)}`, R, y + 92, { size: 11, color: '#555' });
+    text(`${ltr(jalali(d))}  ${ltr(timeHM(d))}`, M + 120, y + 134, { size: 12, color: PAPER.mid, align: 'center' });
+    if (signed.verified) text('✔ امضای دیجیتال معتبر', R, y + 40, { size: 15, bold: true, color: PAPER.ok });
+    text(`شناسه سند: ${ltr(signed.hash)}`, R, y + 72, { size: 11, color: PAPER.mid });
+    text(`اثرانگشت امضاکننده: ${ltr(signed.fp)}`, R, y + 92, { size: 11, color: PAPER.mid });
   }
 
-  rule(H - 56, '#bbb', 1);
-  text(head.address, W / 2, H - 30, { size: 12, color: '#555', align: 'center' });
+  rule(H - 56, PAPER.gold, 1);
+  text(head.address, W / 2, H - 30, { size: 12, color: PAPER.mid, align: 'center' });
   return c;
 }
 

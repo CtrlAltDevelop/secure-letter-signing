@@ -32,7 +32,7 @@ document.querySelectorAll('input[name=decision]').forEach((r) => r.addEventListe
 // signature pad
 const pad = $('pad'), pg = pad.getContext('2d');
 let drawing = false, padDirty = false;
-pg.lineWidth = 3; pg.lineCap = 'round'; pg.lineJoin = 'round'; pg.strokeStyle = '#0b1f6b';
+pg.lineWidth = 3; pg.lineCap = 'round'; pg.lineJoin = 'round'; pg.strokeStyle = '#0F203A';
 const pos = (e) => { const r = pad.getBoundingClientRect(); return [(e.clientX - r.left) * pad.width / r.width, (e.clientY - r.top) * pad.height / r.height]; };
 pad.addEventListener('pointerdown', (e) => { drawing = true; pad.setPointerCapture(e.pointerId); pg.beginPath(); pg.moveTo(...pos(e)); });
 pad.addEventListener('pointermove', (e) => { if (!drawing) return; pg.lineTo(...pos(e)); pg.stroke(); padDirty = true; });

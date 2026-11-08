@@ -11,11 +11,19 @@ function nextLetterNo() {
   return `${jalali().replace(/\//g, '')}-${String(n).padStart(4, '0')}`;
 }
 
+// ---------- tabs ----------
+function showTab(name) {
+  document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+  for (const t of ['create', 'signed']) $('tab-' + t).classList.toggle('hidden', t !== name);
+}
+document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
 // ---------- manager public key ----------
 function refreshPub() {
   const has = !!managerPub;
   msg('pubStatus', has ? `مدیر: ${managerPub.name} — اثرانگشت: ${managerPub.fp}` : 'هنوز کلیدی ثبت نشده است.', has ? 'ok' : 'info');
   $('pubClear').classList.toggle('hidden', !has);
+  $('setup').open = !has; // first run: show the setup block until a key is registered
 }
 refreshPub();
 
@@ -43,7 +51,7 @@ function invalidateDraft() { $('dlLetter').disabled = $('dlLetterPng').disabled 
 ['subject', 'body'].forEach((id) => $(id).addEventListener('input', invalidateDraft));
 
 function setEditorTitle() {
-  $('editorTitle').textContent = thread && thread.rev > 1 ? `۲. ویرایش نامه ${thread.no} (نسخه ${thread.rev})` : '۲. نامه‌ی جدید';
+  $('editorTitle').textContent = thread && thread.rev > 1 ? `ویرایش نامه ${ltr(thread.no)} (نسخه ${thread.rev})` : 'نامه‌ی جدید';
 }
 
 $('mkPreview').addEventListener('click', guard('adminMsg', async () => {
@@ -87,7 +95,17 @@ $('signedFile').addEventListener('change', guard('verifyMsg', async (e) => {
   $('printSigned').disabled = $('dlSignedPng').disabled = false;
   $('reviseBtn').classList.toggle('hidden', p.decision === 'approved');
 }));
-$('printSigned').addEventListener('click', () => { $('printImg').src = signedCanvas.toDataURL('image/png'); setTimeout(() => window.print(), 50); });
+$('printSigned').addEventListener('click', guard('verifyMsg', async () => {
+  const img = $('printImg');
+  // print only after the image has loaded, else the page prints blank.
+  // (img.decode() is not used: it never settles while the image is inside a display:none container.)
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('آماده‌سازی تصویر چاپ ناموفق بود'));
+    img.src = signedCanvas.toDataURL('image/png');
+  });
+  window.print();
+}));
 $('dlSignedPng').addEventListener('click', async () => download('signed-letter.png', await canvasBlob(signedCanvas)));
 
 // ---------- edit & resend ----------
@@ -98,5 +116,6 @@ $('reviseBtn').addEventListener('click', () => {
   draft = null; $('letterPreview').replaceChildren(); invalidateDraft(); setEditorTitle();
   msg('revBanner', `درخواست مدیر (${DECISION_FA[p.decision]}):\n${p.note || '— بدون توضیح —'}`, 'warn');
   msg('adminMsg', 'متن را اصلاح کنید، پیش‌نمایش بزنید و فایل جدید را برای مدیر بفرستید', 'info');
+  showTab('create');
   $('subject').scrollIntoView({ behavior: 'smooth', block: 'center' });
 });

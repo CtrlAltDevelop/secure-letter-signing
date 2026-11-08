@@ -27,3 +27,6 @@ revision / rejects, signs) and `keygen.html` (makes `.private` + `.pub`). UI is 
 - `localStorage` may be unavailable; `store` degrades with a warning, keep it that way.
 - Letterhead is copied into each letter (`letter.head`) so the manager's page needs no settings and the signed document is self-contained.
 - Revision loop: letter `{id, no, rev, prevHash}`. Decision `revision` → employee clicks "ویرایش و ارسال مجدد" → `rev+1`, same `id`/`no`, `prevHash` = doc hash of the manager's signed reply.
+- Print: `#printArea` must stay a direct child of `<body>` (in `layout.html`, not in a page fragment) because the print CSS hides every other body child. Wait for the image `load` event before `window.print()`; `img.decode()` never settles inside a `display:none` container.
+- Styling: glass theme in `src/style.css` (CSS variables, light/dark via OS). Mobile-first; keep inputs at 16px (iOS zoom) and check there is no horizontal scroll at 375px.
+- Palette (design tokens, do not invent new hues): Dark `#081528`/`#0F203A`, Gold `#BFA46F`/`#FBD57F`, Blue `#165EF6` (action) `#A4B9E4` (light) `#32568A` (mid), State `#4CD8B9` ok / `#D65959` error / `#CFA44B` warn, tints `#BBF0E4` / `#EFC9C9`. UI colours live as CSS variables in `src/style.css`; the white letter paper uses the `PAPER` object in `src/shared.js` (darker shades of the same hues for contrast on white).
