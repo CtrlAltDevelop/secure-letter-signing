@@ -2,8 +2,15 @@
 let ident = null;
 let openedLetter = null;
 
+initSplit('sp-mgr');
+
 const refreshSignBtn = () => { $('signBtn').disabled = !(ident && openedLetter); };
-const setUnlocked = () => msg('keyStatus', `باز است: ${ident.name} — اثرانگشت: ${ident.fp}`, 'ok');
+const setUnlocked = () => {
+  msg('keyStatus', `باز است: ${ident.name} — اثرانگشت: ${ident.fp}`, 'ok');
+  $('keySummary').textContent = `کلید مدیر — ✔ باز است (${ident.name})`;
+  $('keySetup').open = false; // collapse to a single row once unlocked; expand to switch key
+};
+$('toSign').addEventListener('click', () => setPane('sp-mgr', 'sign'));
 
 $('unlock').addEventListener('click', guard('keyMsg', async () => {
   const f = $('keyFile').files[0];
@@ -21,6 +28,7 @@ $('letterFile').addEventListener('change', guard('openMsg', async (e) => {
   if (!ident) throw new Error('ابتدا کلید خود را باز کنید');
   openedLetter = await LC.decryptLetter(await readJson(f), ident);
   show('mgrPreview', await renderLetter({ letter: openedLetter }));
+  $('toSign').classList.remove('hidden');
   msg('openMsg', openedLetter.rev > 1 ? `نامه با موفقیت باز شد (ویرایش ${openedLetter.rev})` : 'نامه با موفقیت باز شد', 'ok');
   refreshSignBtn();
 }));
@@ -57,5 +65,6 @@ $('signBtn').addEventListener('click', guard('signMsg', async () => {
   downloadJson(`signed-${safeName(openedLetter.no)}-v${openedLetter.rev || 1}.signed`, signed);
   const p = signed.payload;
   show('mgrPreview', await renderLetter({ letter: p.letter, signed: signedView(p, { hash: await LC.docHash(p), verified: false }) }));
+  setPane('sp-mgr', 'letter');
   msg('signMsg', 'نامه امضا شد؛ فایل .signed را برای تیم اداری بفرستید', 'ok');
 }));

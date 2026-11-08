@@ -2,8 +2,13 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
+// Vazirmatn (SIL OFL) embedded as base64 so pages stay single-file and offline.
+const fontFace = (file, weight) =>
+  `@font-face{font-family:Vazirmatn;font-weight:${weight};font-style:normal;font-display:swap;` +
+  `src:url(data:font/woff2;base64,${readFileSync(new URL(`./src/fonts/${file}`, import.meta.url)).toString('base64')}) format('woff2')}`;
+const fonts = [fontFace('Vazirmatn-Regular.woff2', 400), fontFace('Vazirmatn-Bold.woff2', 700)].join('\n');
 const common = {
-  '/*STYLE*/': read('./src/style.css'),
+  '/*STYLE*/': read('./src/style.css').replace('/*FONT*/', () => fonts),
   '/*CRYPTO*/': read('./src/crypto.js').replace(/\nif \(typeof module[\s\S]*$/, '\n'),
   '/*SHARED*/': read('./src/shared.js'),
 };

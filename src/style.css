@@ -1,3 +1,4 @@
+/*FONT*/
 /* Glassmorphism theme. Light + dark follow the OS. Mobile-first: base styles are phone, @media widens. */
 /* Palette: Dark #081528/#0F203A · Gold #BFA46F/#FBD57F · Blue #165EF6/#A4B9E4/#32568A · State #4CD8B9/#D65959/#CFA44B/#BBF0E4/#EFC9C9 */
 :root{
@@ -85,6 +86,17 @@ button:focus-visible,summary:focus-visible{outline:2px solid var(--gold2);outlin
 code{direction:ltr;unicode-bidi:embed;background:color-mix(in srgb,var(--mut) 15%,transparent);padding:1px 7px;border-radius:6px;word-break:break-all;font-size:.9em}
 .hidden{display:none!important}
 
+/* ---- split layout: phone = one pane at a time (segmented switch); desktop = side-by-side ---- */
+.split>.pane{display:none;margin-bottom:0}
+.split>.pane.active{display:block}
+.seg.tabs{margin-bottom:12px}
+.seg.tabs button{min-height:36px;font-size:13px;padding:6px}
+.cols{display:block}
+.preview:empty::before{content:attr(data-empty);display:block;padding:36px 12px;text-align:center;color:var(--mut);font-size:14px;
+  border:1.5px dashed var(--line);border-radius:14px;margin-top:12px}
+.row.compact>button,.row.compact>input[type=file]{flex:1 1 calc(50% - 8px)}
+.mobile-only{display:flex}
+
 @media (min-width:600px){
   header{margin:14px auto 0;max-width:796px}
   main{padding:16px}
@@ -93,6 +105,21 @@ code{direction:ltr;unicode-bidi:embed;background:color-mix(in srgb,var(--mut) 15
   .row>input[type=file]{width:auto}
   .pad{height:200px}
   .tabs button{font-size:15px}
+}
+
+@media (min-width:900px){
+  header{max-width:1088px}
+  main{max-width:1120px}
+  .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+  .split>.seg{display:none}
+  .split>.pane{display:block}
+  .pane.sticky{position:sticky;top:84px;max-height:calc(100vh - 210px);overflow:auto}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .mobile-only{display:none}
+  .pad{height:140px}
+  #note{min-height:60px!important}
+  .tabs{max-width:420px}
+  .row.compact>button,.row.compact>input[type=file]{flex:0 1 auto}
 }
 
 /* ---- print: show only the letter image (#printArea must be a direct child of <body>) ---- */

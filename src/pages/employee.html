@@ -1,18 +1,24 @@
 <details id="setup" class="card">
   <summary><b>تنظیمات: کلید مدیر و سربرگ</b></summary>
-  <h2 style="margin-top:12px">کلید عمومی مدیر</h2>
-  <div id="pubStatus" class="msg info">هنوز کلیدی ثبت نشده است.</div>
-  <label>فایل <code>.pub</code> که مدیر داده است</label>
-  <input type="file" id="pubFile" accept=".pub,application/json">
-  <div class="row"><button id="pubClear" class="hidden">حذف کلید ثبت‌شده</button></div>
-  <div class="msg info" style="display:block">پس از ثبت، اثرانگشت را تلفنی با مدیر تطبیق دهید تا مطمئن شوید کلید جایگزین نشده است.</div>
-  <h2 style="margin-top:18px">سربرگ نامه</h2>
-    <label>نام شرکت</label><input type="text" id="hName">
-    <label>زیرعنوان</label><input type="text" id="hSub">
-    <label>آدرس / تلفن (پایین نامه)</label><input type="text" id="hAddr">
-    <label>لوگو (PNG/JPG، اختیاری)</label><input type="file" id="hLogo" accept="image/*">
-    <div class="row"><button id="hSave" class="primary">ذخیره</button><button id="hLogoClear">حذف لوگو</button></div>
-    <div id="hMsg" class="msg"></div>
+  <div class="cols">
+    <div>
+      <h2 style="margin-top:12px">کلید عمومی مدیر</h2>
+      <div id="pubStatus" class="msg info">هنوز کلیدی ثبت نشده است.</div>
+      <label>فایل <code>.pub</code> که مدیر داده است</label>
+      <input type="file" id="pubFile" accept=".pub,application/json">
+      <div class="row"><button id="pubClear" class="hidden">حذف کلید ثبت‌شده</button></div>
+      <div class="msg info" style="display:block">پس از ثبت، اثرانگشت را تلفنی با مدیر تطبیق دهید تا مطمئن شوید کلید جایگزین نشده است.</div>
+    </div>
+    <div>
+      <h2 style="margin-top:12px">سربرگ نامه</h2>
+      <label>نام شرکت</label><input type="text" id="hName">
+      <label>زیرعنوان</label><input type="text" id="hSub">
+      <label>آدرس / تلفن (پایین نامه)</label><input type="text" id="hAddr">
+      <label>لوگو (PNG/JPG، اختیاری)</label><input type="file" id="hLogo" accept="image/*">
+      <div class="row"><button id="hSave" class="primary">ذخیره</button><button id="hLogoClear">حذف لوگو</button></div>
+      <div id="hMsg" class="msg"></div>
+    </div>
+  </div>
 </details>
 
 <div class="tabs" role="tablist">
@@ -21,33 +27,51 @@
 </div>
 
 <section id="tab-create">
-<div class="card">
-  <h2 id="editorTitle">نامه‌ی جدید</h2>
-  <div id="revBanner" class="msg"></div>
-  <label>موضوع</label><input type="text" id="subject">
-  <label>متن نامه</label><textarea id="body"></textarea>
-  <div class="row">
-    <button id="mkPreview" class="primary">پیش‌نمایش نامه</button>
-    <button id="dlLetter" disabled>دانلود فایل رمزشده برای مدیر <bdi dir="ltr">(.letter)</bdi></button>
-    <button id="dlLetterPng" disabled>دانلود عکس نامه (PNG)</button>
-    <button id="newLetter">شروع نامه‌ی جدید</button>
+  <div class="split" id="sp-create">
+    <div class="seg tabs">
+      <button data-p="form" class="on">ویرایش</button>
+      <button data-p="preview">پیش‌نمایش</button>
+    </div>
+    <div class="pane card active" data-p="form">
+      <h2 id="editorTitle">نامه‌ی جدید</h2>
+      <div id="revBanner" class="msg"></div>
+      <label>موضوع</label><input type="text" id="subject">
+      <label>متن نامه</label><textarea id="body"></textarea>
+      <div class="row compact">
+        <button id="mkPreview" class="primary">پیش‌نمایش نامه</button>
+        <button id="newLetter">نامه‌ی جدید</button>
+      </div>
+      <div id="adminMsg" class="msg"></div>
+    </div>
+    <div class="pane card sticky" data-p="preview">
+      <div class="row compact" style="margin-top:0">
+        <button id="dlLetter" disabled>فایل رمزشده برای مدیر <bdi dir="ltr">(.letter)</bdi></button>
+        <button id="dlLetterPng" disabled>عکس نامه (PNG)</button>
+      </div>
+      <div id="letterPreview" class="preview" data-empty="با زدن «پیش‌نمایش نامه» اینجا نمایش داده می‌شود"></div>
+    </div>
   </div>
-  <div id="adminMsg" class="msg"></div>
-  <div id="letterPreview" class="preview"></div>
-</div>
 </section>
 
 <section id="tab-signed" class="hidden">
-<div class="card">
-  <h2>بررسی نامه‌ی امضاشده‌ی مدیر</h2>
-  <label>فایل <code>.signed</code> که مدیر فرستاده است</label>
-  <input type="file" id="signedFile" accept=".signed,application/json">
-  <div id="verifyMsg" class="msg"></div>
-  <div class="row">
-    <button id="printSigned" disabled>چاپ</button>
-    <button id="dlSignedPng" disabled>دانلود عکس (PNG)</button>
-    <button id="reviseBtn" class="primary hidden">ویرایش و ارسال مجدد</button>
+  <div class="split" id="sp-signed">
+    <div class="seg tabs">
+      <button data-p="form" class="on">فایل</button>
+      <button data-p="preview">نامه</button>
+    </div>
+    <div class="pane card active" data-p="form">
+      <h2>بررسی نامه‌ی امضاشده‌ی مدیر</h2>
+      <label>فایل <code>.signed</code> که مدیر فرستاده است</label>
+      <input type="file" id="signedFile" accept=".signed,application/json">
+      <div id="verifyMsg" class="msg"></div>
+    </div>
+    <div class="pane card sticky" data-p="preview">
+      <div class="row compact" style="margin-top:0">
+        <button id="printSigned" disabled>چاپ</button>
+        <button id="dlSignedPng" disabled>دانلود عکس (PNG)</button>
+        <button id="reviseBtn" class="primary hidden">ویرایش و ارسال مجدد</button>
+      </div>
+      <div id="signedPreview" class="preview" data-empty="پس از بارگذاری فایل امضاشده، نامه اینجا نمایش داده می‌شود"></div>
+    </div>
   </div>
-  <div id="signedPreview" class="preview"></div>
-</div>
 </section>

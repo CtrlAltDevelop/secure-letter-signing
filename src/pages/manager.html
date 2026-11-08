@@ -1,35 +1,48 @@
-<div class="card">
-  <h2>۱. کلید مدیر</h2>
-  <div id="keyStatus" class="msg info">قفل است.</div>
-  <h3 style="font-size:14px;margin:14px 0 0">باز کردن کلید موجود</h3>
-  <label>فایل <code>.private</code></label><input type="file" id="keyFile" accept=".private,.key,application/json">
-  <label>رمز</label><input type="password" id="unlockPass" autocomplete="off">
-  <div class="row"><button id="unlock" class="primary">باز کردن</button></div>
-  <div class="msg info" style="display:block">کلید ندارید؟ یک بار با <code>keygen.html</code> بسازید.</div>
-  <div id="keyMsg" class="msg"></div>
-</div>
-
-<div class="card">
-  <h2>۲. نامه‌ی دریافتی</h2>
-  <label>فایل <code>.letter</code></label><input type="file" id="letterFile" accept=".letter,application/json">
-  <div id="openMsg" class="msg"></div>
-  <div id="mgrPreview" class="preview"></div>
-</div>
-
-<div class="card">
-  <h2>۳. تصمیم و امضا</h2>
-  <div class="radios">
-    <label><input type="radio" name="decision" value="approved" checked> تأیید</label>
-    <label><input type="radio" name="decision" value="revision"> نیاز به اصلاح</label>
-    <label><input type="radio" name="decision" value="rejected"> رد</label>
+<details id="keySetup" class="card" open>
+  <summary><b id="keySummary">کلید مدیر — قفل است</b></summary>
+  <div class="cols">
+    <div>
+      <div id="keyStatus" class="msg info">قفل است.</div>
+      <div class="msg info" style="display:block">کلید ندارید؟ یک بار با <code>keygen.html</code> بسازید.</div>
+    </div>
+    <div>
+      <label>فایل <code>.private</code></label><input type="file" id="keyFile" accept=".private,.key,application/json">
+      <label>رمز</label><input type="password" id="unlockPass" autocomplete="off">
+      <div class="row"><button id="unlock" class="primary">باز کردن</button></div>
+      <div id="keyMsg" class="msg"></div>
+    </div>
   </div>
-  <label id="noteLabel">توضیح (اختیاری)</label><textarea id="note" style="min-height:90px"></textarea>
-  <label>تصویر امضا: روی کادر بکشید یا PNG بارگذاری کنید</label>
-  <canvas id="pad" class="pad" width="600" height="180"></canvas>
-  <div class="row">
-    <input type="file" id="sigUpload" accept="image/*">
-    <button id="padClear">پاک کردن</button>
+</details>
+
+<div class="split" id="sp-mgr">
+  <div class="seg tabs">
+    <button data-p="letter" class="on">نامه</button>
+    <button data-p="sign">تصمیم و امضا</button>
   </div>
-  <div class="row"><button id="signBtn" class="primary" disabled>امضا و دانلود فایل <bdi dir="ltr">(.signed)</bdi></button></div>
-  <div id="signMsg" class="msg"></div>
+
+  <div class="pane card sticky active" data-p="letter">
+    <h2>نامه‌ی دریافتی</h2>
+    <label>فایل <code>.letter</code></label><input type="file" id="letterFile" accept=".letter,application/json">
+    <div id="openMsg" class="msg"></div>
+    <div class="row mobile-only"><button id="toSign" class="primary hidden">ادامه: تصمیم و امضا ←</button></div>
+    <div id="mgrPreview" class="preview" data-empty="پس از باز کردن فایل نامه، اینجا نمایش داده می‌شود"></div>
+  </div>
+
+  <div class="pane card" data-p="sign">
+    <h2>تصمیم و امضا</h2>
+    <div class="radios">
+      <label><input type="radio" name="decision" value="approved" checked> تأیید</label>
+      <label><input type="radio" name="decision" value="revision"> نیاز به اصلاح</label>
+      <label><input type="radio" name="decision" value="rejected"> رد</label>
+    </div>
+    <label id="noteLabel">توضیح (اختیاری)</label><textarea id="note" style="min-height:80px"></textarea>
+    <label>تصویر امضا: روی کادر بکشید یا PNG بارگذاری کنید</label>
+    <canvas id="pad" class="pad" width="600" height="180"></canvas>
+    <div class="row compact">
+      <input type="file" id="sigUpload" accept="image/*">
+      <button id="padClear">پاک کردن</button>
+    </div>
+    <div class="row"><button id="signBtn" class="primary" disabled>امضا و دانلود فایل <bdi dir="ltr">(.signed)</bdi></button></div>
+    <div id="signMsg" class="msg"></div>
+  </div>
 </div>

@@ -56,6 +56,8 @@ function wrap(ctx, text, maxW) {
 // letter = {no, rev, date, subject, body, head}; signed = {decision, note, sigImage, signerName, signedAt, fp, hash, verified}
 async function renderLetter({ letter, signed }) {
   const W = 794, M = 56, SCALE = 2, LH = 28, INK = PAPER.ink;
+  // canvas text needs the web font fully loaded before measuring/drawing
+  await Promise.all([document.fonts.load(`16px ${FONT}`), document.fonts.load(`bold 16px ${FONT}`)]);
   const head = letter.head || DEFAULT_HEAD;
   const logo = head.logo ? await loadImg(head.logo) : null;
   const sigImg = signed?.sigImage ? await loadImg(signed.sigImage) : null;
@@ -120,3 +122,11 @@ async function renderLetter({ letter, signed }) {
 
 const show = (containerId, canvas) => $(containerId).replaceChildren(canvas);
 const signedView = (p, extra) => ({ ...p, signerName: p.signer.name, fp: p.signer.fp, ...extra });
+
+// split layout: on phones only one pane shows; setPane(id, name) switches it (desktop shows all panes).
+function setPane(id, name) {
+  const el = $(id);
+  el.querySelectorAll(':scope>.seg button').forEach((b) => b.classList.toggle('on', b.dataset.p === name));
+  el.querySelectorAll(':scope>.pane').forEach((p) => p.classList.toggle('active', p.dataset.p === name));
+}
+const initSplit = (id) => $(id).querySelectorAll(':scope>.seg button').forEach((b) => b.addEventListener('click', () => setPane(id, b.dataset.p)));

@@ -13,10 +13,12 @@ function nextLetterNo() {
 
 // ---------- tabs ----------
 function showTab(name) {
-  document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+  document.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   for (const t of ['create', 'signed']) $('tab-' + t).classList.toggle('hidden', t !== name);
 }
-document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+initSplit('sp-create'); initSplit('sp-signed');
 
 // ---------- manager public key ----------
 function refreshPub() {
@@ -64,6 +66,7 @@ $('mkPreview').addEventListener('click', guard('adminMsg', async () => {
   $('dlLetterPng').disabled = false;
   $('dlLetter').disabled = !managerPub;
   setEditorTitle();
+  setPane('sp-create', 'preview');
   msg('adminMsg', managerPub ? '' : 'برای ساخت فایل رمزشده ابتدا کلید عمومی مدیر را ثبت کنید', managerPub ? '' : 'bad');
 }));
 
@@ -75,7 +78,7 @@ $('dlLetter').addEventListener('click', guard('adminMsg', async () => {
 $('dlLetterPng').addEventListener('click', async () => download(`letter-${safeName(draft.no)}-v${draft.rev}.png`, await canvasBlob(draftCanvas)));
 
 $('newLetter').addEventListener('click', () => {
-  thread = null; draft = null; $('subject').value = ''; $('body').value = '';
+  thread = null; draft = null; $('subject').value = ''; $('body').value = ''; setPane('sp-create', 'form');
   $('letterPreview').replaceChildren(); msg('revBanner', ''); msg('adminMsg', ''); invalidateDraft(); setEditorTitle();
 });
 
@@ -94,6 +97,7 @@ $('signedFile').addEventListener('change', guard('verifyMsg', async (e) => {
   show('signedPreview', signedCanvas);
   $('printSigned').disabled = $('dlSignedPng').disabled = false;
   $('reviseBtn').classList.toggle('hidden', p.decision === 'approved');
+  setPane('sp-signed', 'preview');
 }));
 $('printSigned').addEventListener('click', guard('verifyMsg', async () => {
   const img = $('printImg');
@@ -116,6 +120,6 @@ $('reviseBtn').addEventListener('click', () => {
   draft = null; $('letterPreview').replaceChildren(); invalidateDraft(); setEditorTitle();
   msg('revBanner', `درخواست مدیر (${DECISION_FA[p.decision]}):\n${p.note || '— بدون توضیح —'}`, 'warn');
   msg('adminMsg', 'متن را اصلاح کنید، پیش‌نمایش بزنید و فایل جدید را برای مدیر بفرستید', 'info');
-  showTab('create');
+  showTab('create'); setPane('sp-create', 'form');
   $('subject').scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
