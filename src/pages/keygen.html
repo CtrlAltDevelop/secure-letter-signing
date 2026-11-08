@@ -1,0 +1,18 @@
+<div class="card">
+  <h2>ساخت جفت‌کلید</h2>
+  <label>نام مدیر</label><input type="text" id="newName">
+  <label>رمز (حداقل ۸ نویسه)</label><input type="password" id="newPass" autocomplete="new-password">
+  <label>تکرار رمز</label><input type="password" id="newPass2" autocomplete="new-password">
+  <div class="row"><button id="genKey" class="primary">ساخت و دانلود <code>.private</code> و <code>.pub</code></button></div>
+  <div id="genMsg" class="msg"></div>
+  <div id="fpBox" class="msg"></div>
+</div>
+<div class="card">
+  <h2>بعد از ساخت</h2>
+  <div class="msg info" style="display:block">
+۱. فایل <code>manager.private</code> (خصوصی) را فقط نزد مدیر نگه دارید و برای کسی نفرستید. بدون رمز بی‌فایده است، ولی گم شدن رمز قابل بازیابی نیست.
+۲. فایل <code>manager.pub</code> (عمومی) را به کارمند بدهید تا در <code>employee.html</code> ثبت کند.
+۳. اثرانگشت بالا را تلفنی با کارمند تطبیق دهید.
+۴. مدیر در <code>manager.html</code> با <code>manager.private</code> و رمز وارد می‌شود.
+  </div>
+</div>

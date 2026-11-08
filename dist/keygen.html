@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🔑 ساخت کلید مدیر (یک بار)</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2330;--mut:#667085;--line:#dfe3ea;--acc:#1d4ed8;--ok:#047857;--bad:#b91c1c;--warn:#b45309}
+@media (prefers-color-scheme:dark){:root{--bg:#10141c;--card:#181e2a;--ink:#e6e9f0;--mut:#9aa4b5;--line:#2a3345;--acc:#6b9bff;--ok:#34d399;--bad:#f87171;--warn:#fbbf24}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.7 Vazirmatn,Tahoma,"Segoe UI",system-ui,sans-serif}
+header{padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+h1{margin:0;font-size:18px}
+main{max-width:860px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+h2{margin:0 0 10px;font-size:16px}
+label{display:block;margin:10px 0 4px;color:var(--mut);font-size:13px}
+input,textarea,button{font:inherit;color:inherit}
+input[type=text],input[type=password],textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+textarea{min-height:140px;resize:vertical}
+button{padding:9px 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.msg{margin-top:10px;padding:8px 10px;border-radius:8px;font-size:14px;display:none;word-break:break-word;white-space:pre-wrap}
+.msg.ok{display:block;background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.msg.bad{display:block;background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.msg.warn{display:block;background:color-mix(in srgb,var(--warn) 15%,transparent);color:var(--warn)}
+.msg.info{display:block;background:var(--bg);color:var(--mut)}
+.preview canvas{width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff;margin-top:12px}
+.pad{width:100%;height:180px;border:1px dashed var(--mut);border-radius:8px;background:#fff;touch-action:none;display:block}
+.radios{display:flex;gap:16px;flex-wrap:wrap}
+.radios label{display:flex;gap:6px;align-items:center;margin:0;color:var(--ink);font-size:15px}
+code{direction:ltr;unicode-bidi:embed;background:var(--bg);padding:1px 6px;border-radius:4px;word-break:break-all}
+.hidden{display:none!important}
+#printArea{display:none}
+@media print{body>*:not(#printArea){display:none!important}#printArea{display:block}#printArea img{width:100%}@page{margin:0}}
+
+</style>
+</head>
+<body>
+<header><h1>🔑 ساخت کلید مدیر (یک بار)</h1></header>
+<main>
+<div class="card">
+  <h2>ساخت جفت‌کلید</h2>
+  <label>نام مدیر</label><input type="text" id="newName">
+  <label>رمز (حداقل ۸ نویسه)</label><input type="password" id="newPass" autocomplete="new-password">
+  <label>تکرار رمز</label><input type="password" id="newPass2" autocomplete="new-password">
+  <div class="row"><button id="genKey" class="primary">ساخت و دانلود <code>.private</code> و <code>.pub</code></button></div>
+  <div id="genMsg" class="msg"></div>
+  <div id="fpBox" class="msg"></div>
+</div>
+<div class="card">
+  <h2>بعد از ساخت</h2>
+  <div class="msg info" style="display:block">
+۱. فایل <code>manager.private</code> (خصوصی) را فقط نزد مدیر نگه دارید و برای کسی نفرستید. بدون رمز بی‌فایده است، ولی گم شدن رمز قابل بازیابی نیست.
+۲. فایل <code>manager.pub</code> (عمومی) را به کارمند بدهید تا در <code>employee.html</code> ثبت کند.
+۳. اثرانگشت بالا را تلفنی با کارمند تطبیق دهید.
+۴. مدیر در <code>manager.html</code> با <code>manager.private</code> و رمز وارد می‌شود.
+  </div>
+</div>
+
+</main>
+<script>
+// Pure WebCrypto layer: no DOM, runs in browsers and Node >= 19.
+// Identity = ECDSA P-256 (sign) + ECDH P-256 (decrypt). Private part is password-wrapped.
+const LC = (() => {
+  const V = 1;
+  const PBKDF2_ITER = 600000;
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const subtle = globalThis.crypto.subtle;
+  const rand = (n) => globalThis.crypto.getRandomValues(new Uint8Array(n));
+
+  const b64 = (buf) => {
+    const u = new Uint8Array(buf);
+    let s = '';
+    for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000));
+    return btoa(s);
+  };
+  const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const hex = (buf) => [...new Uint8Array(buf)].map((x) => x.toString(16).padStart(2, '0')).join('');
+
+  const sortKeys = (v) => {
+    if (Array.isArray(v)) return v.map(sortKeys);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])]));
+    return v;
+  };
+  const canon = (o) => JSON.stringify(sortKeys(o));
+  const sha256hex = async (text) => hex(await subtle.digest('SHA-256', enc.encode(text)));
+
+  const pubJwk = (j) => ({ kty: j.kty, crv: j.crv, x: j.x, y: j.y });
+
+  async function fingerprint(pub) {
+    const h = await sha256hex(canon({ sign: pubJwk(pub.sign), enc: pubJwk(pub.enc) }));
+    return h.slice(0, 32).match(/.{4}/g).join('-');
+  }
+
+  async function checkPub(pub) {
+    if (!pub || pub.v !== V || !pub.sign || !pub.enc || pub.sign.kty !== 'EC' || pub.enc.kty !== 'EC') {
+      throw new Error('فایل کلید عمومی نامعتبر است');
+    }
+    return { ...pub, fp: await fingerprint(pub) };
+  }
+
+  async function wrapKey(password, salt, usage) {
+    const base = await subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+    return subtle.deriveKey(
+      { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITER },
+      base, { name: 'AES-GCM', length: 256 }, false, usage);
+  }
+
+  async function generateIdentity(name, password) {
+    const sign = await subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const encK = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+    const pub = {
+      v: V, name,
+      sign: pubJwk(await subtle.exportKey('jwk', sign.publicKey)),
+      enc: pubJwk(await subtle.exportKey('jwk', encK.publicKey)),
+    };
+    const priv = {
+      sign: await subtle.exportKey('jwk', sign.privateKey),
+      enc: await subtle.exportKey('jwk', encK.privateKey),
+    };
+    const salt = rand(16);
+    const iv = rand(12);
+    const key = await wrapKey(password, salt, ['encrypt']);
+    const ct = await subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(canon(priv)));
+    const keyFile = { v: V, type: 'key', name, pub, kdf: { salt: b64(salt), iter: PBKDF2_ITER }, iv: b64(iv), ct: b64(ct) };
+    return { keyFile, pubFile: pub };
+  }
+
+  async function unlockIdentity(keyFile, password) {
+    if (keyFile?.v !== V || keyFile.type !== 'key') throw new Error('فایل کلید نامعتبر است');
+    const key = await wrapKey(password, unb64(keyFile.kdf.salt), ['decrypt']);
+    let priv;
+    try {
+      priv = JSON.parse(dec.decode(await subtle.decrypt({ name: 'AES-GCM', iv: unb64(keyFile.iv) }, key, unb64(keyFile.ct))));
+    } catch {
+      throw new Error('رمز اشتباه است یا فایل کلید خراب است');
+    }
+    const pub = await checkPub(keyFile.pub);
+    return {
+      name: keyFile.name, pub, fp: pub.fp,
+      signKey: await subtle.importKey('jwk', priv.sign, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']),
+      encKey: await subtle.importKey('jwk', priv.enc, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']),
+    };
+  }
+
+  async function deriveAes(priv, pub, usage) {
+    const bits = await subtle.deriveBits({ name: 'ECDH', public: pub }, priv, 256);
+    const base = await subtle.importKey('raw', bits, 'HKDF', false, ['deriveKey']);
+    return subtle.deriveKey(
+      { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: enc.encode('letter-v1') },
+      base, { name: 'AES-GCM', length: 256 }, false, usage);
+  }
+
+  // Hybrid encryption to the manager: ephemeral ECDH -> HKDF -> AES-GCM (AAD = recipient fingerprint).
+  async function encryptLetter(letter, mgrPub) {
+    const pub = await checkPub(mgrPub);
+    const eph = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+    const recipient = await subtle.importKey('jwk', pub.enc, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    const aes = await deriveAes(eph.privateKey, recipient, ['encrypt']);
+    const iv = rand(12);
+    const ct = await subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(pub.fp) }, aes, enc.encode(canon(letter)));
+    return { v: V, type: 'letter', to: pub.fp, epk: pubJwk(await subtle.exportKey('jwk', eph.publicKey)), iv: b64(iv), ct: b64(ct) };
+  }
+
+  async function decryptLetter(file, ident) {
+    if (file?.v !== V || file.type !== 'letter') throw new Error('فایل نامه نامعتبر است');
+    if (file.to !== ident.fp) throw new Error('این نامه برای کلید دیگری رمز شده است');
+    const epk = await subtle.importKey('jwk', file.epk, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    const aes = await deriveAes(ident.encKey, epk, ['decrypt']);
+    try {
+      const pt = await subtle.decrypt({ name: 'AES-GCM', iv: unb64(file.iv), additionalData: enc.encode(ident.fp) }, aes, unb64(file.ct));
+      return JSON.parse(dec.decode(pt));
+    } catch {
+      throw new Error('رمزگشایی ناموفق: فایل دستکاری شده است');
+    }
+  }
+
+  // The signature covers the whole original letter + decision + note + signature image + time.
+  async function signLetter(ident, { letter, decision, note, sigImage }) {
+    const payload = {
+      v: V, letter, decision, note, sigImage,
+      signedAt: new Date().toISOString(),
+      signer: { name: ident.name, fp: ident.fp },
+    };
+    const sig = await subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, ident.signKey, enc.encode(canon(payload)));
+    return { v: V, type: 'signed', payload, sig: b64(sig) };
+  }
+
+  async function verifySigned(file, pinnedPub) {
+    const fail = (reason) => ({ ok: false, reason });
+    try {
+      if (file?.v !== V || file.type !== 'signed' || !file.payload || !file.sig) return fail('فرمت فایل امضاشده نامعتبر است');
+      const pub = await checkPub(pinnedPub);
+      if (file.payload.signer?.fp !== pub.fp) return fail('امضاکننده با کلید ثبت‌شده‌ی مدیر مطابقت ندارد');
+      const key = await subtle.importKey('jwk', pub.sign, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+      const ok = await subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, unb64(file.sig), enc.encode(canon(file.payload)));
+      if (!ok) return fail('امضا نامعتبر است: محتوا دستکاری شده یا امضا جعلی است');
+      return { ok: true, payload: file.payload, hash: await docHash(file.payload), fp: pub.fp };
+    } catch (e) {
+      return fail('بررسی ناموفق: ' + e.message);
+    }
+  }
+
+  const docHash = async (payload) => (await sha256hex(canon(payload))).slice(0, 16);
+
+  return { docHash, generateIdentity, unlockIdentity, checkPub, encryptLetter, decryptLetter, signLetter, verifySigned, fingerprint, sha256hex, uuid: () => globalThis.crypto.randomUUID() };
+})();
+
+
+</script>
+<script>
+// Helpers + canvas letter renderer shared by the employee and manager pages.
+// All user text goes through textContent / canvas, never innerHTML.
+const FONT = 'Vazirmatn, Tahoma, "Segoe UI", system-ui, sans-serif';
+const DEFAULT_HEAD = { name: 'نام شرکت نمونه', sub: 'Sample Company Co.', address: 'تهران، خیابان نمونه، پلاک ۱ — تلفن: ۰۲۱-۰۰۰۰۰۰۰۰', logo: '' };
+const DECISION_FA = { approved: 'تأیید شد', rejected: 'رد شد', revision: 'نیاز به اصلاح' };
+const DECISION_COLOR = { approved: '#047857', rejected: '#b91c1c', revision: '#b45309' };
+const $ = (id) => document.getElementById(id);
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { console.warn('storage read failed', e); return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { console.warn('storage write failed', e); return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { console.warn('storage delete failed', e); } },
+};
+
+function msg(id, text, kind = 'info') { const el = $(id); el.textContent = text; el.className = 'msg ' + (text ? kind : ''); }
+const readJson = async (file) => { try { return JSON.parse(await file.text()); } catch { throw new Error('فایل خوانده نشد (JSON نامعتبر)'); } };
+const readDataUrl = (file) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error('خواندن فایل ناموفق بود')); r.readAsDataURL(file); });
+const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('تصویر بارگذاری نشد')); i.src = src; });
+
+function download(name, blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+const downloadJson = (name, obj) => download(name, new Blob([JSON.stringify(obj)], { type: 'application/json' }));
+const canvasBlob = (c) => new Promise((res) => c.toBlob(res, 'image/png'));
+const safeName = (s) => s.replace(/[^\w\-]+/g, '_');
+
+function jalali(d = new Date()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-u-ca-persian-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.year}/${p.month}/${p.day}`;
+}
+const ltr = (s) => `⁦${s}⁩`; // keep digits/hex in logical order inside RTL text
+const timeHM = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+// run async handlers; surface errors in a message box
+const guard = (msgId, fn) => async (...a) => { try { await fn(...a); } catch (e) { console.error(e); msg(msgId, e.message || String(e), 'bad'); } };
+
+function wrap(ctx, text, maxW) {
+  const out = [];
+  for (const para of String(text).split('\n')) {
+    if (!para.trim()) { out.push(''); continue; }
+    let line = '';
+    for (const w of para.split(/\s+/)) {
+      const t = line ? line + ' ' + w : w;
+      if (line && ctx.measureText(t).width > maxW) { out.push(line); line = w; } else line = t;
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+// letter = {no, rev, date, subject, body, head}; signed = {decision, note, sigImage, signerName, signedAt, fp, hash, verified}
+async function renderLetter({ letter, signed }) {
+  const W = 794, M = 56, SCALE = 2, LH = 28, INK = '#111';
+  const head = letter.head || DEFAULT_HEAD;
+  const logo = head.logo ? await loadImg(head.logo) : null;
+  const sigImg = signed?.sigImage ? await loadImg(signed.sigImage) : null;
+
+  const probe = document.createElement('canvas').getContext('2d');
+  probe.direction = 'rtl'; probe.font = `16px ${FONT}`;
+  const body = wrap(probe, letter.body, W - 2 * M);
+  const note = signed?.note ? wrap(probe, signed.note, W - 2 * M) : [];
+
+  let H = 150 + 90 + 40 + body.length * LH + 40;
+  if (signed) H += 70 + note.length * 26 + 150 + 40;
+  H = Math.max(1123, H + 90);
+
+  const c = document.createElement('canvas');
+  c.width = W * SCALE; c.height = H * SCALE;
+  const g = c.getContext('2d');
+  g.scale(SCALE, SCALE);
+  g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+  g.direction = 'rtl'; g.textBaseline = 'alphabetic';
+  const R = W - M;
+  const text = (s, x, y, { size = 16, bold = false, align = 'right', color = INK } = {}) => {
+    g.font = `${bold ? 'bold ' : ''}${size}px ${FONT}`; g.fillStyle = color; g.textAlign = align; g.fillText(s, x, y);
+  };
+  const rule = (y, color = '#1d4ed8', w = 1.5) => { g.strokeStyle = color; g.lineWidth = w; g.beginPath(); g.moveTo(M, y); g.lineTo(R, y); g.stroke(); };
+
+  let textRight = R;
+  if (logo) { const s = 72 / Math.max(logo.width, logo.height); g.drawImage(logo, R - logo.width * s, 36, logo.width * s, logo.height * s); textRight = R - logo.width * s - 16; }
+  text(head.name, textRight, 64, { size: 24, bold: true, color: '#1d4ed8' });
+  text(head.sub, textRight, 92, { size: 14, color: '#555' });
+  rule(122);
+
+  const rev = letter.rev > 1 ? `  (ویرایش ${letter.rev})` : '';
+  text(`شماره: ${ltr(letter.no)}${rev}`, R, 156, { size: 14 });
+  text(`تاریخ: ${ltr(letter.date)}`, M, 156, { size: 14, align: 'left' });
+  text(`موضوع: ${letter.subject}`, R, 196, { size: 17, bold: true });
+
+  let y = 240;
+  for (const l of body) { text(l, R, y); y += LH; }
+
+  if (signed) {
+    y += 20; rule(y, '#bbb', 1); y += 34;
+    text(`نظر مدیر: ${DECISION_FA[signed.decision] || signed.decision}`, R, y, { size: 18, bold: true, color: DECISION_COLOR[signed.decision] || INK }); y += 30;
+    for (const l of note) { text(l, R, y); y += 26; }
+    y += 10;
+    if (sigImg) {
+      const s = Math.min(220 / sigImg.width, 90 / sigImg.height);
+      g.drawImage(sigImg, M + 10, y, sigImg.width * s, sigImg.height * s);
+    }
+    const d = new Date(signed.signedAt);
+    text(signed.signerName, M + 120, y + 112, { size: 14, bold: true, align: 'center' });
+    text(`${ltr(jalali(d))}  ${ltr(timeHM(d))}`, M + 120, y + 134, { size: 12, color: '#555', align: 'center' });
+    if (signed.verified) text('✔ امضای دیجیتال معتبر', R, y + 40, { size: 15, bold: true, color: '#047857' });
+    text(`شناسه سند: ${ltr(signed.hash)}`, R, y + 72, { size: 11, color: '#555' });
+    text(`اثرانگشت امضاکننده: ${ltr(signed.fp)}`, R, y + 92, { size: 11, color: '#555' });
+  }
+
+  rule(H - 56, '#bbb', 1);
+  text(head.address, W / 2, H - 30, { size: 12, color: '#555', align: 'center' });
+  return c;
+}
+
+const show = (containerId, canvas) => $(containerId).replaceChildren(canvas);
+const signedView = (p, extra) => ({ ...p, signerName: p.signer.name, fp: p.signer.fp, ...extra });
+
+</script>
+<script>
+// Key generator page: produces manager.private (password-protected) + manager.pub (public).
+const MIN_PASSWORD = 8;
+
+$('genKey').addEventListener('click', guard('genMsg', async () => {
+  const name = $('newName').value.trim(), pw = $('newPass').value;
+  if (!name) throw new Error('نام مدیر را وارد کنید');
+  if (pw.length < MIN_PASSWORD) throw new Error(`رمز باید حداقل ${MIN_PASSWORD} نویسه باشد`);
+  if (pw !== $('newPass2').value) throw new Error('تکرار رمز یکسان نیست');
+  msg('genMsg', 'در حال ساخت کلید…', 'info');
+  const { keyFile, pubFile } = await LC.generateIdentity(name, pw);
+  downloadJson('manager.private', keyFile);
+  downloadJson('manager.pub', pubFile);
+  $('newPass').value = $('newPass2').value = '';
+  msg('genMsg', 'دو فایل دانلود شد: manager.private و manager.pub', 'ok');
+  msg('fpBox', `اثرانگشت: ${await LC.fingerprint(pubFile)}`, 'info');
+}));
+
+</script>
+</body>
+</html>
