@@ -116,3 +116,9 @@ def test_permission_catalog_is_not_in_the_admin(root):
     dev.force_login(root)
     assert dev.get("/admin/accounts/permission/").status_code == 404
     assert dev.get(f"/admin/accounts/user/{root.pk}/change/").status_code == 200
+
+
+def test_sessions_are_not_in_the_admin(root):
+    dev = Client()
+    dev.force_login(root)
+    assert dev.get("/admin/accounts/session/").status_code == 404

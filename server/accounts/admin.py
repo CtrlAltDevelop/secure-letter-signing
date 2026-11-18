@@ -22,7 +22,7 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 
 from .api_manager import LETTERHEAD_MAX_LOGO, LETTERHEAD_TEXT_FIELDS, clean_letterhead
 from .models import (
-    BASE_PERMISSION, AuditEvent, audit, verify_audit_chain, CompanySettings, InviteCode, Permission, Session, User,
+    BASE_PERMISSION, AuditEvent, audit, verify_audit_chain, CompanySettings, InviteCode, Permission, User,
 )
 
 
@@ -240,12 +240,6 @@ class InviteCodeAdmin(NoDelete, ModelAdmin):
         super().save_model(request, obj, form, change)
         if not change:
             audit(request.user, "invite_created", str(obj.pk), max_uses=obj.max_uses, via="admin")
-
-
-@admin.register(Session)
-class SessionAdmin(ReadOnly, ModelAdmin):
-    list_display = ("user", "device_name", "platform", "ip", "last_active", "revoked_at")
-    exclude = ("refresh_hash", "prev_refresh_hash", "rotated_at")
 
 
 @admin.action(description="Export selected events as CSV")
