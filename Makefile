@@ -1,17 +1,19 @@
 # BRAND picks the company: make up BRAND=acme   (default: demo)
 BRAND ?= demo
+PORT ?= 8090
 PROJECT := letters-$(BRAND)
 SERVER_ENV := DJANGO_DEBUG=1 BRAND=$(BRAND)
 
-.PHONY: help up down logs dev superuser test app
+.PHONY: help up down logs dev superuser test app macos
 
 help:
 	@echo "make up         run backend in Docker (Postgres + Redis) for BRAND=$(BRAND); needs brands/$(BRAND)/.env"
 	@echo "make down       stop the Docker stack"
 	@echo "make logs       follow Docker logs"
-	@echo "make dev        run backend from source: SQLite + in-memory channels/celery, auto-reload, no Docker"
+	@echo "make dev        run backend from source on port $(PORT): SQLite + in-memory channels/celery, auto-reload, no Docker"
 	@echo "make superuser  create a developer (superuser) account for the dev database"
 	@echo "make test       run server, JS and Flutter tests"
+	@echo "make macos       flutter run the macOS app against the dev backend (start `make dev` first; port $(PORT))"
 	@echo "make app        flutter run the app with brand BRAND (copies brand assets first)"
 
 up:
@@ -25,7 +27,7 @@ logs:
 
 dev:
 	cd server && $(SERVER_ENV) uv run python manage.py migrate --noinput
-	cd server && $(SERVER_ENV) uv run python manage.py runserver 0.0.0.0:8000
+	cd server && $(SERVER_ENV) uv run python manage.py runserver 0.0.0.0:$(PORT)
 
 superuser:
 	cd server && $(SERVER_ENV) uv run python manage.py createsuperuser
@@ -38,6 +40,9 @@ test:
 
 app: app-assets
 	cd app && flutter pub get && flutter run --dart-define=BRAND=$(BRAND)
+
+macos: app-assets
+	cd app && flutter pub get && flutter run -d macos --dart-define=BRAND=$(BRAND)
 
 .PHONY: app-assets
 app-assets:

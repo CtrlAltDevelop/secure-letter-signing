@@ -4,6 +4,6 @@
   "logo": "logo.svg",
   "colors": { "primary": "#165EF6", "accent": "#BFA46F", "dark": "#081528" },
   "domain": "localhost",
-  "apiUrl": "http://localhost:8000",
+  "apiUrl": "http://localhost:8090",
   "features": { "signupDomain": false, "signupInvite": false }
 }

@@ -1,4 +1,4 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:letter_signing/api/secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
 /// Minimal string key-value store (OS secure store in production, memory in tests).
@@ -10,7 +10,7 @@ abstract interface class SecureKv {
 
 class FlutterSecureKv implements SecureKv {
   const FlutterSecureKv();
-  static const _storage = FlutterSecureStorage();
+  static const _storage = appSecureStorage;
   @override
   Future<String?> read(String key) => _storage.read(key: key);
   @override

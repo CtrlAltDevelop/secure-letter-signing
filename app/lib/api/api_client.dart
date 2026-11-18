@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:letter_signing/api/secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class ApiException implements Exception {
@@ -22,7 +22,7 @@ abstract class TokenStore {
 class SecureTokenStore implements TokenStore {
   const SecureTokenStore();
   static const _key = 'refresh_token';
-  static const _storage = FlutterSecureStorage();
+  static const _storage = appSecureStorage;
   @override
   Future<String?> readRefresh() => _storage.read(key: _key);
   @override

@@ -7,7 +7,7 @@ cp brands/.env.example brands/<brand>/.env   # edit secrets, SERVER_PORT, DJANGO
 ./build.sh <brand> app apk|ios|macos|windows  # app with the brand baked in
 ```
 Run two companies side by side by giving each brand its own `SERVER_PORT` (and set `apiUrl` in its `brand.json` to match):
-`brands/demo` uses 8000, `brands/acme` uses 8001. Each has its own database, Redis, attachments volume and secrets.
+`brands/demo` uses 8090, `brands/acme` uses 8001. Each has its own database, Redis, attachments volume and secrets.
 
 Behind a TLS proxy set in the brand `.env`: `DJANGO_HTTPS=1`, `NUM_PROXIES=1`, `DJANGO_CSRF_TRUSTED_ORIGINS=https://letters.example.com`.
 Without HTTPS the app must not be used outside a trial (tokens travel in the clear).

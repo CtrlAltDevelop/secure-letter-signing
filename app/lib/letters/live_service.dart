@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:letter_signing/api/secure_storage.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:letter_signing/api/api_client.dart';
@@ -55,7 +55,7 @@ class MemoryCursorStore implements CursorStore {
 class SecureCursorStore implements CursorStore {
   const SecureCursorStore(this.userId);
   final int userId;
-  static const _storage = FlutterSecureStorage();
+  static const _storage = appSecureStorage;
   String get _key => 'live_cursor_$userId';
   @override
   Future<int> read() async =>
