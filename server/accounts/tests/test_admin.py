@@ -96,7 +96,7 @@ def test_invite_codes_render_as_cards(root, manager):
     dev = Client()
     dev.force_login(root)
     html = dev.get("/admin/accounts/invitecode/").content.decode()
-    assert code.code in html and "+ New code" in html and "<table" not in html.split("<main")[-1]
+    assert code.code in html and "+ New code" in html and "copy-code" in html and "<table" not in html.split("<main")[-1]
 
 
 def test_audit_admin_lists_with_badges_and_detail_page(root, manager):

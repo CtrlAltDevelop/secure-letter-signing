@@ -7,7 +7,10 @@
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
   {% for c in cards %}
   <a href="{% url 'admin:accounts_invitecode_change' c.pk %}" class="border border-base-200 dark:border-base-700 rounded-lg p-4 block" style="{% if not c.active %}opacity:.55{% endif %}">
-    <div style="font-family:monospace;font-size:18px;font-weight:700;letter-spacing:.5px">{{ c.code }}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span style="font-family:monospace;font-size:18px;font-weight:700;letter-spacing:.5px">{{ c.code }}</span>
+      <button type="button" class="copy-code border border-base-200 dark:border-base-700 rounded px-2 py-1" style="font-size:12px" data-code="{{ c.code }}">Copy</button>
+    </div>
     <div style="margin-top:8px">{{ c.uses }} / {{ c.max_uses|default:"&infin;" }} used</div>
     <div style="margin-top:4px;font-size:12px">
       {% if c.active %}Active{% else %}Inactive{% endif %}{% if c.expires_at %} &middot; expires {{ c.expires_at|date:"Y-m-d H:i" }}{% endif %}
@@ -17,4 +20,13 @@
   </a>
   {% endfor %}
 </div>
+<script>
+document.querySelectorAll('.copy-code').forEach(function (b) {
+  b.addEventListener('click', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500); };
+    if (navigator.clipboard) { navigator.clipboard.writeText(b.dataset.code).then(done, done); }
+  });
+});
+</script>
 {% endblock %}
