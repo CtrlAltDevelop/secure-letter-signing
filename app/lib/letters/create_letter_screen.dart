@@ -6,7 +6,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:letter_signing/letters/letter_crypto_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
+import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/models.dart';
+import 'package:letter_signing/letters/paper_editor_screen.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
@@ -256,6 +258,26 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
     ),
   );
 
+  Future<void> _writeOnPaper() async {
+    var head = const Letterhead();
+    try {
+      head = await env.api.letterhead();
+    } on Object catch (_) {
+      // Writing still works without a letterhead.
+    }
+    if (!mounted) return;
+    final text = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => PaperEditorScreen(
+          head: head,
+          title: _title.text.trim(),
+          initialText: _body.text,
+        ),
+      ),
+    );
+    if (text != null && mounted) setState(() => _body.text = text);
+  }
+
   Widget _contentCard() => _card(
     'Content',
     'The title is visible in lists. The body is encrypted.',
@@ -270,6 +292,12 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
               ? 'Title is required'
               : null,
         ),
+      ),
+      const SizedBox(height: 8),
+      OutlinedButton.icon(
+        onPressed: _writeOnPaper,
+        icon: const Icon(Icons.description_outlined),
+        label: const Text('Write on A4 paper (preview and print)'),
       ),
       const SizedBox(height: 8),
       TextField(

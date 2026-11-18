@@ -83,16 +83,21 @@ class Letterhead {
   }
 }
 
-/// The printed header: logo left, name/tagline, a rule and the contact line.
+/// Paper colours of the original HTML app's letterhead.
+const Color paperInk = Color(0xFF081528);
+const Color paperBrand = Color(0xFF165EF6);
+const Color paperMid = Color(0xFF32568A);
+const Color paperGold = Color(0xFFBFA46F);
+
+/// Printed header, same look as the original HTML letters: logo on the start edge,
+/// bold brand-blue name, grey-blue tagline, then a blue rule over a thin gold rule.
 class LetterheadHeader extends StatelessWidget {
-  const LetterheadHeader({super.key, required this.head, this.ink});
+  const LetterheadHeader({super.key, required this.head});
   final Letterhead head;
-  final Color? ink;
 
   @override
   Widget build(BuildContext context) {
     if (head.isEmpty) return const SizedBox.shrink();
-    final color = ink ?? const Color(0xFF111827);
     final bytes = head.logoBytes;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,8 +105,8 @@ class LetterheadHeader extends StatelessWidget {
         Row(
           children: [
             if (bytes != null) ...[
-              Image.memory(bytes, height: 52, width: 52, fit: BoxFit.contain),
-              const SizedBox(width: 12),
+              Image.memory(bytes, height: 72, width: 72, fit: BoxFit.contain),
+              const SizedBox(width: 16),
             ],
             Expanded(
               child: Column(
@@ -110,34 +115,32 @@ class LetterheadHeader extends StatelessWidget {
                   if (head.name.isNotEmpty)
                     Text(
                       head.name,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 18,
+                      style: const TextStyle(
+                        color: paperBrand,
+                        fontSize: 24,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   if (head.tagline.isNotEmpty)
                     Text(
                       head.tagline,
-                      style: TextStyle(color: color, fontSize: 11),
+                      style: const TextStyle(color: paperMid, fontSize: 14),
                     ),
                 ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        Divider(height: 1, thickness: 1.2, color: color),
-        if (head.contactLine.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              head.contactLine,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: color, fontSize: 9),
-            ),
-          ),
+        const SizedBox(height: 8),
+        const Divider(height: 1, thickness: 1.5, color: paperBrand),
+        const SizedBox(height: 4),
+        const Divider(height: 1, thickness: 1, color: paperGold),
       ],
     );
   }
+}
+
+/// Footer text under the gold rule: the footer field, else the address/phone/... line.
+extension LetterheadFooter on Letterhead {
+  String get footerText => footer.isNotEmpty ? footer : contactLine;
 }

@@ -13,7 +13,7 @@ import 'package:letter_signing/letters/paper_pages.dart';
 
 const double _minFont = 9;
 const double _maxFont = 20;
-const double _defaultFont = 12;
+const double defaultPaperFont = 12;
 const double _printScale = 3; // 3x A4 points = ~216 dpi
 
 /// The letter as it will look on A4 paper: letterhead, adjustable font size, print / save PDF.
@@ -24,7 +24,9 @@ class PaperScreen extends StatefulWidget {
     required this.title,
     required this.subtitle,
     required this.text,
+    this.initialFont = defaultPaperFont,
   });
+  final double initialFont;
   final Letterhead head;
   final String title;
   final String subtitle;
@@ -35,7 +37,7 @@ class PaperScreen extends StatefulWidget {
 }
 
 class _PaperScreenState extends State<PaperScreen> {
-  double _font = _defaultFont;
+  late double _font = widget.initialFont;
   bool _busy = false;
   String? _error;
   final List<GlobalKey> _keys = [];
@@ -102,9 +104,9 @@ class _PaperScreenState extends State<PaperScreen> {
       ),
       body: Column(
         children: [
-          _FontBar(
+          PaperFontSlider(
             value: _font,
-            pageCount: pages.length,
+            label: 'A4  |  ${pages.length} p',
             onChanged: (v) => setState(() => _font = v),
           ),
           if (_error != null) ErrorBanner(_error!),
@@ -154,14 +156,15 @@ class _PaperScreenState extends State<PaperScreen> {
   }
 }
 
-class _FontBar extends StatelessWidget {
-  const _FontBar({
+class PaperFontSlider extends StatelessWidget {
+  const PaperFontSlider({
+    super.key,
     required this.value,
-    required this.pageCount,
+    required this.label,
     required this.onChanged,
   });
   final double value;
-  final int pageCount;
+  final String label;
   final ValueChanged<double> onChanged;
 
   @override
@@ -180,7 +183,7 @@ class _FontBar extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        Text('${value.round()} pt  |  A4  |  $pageCount p'),
+        Text('${value.round()} pt  |  $label'),
       ],
     ),
   );

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:letter_signing/letters/letterhead.dart';
+import 'package:letter_signing/letters/paper_editor_screen.dart';
 import 'package:letter_signing/letters/paper_pages.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -25,12 +26,43 @@ void main() {
     expect(paginate(text, 12, rtl: true).join('\n'), text);
   });
 
-  testWidgets('letterhead header shows name and contact line', (t) async {
+  testWidgets('letterhead header shows name; footer falls back to contact line', (t) async {
     const head = Letterhead(name: 'Acme', phone: '123', website: 'a.test');
     await t.pumpWidget(
-      const MaterialApp(home: Scaffold(body: LetterheadHeader(head: head))),
+      const MaterialApp(
+        home: Scaffold(body: LetterheadHeader(head: head)),
+      ),
     );
     expect(find.text('Acme'), findsOneWidget);
-    expect(find.text('123  |  a.test'), findsOneWidget);
+    expect(head.footerText, '123  |  a.test');
+  });
+
+  testWidgets('paper editor returns the typed text on Done', (t) async {
+    String? result;
+    await t.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (c) => TextButton(
+            onPressed: () async => result = await Navigator.of(c).push<String>(
+              MaterialPageRoute(
+                builder: (_) => const PaperEditorScreen(
+                  head: Letterhead(name: 'Acme'),
+                  title: 'T',
+                  initialText: 'old',
+                ),
+              ),
+            ),
+            child: const Text('go'),
+          ),
+        ),
+      ),
+    );
+    await t.tap(find.text('go'));
+    await t.pumpAndSettle();
+    expect(find.text('Acme'), findsOneWidget);
+    await t.enterText(find.byType(TextField), 'new text');
+    await t.tap(find.text('Done'));
+    await t.pumpAndSettle();
+    expect(result, 'new text');
   });
 }

@@ -6,10 +6,10 @@ import 'package:letter_signing/letters/letterhead.dart';
 const double a4Width = 595;
 const double a4Height = 842;
 const double pageMargin = 54;
-const double _headerHeight = 96;
+const double _headerHeight = 112;
 const double _titleHeight = 62;
 const double _footerHeight = 36;
-const Color _ink = Color(0xFF111827);
+const Color _ink = paperInk;
 
 /// True when the first letter with a strong direction is Arabic-script/Hebrew.
 bool isRtlText(String s) {
@@ -106,7 +106,7 @@ class PaperPage extends StatelessWidget {
                 height: _headerHeight,
                 child: Align(
                   alignment: Alignment.topCenter,
-                  child: LetterheadHeader(head: head, ink: _ink),
+                  child: LetterheadHeader(head: head),
                 ),
               ),
               SizedBox(
@@ -147,16 +147,16 @@ class PaperPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const Divider(height: 1, color: _ink),
+                  const Divider(height: 1, color: paperGold),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          head.footer,
+                          head.footerText,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 9, color: _ink),
+                          style: const TextStyle(fontSize: 10, color: paperMid),
                         ),
                       ),
                       Text(
