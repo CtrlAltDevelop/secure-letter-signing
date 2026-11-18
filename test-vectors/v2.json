@@ -1,0 +1,72 @@
+{
+  "v": 2,
+  "password": "Vector-Pass#2026",
+  "keyFile": {
+    "v": 1,
+    "type": "key",
+    "name": "Vector User",
+    "pub": {
+      "v": 1,
+      "name": "Vector User",
+      "sign": {
+        "kty": "EC",
+        "crv": "P-256",
+        "x": "vSLQduUMx43tk0XcBMT8e8RxsvF3xPm3TPseGvSJ1kA",
+        "y": "rCtffX7e3EaIaC-w-k3emiyZ3NdiEDZ7_dB6JOzW53I"
+      },
+      "enc": {
+        "kty": "EC",
+        "crv": "P-256",
+        "x": "1LrnmgqwpWyj1KGPn3-WHFQvLXk1_IAekzmrXYtEJnY",
+        "y": "lgSGk0i29-VkPGnxrbLOMmJbjDiCQDWCzSMV_frseGc"
+      }
+    },
+    "kdf": {
+      "salt": "l57Bw0zQYO0jHZoZ53N9FA==",
+      "iter": 600000
+    },
+    "iv": "0/fGLLTGZHai2ghe",
+    "ct": "NtBInohs/ZAOa3BjzOeg0Wtq7kfY/Cey1HkqpvkGpXgLZr95LnF2Pm2g2H7tR+kKjJFfFkGcfhdrOwQDHap32lXQzDV4PA1g7PBFu5tZreb8HLZ1R1oBq1w85nhSO0Vkir4UI7WBSpJWKa3zg4CX2VUDwjkiKNytZyRQHLxzrFIYi2WXjpFfFLDn0Woiw9PefvV60lBs9C6zqL1DdRywafGOuhkkxjyGRk7JGltH4HxoLLDJ3D3nfnid5jVo6doOm2Iub0gwktATG8BZd4cNvfPAtKDo7bTYZjd0t4p2sAExRgnQ4gVMWIm0B2lY6mAJ3LIADNA0cS8aqn9dQobEPfzjixLd8GgqODdK8QY9ne089CU0XHaNa+TDrajd2xm64NjOB7/gdoevEoDEqA5F8cPZ4uRuFNl2M88+HaweucfTG5If44WrLzjrCr6d7U+94jwO7/allbn9OO4q5xfaOUwHNhsOepCNN7Pbx2ez8m0G9+dd+tttnFF5KQGxjROr5KZXO14RHZ3vYAtxPJcRHbGUqTwgmGHxNuF7sP0gend4P47DaNAx5Mxtt2Z39R8y/GpTdEsmybBLAYykU56mPjkp"
+  },
+  "pub": {
+    "v": 1,
+    "name": "Vector User",
+    "sign": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "vSLQduUMx43tk0XcBMT8e8RxsvF3xPm3TPseGvSJ1kA",
+      "y": "rCtffX7e3EaIaC-w-k3emiyZ3NdiEDZ7_dB6JOzW53I"
+    },
+    "enc": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "1LrnmgqwpWyj1KGPn3-WHFQvLXk1_IAekzmrXYtEJnY",
+      "y": "lgSGk0i29-VkPGnxrbLOMmJbjDiCQDWCzSMV_frseGc"
+    }
+  },
+  "fp": "0016-2ff3-5778-8183-8c74-995f-05de-2417",
+  "docKey": "GobwN2KFrmFIFERyd68tgOetxKZRrK1kxb6XcbjfOCM=",
+  "wrapped": {
+    "to": "0016-2ff3-5778-8183-8c74-995f-05de-2417",
+    "epk": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "Di7_aRckvUR0c5WpOupHcERUIPEtdSYcXj588_JhHyM",
+      "y": "KVUoB-Uxh-WAklXidkT_cyfzw0tbbUuwa79St94hE4c"
+    },
+    "iv": "AG4rUXGC3HJRd1V8",
+    "ct": "20vROyOauOe/oPPmXnnPY1VyIpaUHyoAtEP34ior1clQhyzlch36EP60eeLG4v3g"
+  },
+  "bodyPlain": {
+    "subject": "Subject é中",
+    "paragraphs": [
+      "one",
+      "two"
+    ],
+    "n": 3
+  },
+  "body": {
+    "iv": "7SCrtKt26ziOkjay",
+    "ct": "5LAbVzqERMDwJBqWtOEQakuJErwm+ErG0/Un687lGvzaDjGWWudvaKuna6emvgUttbaXApaJShCdbbcam+AqtTXA793ztmXRbUSL5Q=="
+  }
+}

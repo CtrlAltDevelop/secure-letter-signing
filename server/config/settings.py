@@ -16,6 +16,7 @@ BRAND = os.environ.get("BRAND", "demo")
 BRANDS_DIR = Path(os.environ.get("BRANDS_DIR", BASE_DIR.parent / "brands"))
 
 INSTALLED_APPS = [
+    "daphne",  # runserver serves ASGI (WebSockets) in dev
     "unfold",  # must come before django.contrib.admin
     "django.contrib.admin",
     "django.contrib.auth",
@@ -25,6 +26,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "core",
     "accounts",
+    "keys",
+    "letters",
 ]
 
 MIDDLEWARE = [
@@ -112,6 +115,10 @@ LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
+MEDIA_ROOT = Path(os.environ.get("ATTACHMENTS_DIR", BASE_DIR / "attachments"))
+MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_ATTACHMENT_BYTES + 1024 * 1024
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"

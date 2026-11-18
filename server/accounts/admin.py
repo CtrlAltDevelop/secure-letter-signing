@@ -1,12 +1,17 @@
 """Superuser (developer) admin. Staff access is the superuser only; the manager uses the app/API.
 Nothing can be deleted here. Letters will never be registered in this admin."""
+import csv
+import json
+
 from django import forms
+from django.contrib import messages
+from django.http import HttpResponse
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from .models import AuditEvent, CompanySettings, InviteCode, Permission, Session, User
+from .models import AuditEvent, verify_audit_chain, CompanySettings, InviteCode, Permission, Session, User
 
 
 class NoDelete:
@@ -90,7 +95,28 @@ class SessionAdmin(ReadOnly, ModelAdmin):
     exclude = ("refresh_hash", "prev_refresh_hash", "rotated_at")
 
 
+@admin.action(description="Export selected events as CSV")
+def export_audit_csv(modeladmin, request, queryset):
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="audit.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["id", "at", "actor", "action", "target", "data", "prev_hash", "hash"])
+    for e in queryset.order_by("id").select_related("actor"):
+        writer.writerow([e.id, e.at.isoformat(), e.actor.email if e.actor else "", e.action, e.target,
+                         json.dumps(e.data, sort_keys=True), e.prev_hash, e.hash])
+    return response
+
+
 @admin.register(AuditEvent)
 class AuditEventAdmin(ReadOnly, ModelAdmin):
-    list_display = ("at", "actor", "action", "target")
+    list_display = ("id", "at", "actor", "action", "target")
     list_filter = ("action",)
+    actions = [export_audit_csv]
+
+    def changelist_view(self, request, extra_context=None):
+        broken = verify_audit_chain()
+        if broken is None:
+            messages.success(request, "Audit chain verified: no tampering detected.")
+        else:
+            messages.error(request, f"AUDIT CHAIN BROKEN at event #{broken}: a row was altered or removed.")
+        return super().changelist_view(request, extra_context)

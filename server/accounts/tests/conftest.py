@@ -1,17 +1,11 @@
 import json
 
 import pytest
-from django.core.cache import cache
 from django.test import Client
 
 from accounts.models import BASE_PERMISSION, CompanySettings, Permission, User
 
 PASSWORD = "Str0ng-Passw0rd!x"
-
-
-@pytest.fixture(autouse=True)
-def _fresh_cache():
-    cache.clear()  # throttle counters live in the cache
 
 
 class Api:

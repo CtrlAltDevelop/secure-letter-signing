@@ -25,17 +25,20 @@ Object? _sortKeys(Object? v) {
   return v;
 }
 
-final _curve = ECCurve_secp256r1();
+final p256Curve = ECCurve_secp256r1();
 
-ECPublicKey _publicKey(Map<String, dynamic> jwk) {
-  BigInt big(String k) => _bytesToBigInt(b64uDecode(jwk[k] as String));
-  return ECPublicKey(_curve.curve.createPoint(big('x'), big('y')), _curve);
+ECPublicKey ecPublicKey(Map<String, dynamic> jwk) {
+  BigInt big(String k) => bytesToBigInt(b64uDecode(jwk[k] as String));
+  return ECPublicKey(
+    p256Curve.curve.createPoint(big('x'), big('y')),
+    p256Curve,
+  );
 }
 
-ECPrivateKey _privateKey(Map<String, dynamic> jwk) =>
-    ECPrivateKey(_bytesToBigInt(b64uDecode(jwk['d'] as String)), _curve);
+ECPrivateKey ecPrivateKey(Map<String, dynamic> jwk) =>
+    ECPrivateKey(bytesToBigInt(b64uDecode(jwk['d'] as String)), p256Curve);
 
-BigInt _bytesToBigInt(Uint8List bytes) {
+BigInt bytesToBigInt(Uint8List bytes) {
   var result = BigInt.zero;
   for (final b in bytes) {
     result = (result << 8) | BigInt.from(b);
@@ -43,7 +46,7 @@ BigInt _bytesToBigInt(Uint8List bytes) {
   return result;
 }
 
-Uint8List _bigIntTo32(BigInt v) {
+Uint8List bigIntTo32(BigInt v) {
   final out = Uint8List(32);
   for (var i = 31; i >= 0; i--) {
     out[i] = (v & BigInt.from(0xff)).toInt();
@@ -64,13 +67,13 @@ String fingerprint(Map<String, dynamic> pub) {
     'sign': strip(pub['sign'] as Map<String, dynamic>),
     'enc': strip(pub['enc'] as Map<String, dynamic>),
   });
-  final hex = _hex(
+  final hex = hexOf(
     SHA256Digest().process(Uint8List.fromList(utf8.encode(text))),
   ).substring(0, 32);
   return RegExp('.{4}').allMatches(hex).map((m) => m.group(0)!).join('-');
 }
 
-String _hex(Uint8List bytes) =>
+String hexOf(Uint8List bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
 /// ECDSA P-256 / SHA-256 signature as raw r||s (64 bytes), the WebCrypto format.
@@ -79,12 +82,12 @@ Uint8List signBytes(Uint8List message, Map<String, dynamic> privateJwk) {
     ..init(
       true,
       ParametersWithRandom(
-        PrivateKeyParameter<ECPrivateKey>(_privateKey(privateJwk)),
+        PrivateKeyParameter<ECPrivateKey>(ecPrivateKey(privateJwk)),
         SecureRandom('Fortuna')..seed(KeyParameter(Uint8List(32))),
       ),
     );
   final sig = signer.generateSignature(message) as ECSignature;
-  return Uint8List.fromList([..._bigIntTo32(sig.r), ..._bigIntTo32(sig.s)]);
+  return Uint8List.fromList([...bigIntTo32(sig.r), ...bigIntTo32(sig.s)]);
 }
 
 bool verifyBytes(
@@ -94,10 +97,10 @@ bool verifyBytes(
 ) {
   if (rawSig.length != 64) return false;
   final verifier = ECDSASigner(SHA256Digest())
-    ..init(false, PublicKeyParameter<ECPublicKey>(_publicKey(publicJwk)));
+    ..init(false, PublicKeyParameter<ECPublicKey>(ecPublicKey(publicJwk)));
   final sig = ECSignature(
-    _bytesToBigInt(rawSig.sublist(0, 32)),
-    _bytesToBigInt(rawSig.sublist(32)),
+    bytesToBigInt(rawSig.sublist(0, 32)),
+    bytesToBigInt(rawSig.sublist(32)),
   );
   return verifier.verifySignature(message, sig);
 }
@@ -131,10 +134,10 @@ Map<String, dynamic> decryptLetter(
   if (file['to'] != fp)
     throw const FormatException('Letter is encrypted for another key');
 
-  final agreement = ECDHBasicAgreement()..init(_privateKey(encPrivateJwk));
-  final shared = _bigIntTo32(
+  final agreement = ECDHBasicAgreement()..init(ecPrivateKey(encPrivateJwk));
+  final shared = bigIntTo32(
     agreement.calculateAgreement(
-      _publicKey(file['epk'] as Map<String, dynamic>),
+      ecPublicKey(file['epk'] as Map<String, dynamic>),
     ),
   );
 
@@ -166,3 +169,6 @@ Map<String, dynamic> decryptLetter(
     throw const FormatException('Decryption failed: file was tampered with');
   }
 }
+
+String b64uEncode(Uint8List bytes) =>
+    base64Url.encode(bytes).replaceAll('=', '');

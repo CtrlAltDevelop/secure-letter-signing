@@ -1,9 +1,11 @@
+import hashlib
+import json
 import secrets
 import uuid
 
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -125,15 +127,74 @@ class CompanySettings(models.Model):
         return obj
 
 
+GENESIS_HASH = "0" * 64
+
+
 class AuditEvent(models.Model):
-    """Append-only record of sensitive actions (hash chain is added in Phase 5)."""
+    """Append-only, hash-chained record of sensitive actions. Verify with `verify_audit_chain`."""
 
     actor = models.ForeignKey(User, null=True, on_delete=models.PROTECT, related_name="+")
     action = models.CharField(max_length=64)
     target = models.CharField(max_length=200, blank=True)
     data = models.JSONField(default=dict, blank=True)
-    at = models.DateTimeField(auto_now_add=True)
+    at = models.DateTimeField(default=timezone.now)
+    prev_hash = models.CharField(max_length=64, blank=True)
+    hash = models.CharField(max_length=64, blank=True)  # empty only on rows from before the chain existed
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["prev_hash"], condition=~Q(hash=""), name="audit_chain_is_linear"),
+        ]
+
+
+def audit_digest(prev_hash: str, actor_id, action: str, target: str, data: dict, at) -> str:
+    from core.cryptoutil import canonical_json
+
+    body = canonical_json(
+        {"a": actor_id, "act": action, "t": target, "d": json.loads(json.dumps(data, default=str)), "at": at.isoformat()}
+    )
+    return hashlib.sha256((prev_hash + body).encode()).hexdigest()
 
 
 def audit(actor: User | None, action: str, target: str = "", **data) -> AuditEvent:
-    return AuditEvent.objects.create(actor=actor, action=action, target=target, data=data)
+    for _ in range(5):  # a concurrent writer taking the same predecessor loses the unique constraint and retries
+        try:
+            with transaction.atomic():
+                last = AuditEvent.objects.exclude(hash="").order_by("-id").select_for_update().first()
+                prev = last.hash if last else GENESIS_HASH
+                at = timezone.now()
+                digest = audit_digest(prev, actor.id if actor else None, action, target, data, at)
+                return AuditEvent.objects.create(
+                    actor=actor, action=action, target=target, data=data, at=at, prev_hash=prev, hash=digest
+                )
+        except IntegrityError:
+            continue
+    raise RuntimeError("could not append to the audit chain")
+
+
+def verify_audit_chain() -> int | None:
+    """Id of the first tampered/missing row, or None when the chain is intact."""
+    prev = None
+    for ev in AuditEvent.objects.exclude(hash="").order_by("id").iterator():
+        if prev is not None and ev.prev_hash != prev:
+            return ev.id
+        if prev is None and ev.prev_hash != GENESIS_HASH:
+            return ev.id
+        if audit_digest(ev.prev_hash, ev.actor_id, ev.action, ev.target, ev.data, ev.at) != ev.hash:
+            return ev.id
+        prev = ev.hash
+    return None
+
+
+class Notification(models.Model):
+    """In-app notification. Carries the letter title only, never content."""
+
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="notifications")
+    kind = models.CharField(max_length=40)
+    title = models.CharField(max_length=300)
+    data = models.JSONField(default=dict, blank=True)
+    at = models.DateTimeField(default=timezone.now)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-id"]
