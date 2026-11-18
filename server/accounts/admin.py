@@ -258,6 +258,12 @@ class InviteCodeAdmin(NoDelete, ModelAdmin):
     filter_horizontal = ("grants",)
     readonly_fields = ("code", "uses", "created_by")
 
+    def get_readonly_fields(self, request, obj=None):
+        """Once created a code cannot be edited, only disabled."""
+        if obj:
+            return tuple(f for f in self.fields if f != "active")
+        return self.readonly_fields
+
     def changelist_view(self, request, extra_context=None):
         """Card grid instead of the default table."""
         opts = self.opts

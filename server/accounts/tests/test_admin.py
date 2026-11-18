@@ -132,3 +132,16 @@ def test_users_render_as_searchable_cards(root, make_user):
     assert "zed@corp.test" in html and "+ New user" in html
     only = dev.get("/admin/accounts/user/?q=nomatch").content.decode()
     assert "No users found" in only
+
+
+def test_existing_invite_code_can_only_be_disabled(root, manager):
+    from accounts.models import InviteCode
+    code = InviteCode.objects.create(created_by=manager, max_uses=2)
+    dev = Client()
+    dev.force_login(root)
+    url = f"/admin/accounts/invitecode/{code.pk}/change/"
+    html = dev.get(url).content.decode()
+    assert 'name="active"' in html and 'name="max_uses"' not in html
+    dev.post(url, {"max_uses": 99, "active": ""})
+    code.refresh_from_db()
+    assert code.max_uses == 2 and code.active is False
