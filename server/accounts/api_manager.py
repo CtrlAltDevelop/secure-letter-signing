@@ -76,7 +76,7 @@ def users(request):
 def set_permissions(request, user_id: int, data: GrantsIn):
     manager = require_manager(request)
     target = get_object_or_404(User, pk=user_id)
-    if target.is_superuser:
+    if target.is_superuser and target.pk != manager.pk:  # the manager may grant themselves letter permissions
         raise HttpError(403, "This account cannot be changed here")
     codes = set(data.codes) | {BASE_PERMISSION}
     found = Permission.objects.filter(code__in=codes)

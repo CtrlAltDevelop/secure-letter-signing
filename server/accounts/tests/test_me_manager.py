@@ -135,3 +135,12 @@ def test_notifications_list_and_mark_read(api, make_user):
     assert [r["title"] for r in rows] == ["Hello"] and rows[0]["read"] is False
     api.call("post", "/me/notifications/read", token=token)
     assert api.call("get", "/me/notifications", token=token).data[0]["read"] is True
+
+
+def test_manager_who_is_also_superuser_can_grant_themselves_letter_permissions(api, make_user):
+    boss = make_user("boss2@corp.test", manager=True)
+    boss.is_superuser = True
+    boss.save(update_fields=["is_superuser"])
+    token = api.login(boss.email)["access"]
+    resp = api.call("put", f"/manage/users/{boss.id}/permissions", {"codes": ["letter.create", "letter.sign"]}, token=token)
+    assert resp.status_code == 200 and "letter.create" in resp.data["permissions"]
