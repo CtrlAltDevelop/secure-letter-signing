@@ -243,6 +243,25 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
           () => _text.setAlign(ParaAlign.justify),
           on: para.align == ParaAlign.justify,
         ),
+        PopupMenuButton<ParaDir>(
+          tooltip: 'Direction of the whole letter',
+          icon: const Icon(Icons.swap_horiz),
+          onSelected: _text.setDirAll,
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: ParaDir.rtl,
+              child: Text('Whole letter right-to-left'),
+            ),
+            PopupMenuItem(
+              value: ParaDir.ltr,
+              child: Text('Whole letter left-to-right'),
+            ),
+            PopupMenuItem(
+              value: ParaDir.auto,
+              child: Text('Whole letter automatic'),
+            ),
+          ],
+        ),
         tool(
           Icons.format_textdirection_l_to_r,
           'Left-to-right paragraph',

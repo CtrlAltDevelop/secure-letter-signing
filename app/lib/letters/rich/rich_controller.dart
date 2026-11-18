@@ -114,6 +114,10 @@ class RichController extends TextEditingController {
     _apply(_doc.mapParas(sel.start, sel.end, (p) => p.copyWith(dir: dir)));
   }
 
+  /// Sets the direction of every paragraph (the whole letter). New lines copy it from the line they split.
+  void setDirAll(ParaDir dir) =>
+      _apply(_doc.mapParas(0, _doc.text.length, (p) => p.copyWith(dir: dir)));
+
   ParaStyle get currentPara =>
       _doc.paras[_doc.paraAt(_selectionStart).clamp(0, _doc.paras.length - 1)];
 

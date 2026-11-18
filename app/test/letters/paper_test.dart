@@ -54,6 +54,12 @@ void main() {
       expect(back.paras.single.dir, ParaDir.rtl);
     });
 
+    test('whole-letter direction reaches every paragraph and new lines', () {
+      final c = RichController(RichDoc.plain('a\nb'));
+      c.setDirAll(ParaDir.rtl);
+      expect(c.doc.paras.map((p) => p.dir), everyElement(ParaDir.rtl));
+    });
+
     test('toggle clears when everything already has the flag', () {
       final d = RichDoc.plain('abc').toggleFlag(0, 3, flagItalic);
       expect(d.toggleFlag(0, 3, flagItalic).hasFormatting, isFalse);
