@@ -33,14 +33,23 @@ class StoredKey {
 }
 
 /// Everything persisted about this device's key, on top of [SecureKv].
-/// One key per device. The server decides whether it is active.
+/// One key per account per device (pass [userId]; without it the store is device-wide, as in older builds).
+/// The server decides whether it is active.
 class KeyStore {
-  KeyStore({SecureKv? kv, Biometrics? biometrics, DateTime Function()? clock})
-    : kv = kv ?? const FlutterSecureKv(),
-      biometrics = biometrics ?? const LocalAuthBiometrics() {
+  KeyStore({
+    SecureKv? kv,
+    Biometrics? biometrics,
+    DateTime Function()? clock,
+    int? userId,
+  }) : _device = kv ?? const FlutterSecureKv(),
+       kv = userId == null
+           ? (kv ?? const FlutterSecureKv())
+           : PrefixedKv(kv ?? const FlutterSecureKv(), 'user$userId.'),
+       biometrics = biometrics ?? const LocalAuthBiometrics() {
     attempts = AttemptLimiter(this.kv, clock: clock);
   }
 
+  final SecureKv _device; // unprefixed: only used to adopt a pre-accounts key
   final SecureKv kv;
   final Biometrics biometrics;
   late final AttemptLimiter attempts;
@@ -102,6 +111,20 @@ class KeyStore {
     await kv.write(_idKey, keyId);
     await kv.write(_sealedKey, '0');
     return StoredKey(keyId: keyId, keyFile: keyFile, sealed: false);
+  }
+
+  /// Builds before per-account storage kept one key per device. If that key is one of [ownKeyIds]
+  /// (the server says it belongs to this account) move it under this account; otherwise leave it alone.
+  Future<bool> adoptDeviceKey(Set<String> ownKeyIds) async {
+    final id = await _device.read(_idKey);
+    final file = await _device.read(_fileKey);
+    if (id == null || file == null || !ownKeyIds.contains(id)) return false;
+    for (final k in [_fileKey, _idKey, _sealedKey, _secretKey]) {
+      final v = await _device.read(k);
+      if (v != null) await kv.write(k, v);
+      await _device.delete(k);
+    }
+    return true;
   }
 
   Future<void> clear() async {

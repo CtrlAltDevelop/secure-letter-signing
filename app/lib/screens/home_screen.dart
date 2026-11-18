@@ -28,9 +28,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _keyStore = KeyStore();
+  late final _keyStore = KeyStore(userId: widget.auth.user!.id);
   late final LettersEnv _env = _buildEnv();
-  late Future<StoredKey?> _localKey = _keyStore.load();
+  late Future<StoredKey?> _localKey = _loadKey();
+
+  /// This account's key on this device; adopts a key saved by an older build if the server says it is ours.
+  Future<StoredKey?> _loadKey() async {
+    final local = await _keyStore.load();
+    if (local != null) return local;
+    try {
+      final mine = await widget.auth.api.call('GET', '/keys/mine') as List;
+      final ids = {for (final k in mine) (k as Map)['id'] as String};
+      if (await _keyStore.adoptDeviceKey(ids)) return await _keyStore.load();
+    } on Exception {
+      // Offline: the user can still create a key; an old key is adopted on a later launch.
+    }
+    return null;
+  }
 
   LettersEnv _buildEnv() {
     final user = widget.auth.user!;

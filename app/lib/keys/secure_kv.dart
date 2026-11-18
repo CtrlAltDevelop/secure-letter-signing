@@ -30,6 +30,20 @@ class MemoryKv implements SecureKv {
   Future<void> delete(String key) async => data.remove(key);
 }
 
+/// Namespaces another store, so several accounts on one device never see each other's keys.
+class PrefixedKv implements SecureKv {
+  const PrefixedKv(this._inner, this.prefix);
+  final SecureKv _inner;
+  final String prefix;
+  @override
+  Future<String?> read(String key) => _inner.read('$prefix$key');
+  @override
+  Future<void> write(String key, String value) =>
+      _inner.write('$prefix$key', value);
+  @override
+  Future<void> delete(String key) => _inner.delete('$prefix$key');
+}
+
 /// Local biometric check. A failed or cancelled check returns false, never throws.
 abstract interface class Biometrics {
   Future<bool> available();
