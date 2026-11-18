@@ -20,6 +20,10 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from unfold.admin import ModelAdmin
 from unfold.decorators import action, display
+from unfold.widgets import (
+    UnfoldAdminEmailInputWidget, UnfoldAdminFileFieldWidget, UnfoldAdminTextareaWidget, UnfoldAdminTextInputWidget,
+    UnfoldBooleanWidget,
+)
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from .api_manager import LETTERHEAD_MAX_LOGO, LETTERHEAD_TEXT_FIELDS, clean_letterhead
@@ -181,15 +185,17 @@ LOGO_MAGIC = (b"\x89PNG", b"\xff\xd8\xff")
 class CompanySettingsForm(forms.ModelForm):
     """Flattens the letterhead JSON into plain fields; the logo is an uploaded PNG/JPEG."""
 
-    lh_name = forms.CharField(label="Company name", required=False, max_length=300)
-    lh_tagline = forms.CharField(label="Tagline / department", required=False, max_length=300)
-    lh_address = forms.CharField(label="Address", required=False, max_length=300)
-    lh_phone = forms.CharField(label="Phone", required=False, max_length=300)
-    lh_email = forms.CharField(label="Email", required=False, max_length=300)
-    lh_website = forms.CharField(label="Website", required=False, max_length=300)
-    lh_footer = forms.CharField(label="Footer text", required=False, max_length=300)
-    lh_logo = forms.FileField(label="Logo (PNG or JPEG, max 200 KB)", required=False)
-    lh_remove_logo = forms.BooleanField(label="Remove current logo", required=False)
+    lh_name = forms.CharField(label="Company name", required=False, max_length=300, widget=UnfoldAdminTextInputWidget)
+    lh_tagline = forms.CharField(
+        label="Tagline / department", required=False, max_length=300, widget=UnfoldAdminTextInputWidget)
+    lh_address = forms.CharField(label="Address", required=False, max_length=300, widget=UnfoldAdminTextareaWidget(attrs={"rows": 3}))
+    lh_phone = forms.CharField(label="Phone", required=False, max_length=300, widget=UnfoldAdminTextInputWidget)
+    lh_email = forms.CharField(label="Email", required=False, max_length=300, widget=UnfoldAdminEmailInputWidget)
+    lh_website = forms.CharField(label="Website", required=False, max_length=300, widget=UnfoldAdminTextInputWidget)
+    lh_footer = forms.CharField(label="Footer text", required=False, max_length=300, widget=UnfoldAdminTextareaWidget(attrs={"rows": 3}))
+    lh_logo = forms.FileField(
+        label="Logo (PNG or JPEG, max 200 KB)", required=False, widget=UnfoldAdminFileFieldWidget)
+    lh_remove_logo = forms.BooleanField(label="Remove current logo", required=False, widget=UnfoldBooleanWidget)
 
     class Meta:
         model = CompanySettings
