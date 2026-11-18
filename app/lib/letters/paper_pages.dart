@@ -34,7 +34,9 @@ class PaperPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dir = isRtlText(doc.text) ? TextDirection.rtl : TextDirection.ltr;
+    final dir = paraIsRtl(doc.paras.first, doc.text)
+        ? TextDirection.rtl
+        : TextDirection.ltr;
     return Container(
       width: a4Width,
       height: a4Height,

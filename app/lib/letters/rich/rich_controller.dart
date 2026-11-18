@@ -107,6 +107,13 @@ class RichController extends TextEditingController {
     _apply(_doc.mapParas(sel.start, sel.end, (p) => p.copyWith(align: align)));
   }
 
+  void setDir(ParaDir dir) {
+    final sel = selection.isValid
+        ? selection
+        : const TextSelection.collapsed(offset: 0);
+    _apply(_doc.mapParas(sel.start, sel.end, (p) => p.copyWith(dir: dir)));
+  }
+
   ParaStyle get currentPara =>
       _doc.paras[_doc.paraAt(_selectionStart).clamp(0, _doc.paras.length - 1)];
 

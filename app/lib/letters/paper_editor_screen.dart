@@ -243,6 +243,22 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
           () => _text.setAlign(ParaAlign.justify),
           on: para.align == ParaAlign.justify,
         ),
+        tool(
+          Icons.format_textdirection_l_to_r,
+          'Left-to-right paragraph',
+          () => _text.setDir(
+            para.dir == ParaDir.ltr ? ParaDir.auto : ParaDir.ltr,
+          ),
+          on: para.dir == ParaDir.ltr,
+        ),
+        tool(
+          Icons.format_textdirection_r_to_l,
+          'Right-to-left paragraph',
+          () => _text.setDir(
+            para.dir == ParaDir.rtl ? ParaDir.auto : ParaDir.rtl,
+          ),
+          on: para.dir == ParaDir.rtl,
+        ),
       ],
     );
   }

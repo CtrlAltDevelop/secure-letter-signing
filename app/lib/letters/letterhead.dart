@@ -72,16 +72,29 @@ class Letterhead {
   String get contactLine =>
       [address, phone, email, website].where((s) => s.isNotEmpty).join('  |  ');
 
+  /// Decoded logo. The same instance is returned for the same data URL, so
+  /// `Image.memory` keeps its cached image instead of reloading on every
+  /// rebuild (e.g. on each keystroke in the letterhead form).
   Uint8List? get logoBytes {
+    if (logo == _lastLogo) return _lastBytes;
     final i = logo.indexOf('base64,');
-    if (i < 0) return null;
-    try {
-      return base64Decode(logo.substring(i + 7));
-    } on FormatException {
-      return null;
+    Uint8List? bytes;
+    if (i >= 0) {
+      try {
+        bytes = base64Decode(logo.substring(i + 7));
+      } on FormatException {
+        bytes = null;
+      }
     }
+    _lastLogo = logo;
+    _lastBytes = bytes;
+    return bytes;
   }
 }
+
+// ponytail: one-entry cache; only one logo is shown at a time.
+String _lastLogo = '';
+Uint8List? _lastBytes;
 
 /// Paper colours of the original HTML app's letterhead.
 const Color paperInk = Color(0xFF081528);
@@ -105,7 +118,13 @@ class LetterheadHeader extends StatelessWidget {
         Row(
           children: [
             if (bytes != null) ...[
-              Image.memory(bytes, height: 72, width: 72, fit: BoxFit.contain),
+              Image.memory(
+                bytes,
+                height: 72,
+                width: 72,
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+              ),
               const SizedBox(width: 16),
             ],
             Expanded(

@@ -31,6 +31,29 @@ void main() {
       },
     );
 
+    test('explicit direction overrides the text and survives json', () {
+      expect(paraIsRtl(const ParaStyle(), 'سلام'), isTrue);
+      expect(
+        paraIsRtl(
+          const ParaStyle(ParaKind.normal, ParaAlign.start, ParaDir.ltr),
+          'سلام',
+        ),
+        isFalse,
+      );
+      expect(
+        paraIsRtl(
+          const ParaStyle(ParaKind.normal, ParaAlign.start, ParaDir.rtl),
+          'hello',
+        ),
+        isTrue,
+      );
+      final d = RichDoc('hello', const [], const [
+        ParaStyle(ParaKind.normal, ParaAlign.start, ParaDir.rtl),
+      ]);
+      final back = RichDoc.fromJson('hello', d.toJson());
+      expect(back.paras.single.dir, ParaDir.rtl);
+    });
+
     test('toggle clears when everything already has the flag', () {
       final d = RichDoc.plain('abc').toggleFlag(0, 3, flagItalic);
       expect(d.toggleFlag(0, 3, flagItalic).hasFormatting, isFalse);

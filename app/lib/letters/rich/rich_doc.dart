@@ -17,21 +17,32 @@ enum ParaKind { normal, h1, h2, bullet, numbered }
 
 enum ParaAlign { start, center, end, justify }
 
+/// Writing direction of a paragraph; `auto` follows the first strong letter. Stored index: append only.
+enum ParaDir { auto, ltr, rtl }
+
 @immutable
 class ParaStyle {
-  const ParaStyle([this.kind = ParaKind.normal, this.align = ParaAlign.start]);
+  const ParaStyle([
+    this.kind = ParaKind.normal,
+    this.align = ParaAlign.start,
+    this.dir = ParaDir.auto,
+  ]);
   final ParaKind kind;
   final ParaAlign align;
+  final ParaDir dir;
 
-  ParaStyle copyWith({ParaKind? kind, ParaAlign? align}) =>
-      ParaStyle(kind ?? this.kind, align ?? this.align);
+  ParaStyle copyWith({ParaKind? kind, ParaAlign? align, ParaDir? dir}) =>
+      ParaStyle(kind ?? this.kind, align ?? this.align, dir ?? this.dir);
 
   @override
   bool operator ==(Object other) =>
-      other is ParaStyle && other.kind == kind && other.align == align;
+      other is ParaStyle &&
+      other.kind == kind &&
+      other.align == align &&
+      other.dir == dir;
 
   @override
-  int get hashCode => Object.hash(kind, align);
+  int get hashCode => Object.hash(kind, align, dir);
 }
 
 /// Letter text with character flags (one per UTF-16 unit) and one [ParaStyle] per line.
@@ -181,7 +192,8 @@ class RichDoc {
       'v': version,
       'f': runs,
       'p': [
-        for (final p in paras) [p.kind.index, p.align.index],
+        for (final p in paras)
+          [p.kind.index, p.align.index, if (p.dir != ParaDir.auto) p.dir.index],
       ],
     };
   }
@@ -199,6 +211,7 @@ class RichDoc {
           ParaStyle(
             ParaKind.values[(p as List)[0] as int],
             ParaAlign.values[p[1] as int],
+            p.length > 2 ? ParaDir.values[p[2] as int] : ParaDir.auto,
           ),
       ];
       if (flags.length != text.length) return RichDoc.plain(text);

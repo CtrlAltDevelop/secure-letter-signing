@@ -34,6 +34,13 @@ bool isRtlText(String s) {
   return false;
 }
 
+/// Direction of a paragraph: the explicit choice, else the first strong letter.
+bool paraIsRtl(ParaStyle p, String text) => switch (p.dir) {
+  ParaDir.ltr => false,
+  ParaDir.rtl => true,
+  ParaDir.auto => isRtlText(text),
+};
+
 double kindScale(ParaKind k) => switch (k) {
   ParaKind.h1 => 1.7,
   ParaKind.h2 => 1.35,
@@ -148,7 +155,7 @@ List<List<PageSlice>> paginateRich(
     final width = contentWidth - (isListKind(kind) ? bulletIndent : 0);
     final painter = TextPainter(
       text: richSpan(doc, ps, pe, font, null),
-      textDirection: isRtlText(doc.text.substring(ps, pe))
+      textDirection: paraIsRtl(doc.paras[i], doc.text.substring(ps, pe))
           ? TextDirection.rtl
           : TextDirection.ltr,
     )..layout(maxWidth: width);
@@ -233,7 +240,7 @@ class PaperBody extends StatelessWidget {
         height: font * kindScale(style.kind) * lineHeightFactor + gap,
       );
     }
-    final rtl = isRtlText(doc.text.substring(s.start, s.end));
+    final rtl = paraIsRtl(style, doc.text.substring(s.start, s.end));
     final dir = rtl ? TextDirection.rtl : TextDirection.ltr;
     final text = Text.rich(
       richSpan(doc, s.start, s.end, font, TextStyle(color: ink)),
