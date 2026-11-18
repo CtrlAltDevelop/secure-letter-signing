@@ -97,3 +97,15 @@ def test_invite_codes_render_as_cards(root, manager):
     dev.force_login(root)
     html = dev.get("/admin/accounts/invitecode/").content.decode()
     assert code.code in html and "+ New code" in html and "<table" not in html.split("<main")[-1]
+
+
+def test_audit_admin_lists_with_badges_and_detail_page(root, manager):
+    from accounts.models import AuditEvent, audit
+    audit(manager, "invite_created", "7", max_uses=3)
+    ev = AuditEvent.objects.latest("id")
+    dev = Client()
+    dev.force_login(root)
+    html = dev.get("/admin/accounts/auditevent/").content.decode()
+    assert "invite created" in html and "max_uses: 3" in html
+    assert dev.get("/admin/accounts/auditevent/?q=invite").status_code == 200
+    assert "max_uses" in dev.get(f"/admin/accounts/auditevent/{ev.pk}/change/").content.decode()

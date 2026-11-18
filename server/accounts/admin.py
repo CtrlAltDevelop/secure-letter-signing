@@ -7,6 +7,7 @@ import json
 from django import forms
 from django.contrib import messages
 from django.http import HttpResponse
+from django.utils.html import format_html
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
@@ -16,7 +17,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from unfold.admin import ModelAdmin
-from unfold.decorators import action
+from unfold.decorators import action, display
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from .api_manager import LETTERHEAD_MAX_LOGO, LETTERHEAD_TEXT_FIELDS, clean_letterhead
@@ -265,16 +266,57 @@ def export_audit_csv(modeladmin, request, queryset):
     return response
 
 
+AUDIT_LABELS = {  # badge colour by action family (unfold label colours)
+    "danger": ("revoked", "rejected", "deactivated", "locked", "reuse", "failed", "cancel"),
+    "warning": ("reset", "changed", "rotated", "approved", "unlist", "imported"),
+    "success": ("created", "signed", "published", "login", "signup", "sent"),
+}
+
+
+def audit_tone(action: str) -> str:
+    for tone, words in AUDIT_LABELS.items():
+        if any(w in action for w in words):
+            return tone
+    return "info"
+
+
 @admin.register(AuditEvent)
 class AuditEventAdmin(ReadOnly, ModelAdmin):
-    list_display = ("id", "at", "actor", "action", "target")
-    list_filter = ("action",)
+    list_display = ("id", "when", "kind", "actor", "target", "summary")
+    list_display_links = ("id", "kind")
+    list_filter = ("action", "actor")
+    list_filter_submit = True
+    search_fields = ("action", "target", "actor__email")
+    date_hierarchy = "at"
+    list_per_page = 50
+    ordering = ("-id",)
     actions = [export_audit_csv]
+    readonly_fields = ("at", "actor", "action", "target", "pretty_data", "prev_hash", "hash")
+    fields = readonly_fields
+
+    @admin.display(description="When", ordering="at")
+    def when(self, obj):
+        return obj.at.strftime("%Y-%m-%d %H:%M:%S")
+
+    @display(description="Event", ordering="action", label={"danger": "danger", "warning": "warning",
+                                                           "success": "success", "info": "info"})
+    def kind(self, obj):
+        return audit_tone(obj.action), obj.action.replace("_", " ")
+
+    @admin.display(description="Details")
+    def summary(self, obj):
+        text = ", ".join(f"{k}: {v}" for k, v in (obj.data or {}).items())
+        return text if len(text) <= 90 else text[:87] + "..."
+
+    @admin.display(description="Data")
+    def pretty_data(self, obj):
+        return format_html("<pre style='white-space:pre-wrap'>{}</pre>", json.dumps(obj.data, indent=2, sort_keys=True))
 
     def changelist_view(self, request, extra_context=None):
         broken = verify_audit_chain()
+        total = AuditEvent.objects.count()
         if broken is None:
-            messages.success(request, "Audit chain verified: no tampering detected.")
+            messages.success(request, f"Audit chain verified: {total} events, no tampering detected.")
         else:
             messages.error(request, f"AUDIT CHAIN BROKEN at event #{broken}: a row was altered or removed.")
         return super().changelist_view(request, extra_context)
