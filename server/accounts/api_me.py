@@ -6,6 +6,7 @@ from django.utils import timezone
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
+from . import ratelimit
 from .api_auth import Detail, check_password
 from .auth import BearerAuth, user_of
 from .models import Session, audit
@@ -64,8 +65,11 @@ def revoke_session(request, session_id: UUID):
 @router.post("/password", response=Detail)
 def change_password(request, data: PasswordIn):
     user = user_of(request)
+    ratelimit.check("me-password", str(user.id))
     if not check_hash(data.current_password, user.password):
+        ratelimit.fail("me-password", str(user.id))
         raise HttpError(403, "Current password is wrong")
+    ratelimit.reset("me-password", str(user.id))
     check_password(data.new_password, user)
     user.set_password(data.new_password)
     user.save(update_fields=["password"])

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core import signing
@@ -10,15 +12,16 @@ from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 from ninja.throttling import AnonRateThrottle
 
-from . import mailer
+from . import mailer, ratelimit
 from .auth import BearerAuth, hash_token, issue_access, new_refresh_token
-from .models import BASE_PERMISSION, CompanySettings, InviteCode, Permission, Session, User, audit
+from .models import BASE_PERMISSION, CompanySettings, InviteCode, Permission, RetiredRefresh, Session, User, audit
 from .schemas import TokenOut, UserOut
 
 router = Router(tags=["auth"])
 throttle = [AnonRateThrottle("20/m")]
 VERIFY_MAX_AGE = 3 * 24 * 3600
 RESET_MAX_AGE = 24 * 3600
+REFRESH_GRACE = timedelta(seconds=10)
 
 
 class SignupIn(Schema):
@@ -131,40 +134,65 @@ def verify_email(request, data: TokenIn):
 
 @router.post("/login", auth=None, throttle=throttle, response=TokenOut)
 def login(request, data: LoginIn):
-    user = authenticate(request, username=data.email.strip().lower(), password=data.password)
+    email = data.email.strip().lower()
+    ratelimit.check("login", email)
+    user = authenticate(request, username=email, password=data.password)
     if user is None:
+        ratelimit.fail("login", email)
         raise HttpError(401, "Invalid email or password")
+    ratelimit.reset("login", email)
     refresh = new_refresh_token()
     session = Session.objects.create(
         user=user, refresh_hash=hash_token(refresh), device_name=data.device_name[:100],
-        platform=data.platform[:30], ip=request.META.get("REMOTE_ADDR"),
+        platform=data.platform[:30], ip=ratelimit.client_ip(request),
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:300],
     )
     audit(user, "login", str(session.id), device=session.device_name)
     return TokenOut(access=issue_access(session), refresh=refresh, session_id=session.id, user=UserOut.of(user))
 
 
+def _find_refreshable(presented: str):
+    """Locked session this refresh token may rotate, or None. Revokes the session on reuse of a retired token."""
+    now = timezone.now()
+    session = (
+        Session.objects.select_for_update().select_related("user")
+        .filter(refresh_hash=presented, revoked_at__isnull=True).first()
+    )
+    if session:
+        return session, False
+    retired = RetiredRefresh.objects.filter(token_hash=presented).values_list("session_id", flat=True).first()
+    if retired is None:
+        return None, False
+    session = Session.objects.select_for_update().select_related("user").get(pk=retired)
+    if session.revoked_at is not None:
+        return None, False
+    # The client may have lost our response: its immediate predecessor is honoured for a few seconds.
+    if session.prev_refresh_hash == presented and now - session.rotated_at < REFRESH_GRACE:
+        return session, False
+    session.revoked_at = now
+    session.save(update_fields=["revoked_at"])
+    return None, True
+
+
 @router.post("/refresh", auth=None, throttle=throttle, response=TokenOut)
 def refresh(request, data: RefreshIn):
     presented = hash_token(data.refresh)
     reuse_detected = False
+    new_refresh = new_refresh_token()
     with transaction.atomic():
-        session = (
-            Session.objects.select_for_update().select_related("user")
-            .filter(refresh_hash=presented, revoked_at__isnull=True).first()
-        )
-        if session is None:
-            # An already-rotated token coming back means it was copied: kill that session.
-            reuse_detected = Session.objects.filter(
-                prev_refresh_hash=presented, revoked_at__isnull=True
-            ).update(revoked_at=timezone.now()) > 0
-        elif session.user.is_active:
-            new_refresh = new_refresh_token()
-            session.prev_refresh_hash = presented
+        session, reuse_detected = _find_refreshable(presented)
+        if session is not None and session.user.is_active:
+            now = timezone.now()
+            RetiredRefresh.objects.get_or_create(token_hash=session.refresh_hash, defaults={"session": session})
+            if session.refresh_hash == presented:  # normal rotation (not a grace-window retry)
+                session.prev_refresh_hash = presented
+                session.rotated_at = now
             session.refresh_hash = hash_token(new_refresh)
-            session.last_active = timezone.now()
-            session.save(update_fields=["prev_refresh_hash", "refresh_hash", "last_active"])
-    if session is None or not session.user.is_active:
+            session.last_active = now
+            session.save(update_fields=["prev_refresh_hash", "rotated_at", "refresh_hash", "last_active"])
+        else:
+            session = None
+    if session is None:
         if reuse_detected:
             audit(None, "refresh_reuse_detected")
         raise HttpError(401, "Invalid refresh token")
@@ -182,7 +210,10 @@ def logout(request):
 @router.post("/password-reset/request", auth=None, throttle=throttle, response=Detail)
 def password_reset_request(request, data: ResetRequestIn):
     """Always answers the same, so it does not reveal which emails exist."""
-    user = User.objects.filter(email=data.email.strip().lower(), is_active=True).first()
+    email = data.email.strip().lower()
+    ratelimit.check("reset", email)  # also caps mail sent to one address
+    ratelimit.fail("reset", email)
+    user = User.objects.filter(email=email, is_active=True).first()
     if user:
         token = signing.dumps({"u": user.id, "p": user.password[-16:]}, salt="password-reset")
         mailer.send(user.email, "Reset your password", f"Your password reset token:\n\n{token}\n")

@@ -29,6 +29,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "accounts.middleware.NoStoreApiMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -74,10 +75,24 @@ REDIS_URL = os.environ.get("REDIS_URL", "")
 if REDIS_URL:
     CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [REDIS_URL]}}}
     CELERY_BROKER_URL = REDIS_URL
+    # Shared across workers and restarts: throttles and lockouts depend on it.
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}}
 else:
     CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
     CELERY_BROKER_URL = "memory://"
     CELERY_TASK_ALWAYS_EAGER = True  # run tasks inline in dev and tests
+
+# Number of reverse proxies in front of the server. 0 = trust REMOTE_ADDR only (X-Forwarded-For ignored).
+NINJA_NUM_PROXIES = int(os.environ.get("NUM_PROXIES", "0"))
+
+# Production is HTTPS-only unless DJANGO_HTTPS=0 (plain-HTTP trial runs, e.g. the bare docker compose stack).
+if not DEBUG and os.environ.get("DJANGO_HTTPS", "1") == "1":
+    if NINJA_NUM_PROXIES:
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
+    CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

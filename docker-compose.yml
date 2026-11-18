@@ -30,6 +30,8 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_URL: redis://redis:6379/0
+      DJANGO_HTTPS: ${DJANGO_HTTPS:-0}  # set 1 (and NUM_PROXIES=1) behind a TLS-terminating proxy
+      NUM_PROXIES: ${NUM_PROXIES:-0}
     volumes:
       - ./brands:/brands:ro
       - attachments:/app/attachments

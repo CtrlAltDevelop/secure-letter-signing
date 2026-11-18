@@ -36,14 +36,47 @@ def test_revoked_session_is_rejected_immediately(api, make_user):
     assert api.call("get", "/me", token=body["access"]).status_code == 401
 
 
+def _age_rotation(email: str, seconds: int) -> None:
+    Session.objects.filter(user__email=email).update(rotated_at=timezone.now() - timedelta(seconds=seconds))
+
+
 def test_refresh_rotates_and_reuse_kills_the_session(api, make_user):
     make_user("a@corp.test")
     first = api.login("a@corp.test")
     second = api.call("post", "/auth/refresh", {"refresh": first["refresh"]})
     assert second.status_code == 200 and second.data["refresh"] != first["refresh"]
-    # replaying the old token is treated as theft
+    _age_rotation("a@corp.test", 60)  # outside the retry grace window: replay is theft
     assert api.call("post", "/auth/refresh", {"refresh": first["refresh"]}).status_code == 401
     assert api.call("get", "/me", token=second.data["access"]).status_code == 401
+
+
+def test_retry_within_grace_window_gets_a_fresh_token_without_revoking(api, make_user):
+    make_user("a@corp.test")
+    first = api.login("a@corp.test")
+    api.call("post", "/auth/refresh", {"refresh": first["refresh"]})  # response "lost"
+    retry = api.call("post", "/auth/refresh", {"refresh": first["refresh"]})
+    assert retry.status_code == 200
+    assert api.call("get", "/me", token=retry.data["access"]).status_code == 200
+
+
+def test_token_two_rotations_old_kills_the_session(api, make_user):
+    make_user("a@corp.test")
+    first = api.login("a@corp.test")
+    second = api.call("post", "/auth/refresh", {"refresh": first["refresh"]}).data
+    _age_rotation("a@corp.test", 60)
+    third = api.call("post", "/auth/refresh", {"refresh": second["refresh"]}).data
+    assert api.call("post", "/auth/refresh", {"refresh": first["refresh"]}).status_code == 401
+    assert api.call("get", "/me", token=third["access"]).status_code == 401
+
+
+def test_login_locks_out_after_repeated_failures_for_one_email(api, make_user):
+    make_user("a@corp.test")
+    from accounts import ratelimit
+
+    for _ in range(ratelimit.MAX_FAILURES):
+        assert api.call("post", "/auth/login", {"email": "A@corp.test", "password": "bad"}).status_code == 401
+    assert api.call("post", "/auth/login", {"email": "a@corp.test", "password": "bad"}).status_code == 429
+    assert api.call("post", "/auth/login", {"email": "a@corp.test", "password": PASSWORD}).status_code == 429
 
 
 def test_logout_revokes_the_session(api, make_user):

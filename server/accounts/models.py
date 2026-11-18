@@ -5,6 +5,7 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 BASE_PERMISSION = "user"
 
@@ -68,7 +69,8 @@ class Session(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="sessions")
     refresh_hash = models.CharField(max_length=64, unique=True)
-    prev_refresh_hash = models.CharField(max_length=64, blank=True, db_index=True)  # detects refresh-token reuse
+    prev_refresh_hash = models.CharField(max_length=64, blank=True)  # immediate predecessor: retry grace window
+    rotated_at = models.DateTimeField(default=timezone.now)
     device_name = models.CharField(max_length=100, blank=True)
     platform = models.CharField(max_length=30, blank=True)
     ip = models.GenericIPAddressField(null=True, blank=True)
@@ -76,6 +78,14 @@ class Session(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     last_active = models.DateTimeField(auto_now_add=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
+
+
+class RetiredRefresh(models.Model):
+    """Every refresh token that was rotated away. Presenting one again means it was copied."""
+
+    token_hash = models.CharField(max_length=64, primary_key=True)
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="retired")
+    retired_at = models.DateTimeField(auto_now_add=True)
 
 
 def _new_invite_code() -> str:

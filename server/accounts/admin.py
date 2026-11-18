@@ -87,7 +87,7 @@ class InviteCodeAdmin(ReadOnly, ModelAdmin):
 @admin.register(Session)
 class SessionAdmin(ReadOnly, ModelAdmin):
     list_display = ("user", "device_name", "platform", "ip", "last_active", "revoked_at")
-    exclude = ("refresh_hash", "prev_refresh_hash")
+    exclude = ("refresh_hash", "prev_refresh_hash", "rotated_at")
 
 
 @admin.register(AuditEvent)
