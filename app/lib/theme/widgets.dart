@@ -195,6 +195,52 @@ class AuthScaffold extends StatelessWidget {
   final bool showBack;
   final Widget? footer;
 
+  Widget _header(BuildContext context, {required double logoSize}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(child: BrandLogo(size: logoSize)),
+        const SizedBox(height: 16),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            subtitle!,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _formColumn() => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      AppCard(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (i, c) in children.indexed) ...[
+              if (i > 0) const SizedBox(height: 14),
+              c,
+            ],
+          ],
+        ),
+      ),
+      if (footer != null) ...[const SizedBox(height: 12), footer!],
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -213,52 +259,43 @@ class AuthScaffold extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Center(child: BrandLogo(size: 76)),
-                    const SizedBox(height: 20),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              // Short and wide (phone in landscape, small desktop window):
+              // put the branding beside the form instead of stacking them.
+              final sideBySide = box.maxWidth >= 640 && box.maxHeight < 600;
+              return Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: sideBySide ? 12 : 24,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: sideBySide ? 880 : 420,
                     ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        subtitle!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    AppCard(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final (i, c) in children.indexed) ...[
-                            if (i > 0) const SizedBox(height: 14),
-                            c,
-                          ],
-                        ],
-                      ),
-                    ),
-                    if (footer != null) ...[
-                      const SizedBox(height: 12),
-                      footer!,
-                    ],
-                  ],
+                    child: sideBySide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(child: _header(context, logoSize: 64)),
+                              const SizedBox(width: 32),
+                              Expanded(child: _formColumn()),
+                            ],
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _header(context, logoSize: 76),
+                              const SizedBox(height: 24),
+                              _formColumn(),
+                            ],
+                          ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

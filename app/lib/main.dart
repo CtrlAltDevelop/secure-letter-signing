@@ -8,6 +8,7 @@ import 'package:letter_signing/api/auth_controller.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/screens/home_screen.dart';
 import 'package:letter_signing/theme/app_theme.dart';
+import 'package:letter_signing/theme/no_scrollbar_behavior.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
 import 'brand.dart';
@@ -64,6 +65,7 @@ class _LetterAppState extends State<LetterApp> {
       theme: AppTheme.light(widget.brand),
       darkTheme: AppTheme.dark(widget.brand),
       themeMode: ThemeMode.system,
+      scrollBehavior: const NoScrollbarBehavior(),
       home: _restoring
           ? SplashScreen(brand: widget.brand)
           : ListenableBuilder(

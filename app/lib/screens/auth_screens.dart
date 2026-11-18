@@ -238,7 +238,6 @@ class _SignupScreenState extends State<SignupScreen> {
       return AuthScaffold(
         title: 'Check your email',
         subtitle: 'Paste the token we emailed you to verify your address.',
-        showBack: true,
         footer: back,
         children: [
           TextField(
@@ -262,7 +261,6 @@ class _SignupScreenState extends State<SignupScreen> {
     return AuthScaffold(
       title: 'Create account',
       subtitle: 'Join your company workspace',
-      showBack: true,
       footer: back,
       children: [
         Form(
