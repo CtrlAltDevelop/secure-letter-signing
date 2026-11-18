@@ -68,6 +68,8 @@ class CompanyIn(Schema):
 class InviteIn(Schema):
     max_uses: int | None = 1  # null = unlimited
     expires_at: datetime | None = None
+    codes: list[str] = []  # permission codes granted at signup, besides the base one
+    department_id: int | None = None
 
 
 class InviteOut(Schema):
@@ -77,6 +79,15 @@ class InviteOut(Schema):
     uses: int
     expires_at: datetime | None
     active: bool
+    codes: list[str]
+    department: str
+
+    @staticmethod
+    def of(i: InviteCode) -> "InviteOut":
+        return InviteOut(
+            id=i.id, code=i.code, max_uses=i.max_uses, uses=i.uses, expires_at=i.expires_at, active=i.active,
+            codes=sorted(g.code for g in i.grants.all()), department=i.department.name if i.department else "",
+        )
 
 
 @router.get("/permissions", response=list[PermissionOut])
@@ -242,15 +253,23 @@ def create_invite(request, data: InviteIn):
     manager = require_manager(request)
     if data.max_uses is not None and data.max_uses < 1:
         raise HttpError(422, "max_uses must be at least 1, or empty for unlimited")
-    invite = InviteCode.objects.create(created_by=manager, max_uses=data.max_uses, expires_at=data.expires_at)
-    audit(manager, "invite_created", str(invite.id), max_uses=invite.max_uses)
-    return invite
+    found = Permission.objects.filter(code__in=set(data.codes) - {BASE_PERMISSION})
+    if found.count() != len(set(data.codes) - {BASE_PERMISSION}):
+        raise HttpError(422, "Unknown permission code")
+    dept = get_object_or_404(Department, pk=data.department_id, active=True) if data.department_id else None
+    invite = InviteCode.objects.create(
+        created_by=manager, max_uses=data.max_uses, expires_at=data.expires_at, department=dept,
+    )
+    invite.grants.set(found)
+    audit(manager, "invite_created", str(invite.id), max_uses=invite.max_uses, grants=sorted(data.codes))
+    return InviteOut.of(invite)
 
 
 @router.get("/invites", response=list[InviteOut])
 def invites(request):
     require_manager(request)
-    return InviteCode.objects.order_by("-created_at")
+    return [InviteOut.of(i) for i in InviteCode.objects.prefetch_related("grants").select_related("department")
+            .order_by("-created_at")]
 
 
 @router.post("/invites/{invite_id}/deactivate", response=InviteOut)
@@ -260,4 +279,4 @@ def deactivate_invite(request, invite_id: int):
     invite.active = False
     invite.save(update_fields=["active"])
     audit(manager, "invite_deactivated", str(invite.id))
-    return invite
+    return InviteOut.of(invite)

@@ -12,6 +12,7 @@
     <div style="margin-top:4px;font-size:12px">
       {% if c.active %}Active{% else %}Inactive{% endif %}{% if c.expires_at %} &middot; expires {{ c.expires_at|date:"Y-m-d H:i" }}{% endif %}
     </div>
+    <div style="margin-top:4px;font-size:12px">{% for g in c.grants.all %}{{ g.code }}{% if not forloop.last %}, {% endif %}{% empty %}base access only{% endfor %}{% if c.department %} &middot; {{ c.department }}{% endif %}</div>
     <div style="margin-top:4px;font-size:12px;opacity:.7">by {{ c.created_by|default:"-" }}</div>
   </a>
   {% endfor %}

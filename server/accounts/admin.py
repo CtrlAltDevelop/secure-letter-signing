@@ -254,7 +254,8 @@ class InviteCodeAdmin(NoDelete, ModelAdmin):
     """The superuser may issue and deactivate codes (the manager does it in the app). Never deleted."""
 
     list_display = ("code", "created_by", "uses", "max_uses", "active", "expires_at")
-    fields = ("code", "max_uses", "expires_at", "active", "uses", "created_by")
+    fields = ("code", "max_uses", "expires_at", "active", "grants", "department", "uses", "created_by")
+    filter_horizontal = ("grants",)
     readonly_fields = ("code", "uses", "created_by")
 
     def changelist_view(self, request, extra_context=None):

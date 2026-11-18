@@ -108,6 +108,10 @@ def signup(request, data: SignupIn):
             uses=F("uses") + 1
         ):
             raise HttpError(403, "Invalid or expired invitation code")
+        user.grants.add(*invite.grants.all())
+        if invite.department_id and invite.department.active:
+            user.department = invite.department
+            user.save(update_fields=["department"])
         audit(user, "signup_invite", email, invite=invite.id)
         return Status(201, {"detail": "Registered"})
 

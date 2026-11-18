@@ -196,3 +196,14 @@ def test_departments_are_manager_only_and_users_cannot_self_assign(api, make_use
     assert api.call("post", "/manage/departments", {"name": "X"}, tok).status_code == 403
     me = api.call("patch", "/me", {"department": "Hack"}, tok)
     assert me.data["department"] == ""
+
+
+def test_manager_creates_invite_with_grants_and_department(api, make_user):
+    from accounts.models import Department
+    make_user("boss@corp.test", manager=True)
+    boss = token_for(api, "boss@corp.test")
+    dept = Department.objects.create(name="Ops")
+    resp = api.call("post", "/manage/invites", {"codes": ["letter.sign", "user"], "department_id": dept.id}, boss)
+    assert resp.data["codes"] == ["letter.sign"] and resp.data["department"] == "Ops"
+    assert api.call("post", "/manage/invites", {"codes": ["nope"]}, boss).status_code == 422
+    assert api.call("get", "/manage/invites", token=boss).data[0]["codes"] == ["letter.sign"]

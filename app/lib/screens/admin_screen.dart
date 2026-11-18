@@ -184,43 +184,113 @@ class _AdminTabState extends State<AdminTab> {
     }
   }
 
-  Future<void> _newInvite() async {
+  Future<void> _newInvite(List<String> permissionCodes) async {
     final uses = TextEditingController(text: '1');
+    final chosen = <String>{};
+    int? department;
+    var departments = <Map<String, dynamic>>[];
+    try {
+      departments = [
+        for (final d
+            in await widget.auth.api.call('GET', '/manage/departments') as List)
+          if ((d as Map)['active'] == true) Map<String, dynamic>.from(d),
+      ];
+    } on Object catch (_) {
+      // The code can still be created without a department.
+    }
+    if (!mounted) return;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.confirmation_number_outlined),
-        title: const Text('New invitation code'),
-        content: SizedBox(
-          width: 320,
-          child: TextField(
-            controller: uses,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: 'Max uses',
-              helperText: 'Leave empty for unlimited',
-              prefixIcon: Icon(Icons.tag),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          icon: const Icon(Icons.confirmation_number_outlined),
+          title: const Text('New invitation code'),
+          content: SizedBox(
+            width: 340,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: uses,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: 'Max uses',
+                      helperText: 'Leave empty for unlimited',
+                      prefixIcon: Icon(Icons.tag),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int?>(
+                    initialValue: department,
+                    decoration: const InputDecoration(
+                      labelText: 'Department',
+                      prefixIcon: Icon(Icons.apartment_outlined),
+                    ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      for (final d in departments)
+                        DropdownMenuItem<int?>(
+                          value: d['id'] as int,
+                          child: Text('${d['name']}'),
+                        ),
+                    ],
+                    onChanged: (v) => setLocal(() => department = v),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Permissions for people who join with this code',
+                    style: Theme.of(ctx).textTheme.labelLarge,
+                  ),
+                  for (final code in permissionCodes)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(permissionLabel(code)),
+                      subtitle: code == 'user'
+                          ? const Text('Always granted')
+                          : null,
+                      value: code == 'user' || chosen.contains(code),
+                      onChanged: code == 'user'
+                          ? null
+                          : (v) => setLocal(() {
+                              if (v == true) {
+                                chosen.add(code);
+                              } else {
+                                chosen.remove(code);
+                              }
+                            }),
+                    ),
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Create'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
     final maxUses = int.tryParse(uses.text.trim()); // empty = unlimited
     uses.dispose();
     if (ok == true) {
-      await _call('POST', '/manage/invites', {'max_uses': maxUses});
+      await _call('POST', '/manage/invites', {
+        'max_uses': maxUses,
+        'codes': chosen.toList(),
+        'department_id': department,
+      });
     }
   }
 
@@ -269,7 +339,7 @@ class _AdminTabState extends State<AdminTab> {
                     ),
                     ..._signupSection(data.company),
                     DepartmentsCard(api: widget.auth.api, onChanged: _reload),
-                    ..._invitesSection(data.invites),
+                    ..._invitesSection(data.invites, data.permissionCodes),
                     ..._peopleSection(data),
                     const SizedBox(height: Tokens.gap),
                   ],
@@ -311,11 +381,14 @@ class _AdminTabState extends State<AdminTab> {
     ),
   ];
 
-  List<Widget> _invitesSection(List<Map<String, dynamic>> invites) => [
+  List<Widget> _invitesSection(
+    List<Map<String, dynamic>> invites,
+    List<String> permissionCodes,
+  ) => [
     SectionHeader(
       'Invitation codes',
       trailing: FilledButton.tonalIcon(
-        onPressed: _newInvite,
+        onPressed: () => _newInvite(permissionCodes),
         icon: const Icon(Icons.add),
         label: const Text('New code'),
       ),
@@ -388,6 +461,17 @@ class _InviteCard extends StatelessWidget {
                   '${invite['uses']}/${invite['max_uses'] ?? '\u221e'} used',
                   style: TextStyle(color: muted, fontSize: 12),
                 ),
+                if ((invite['codes'] as List?)?.isNotEmpty == true ||
+                    '${invite['department'] ?? ''}'.isNotEmpty)
+                  Text(
+                    [
+                      ...List<String>.from(invite['codes'] as List)
+                          .map(permissionLabel),
+                      if ('${invite['department']}'.isNotEmpty)
+                        '${invite['department']}',
+                    ].join(', '),
+                    style: TextStyle(color: muted, fontSize: 12),
+                  ),
               ],
             ),
           ),

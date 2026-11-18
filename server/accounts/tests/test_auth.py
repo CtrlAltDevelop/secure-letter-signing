@@ -201,3 +201,15 @@ def test_invite_without_max_uses_is_unlimited(api, manager, company):
         assert resp.status_code == 201
     invite.refresh_from_db()
     assert invite.uses == 3
+
+
+def test_invite_gives_chosen_grants_and_department_at_signup(api, manager, company):
+    from accounts.models import Department, Permission
+    company.signup_invite_enabled = True
+    company.save()
+    dept = Department.objects.create(name="Legal")
+    invite = InviteCode.objects.create(created_by=manager, max_uses=1, department=dept)
+    invite.grants.add(Permission.objects.get(code="letter.create"))
+    api.call("post", "/auth/signup", {"email": "n@gmail.test", "password": PASSWORD, "invite_code": invite.code})
+    user = api.login("n@gmail.test")["user"]
+    assert user["permissions"] == ["letter.create", "user"] and user["department"] == "Legal"

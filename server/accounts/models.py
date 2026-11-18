@@ -117,6 +117,9 @@ class InviteCode(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Applied to everyone who signs up with this code (the base "user" grant is always given).
+    grants = models.ManyToManyField(Permission, blank=True, related_name="invites")
+    department = models.ForeignKey(Department, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
 
 
 class CompanySettings(models.Model):
