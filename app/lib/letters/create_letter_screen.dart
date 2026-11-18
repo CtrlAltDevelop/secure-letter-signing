@@ -14,12 +14,20 @@ import 'package:letter_signing/letters/rich/rich_layout.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
+const Duration _autosaveEvery = Duration(seconds: 60);
+
 /// Create a letter: title, body, attachments, signers (ordered), viewers, visibility, publish timing, chain.
 /// Pops the saved/sent [LetterBrief].
 class CreateLetterScreen extends StatefulWidget {
-  const CreateLetterScreen({super.key, required this.env, this.parentId});
+  const CreateLetterScreen({
+    super.key,
+    required this.env,
+    this.parentId,
+    this.autosaveEvery = _autosaveEvery,
+  });
   final LettersEnv env;
   final String? parentId;
+  final Duration autosaveEvery;
 
   @override
   State<CreateLetterScreen> createState() => _CreateLetterScreenState();
@@ -42,6 +50,9 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
   bool _submitted = false;
   String? _error;
   DraftSaved? _saved;
+  Timer? _autosave;
+  String _lastSavedState = '';
+  String? _autosavedAt;
 
   LettersEnv get env => widget.env;
 
@@ -49,10 +60,15 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
   void initState() {
     super.initState();
     unawaited(_loadDirectory());
+    _autosave = Timer.periodic(
+      widget.autosaveEvery,
+      (_) => unawaited(_autosaveDraft()),
+    );
   }
 
   @override
   void dispose() {
+    _autosave?.cancel();
     _title.dispose();
     _body.dispose();
     super.dispose();
@@ -184,6 +200,49 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
     parentId: widget.parentId,
   );
 
+  /// Everything that goes into the draft, to tell whether anything changed since the last save.
+  String get _state => [
+    _title.text,
+    _body.text,
+    '${_rich?.toJson()}',
+    '$_signers',
+    '${_viewers.toList()..sort()}',
+    '${_files.map((f) => f.name).toList()}',
+    _visibility,
+    _publish,
+    _order,
+  ].join('\u0000');
+
+  /// Saves the encrypted draft on the server every minute while there is something new. Skipped for public
+  /// letters (they need a key unlock) and until there is a title and a signer. Never writes plaintext to disk.
+  Future<void> _autosaveDraft() async {
+    if (!mounted ||
+        _busy ||
+        _visibility == 'public' ||
+        _title.text.trim().isEmpty ||
+        _signers.isEmpty ||
+        _state == _lastSavedState) {
+      return;
+    }
+    final snapshot = _state;
+    setState(() => _busy = true);
+    try {
+      await _save();
+      _lastSavedState = snapshot;
+      if (mounted) {
+        final n = DateTime.now();
+        setState(
+          () => _autosavedAt =
+              '${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}',
+        );
+      }
+    } on Object catch (_) {
+      // Quiet: the next tick retries, and Save draft shows real errors.
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<DraftSaved> _save() async {
     if (_title.text.trim().isEmpty) {
       throw const LetterException('Title is required');
@@ -214,6 +273,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
     });
     try {
       final saved = await _save();
+      _lastSavedState = _state;
       final brief = send
           ? await env.crypto.send(saved.brief.id, docKey: saved.docKey)
           : saved.brief;
@@ -310,6 +370,14 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
         label: const Text('Write on A4 paper (preview and print)'),
       ),
       const SizedBox(height: 8),
+      if (_autosavedAt != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            'Draft auto-saved at $_autosavedAt (encrypted)',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
       if (_rich != null)
         InkWell(
           onTap: _writeOnPaper,

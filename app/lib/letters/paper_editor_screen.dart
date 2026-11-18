@@ -11,6 +11,13 @@ import 'package:letter_signing/letters/rich/rich_doc.dart';
 import 'package:letter_signing/letters/rich/rich_layout.dart';
 
 const double _wideBreakpoint = 900;
+const _swatch = [
+  Color(0xFF081528),
+  Color(0xFF165EF6),
+  Color(0xFFB3261E),
+  Color(0xFF1F8F78),
+];
+const _swatchNames = ['Ink', 'Blue', 'Red', 'Green'];
 
 /// Write the letter like the original HTML app: an edit pane and a live A4 preview.
 /// Wide screens show both side by side, phones switch with Edit / Preview tabs. Pops the text.
@@ -172,6 +179,45 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
           'Bullet list',
           () => _text.setKind(ParaKind.bullet),
           on: para.kind == ParaKind.bullet,
+        ),
+        tool(
+          Icons.format_list_numbered,
+          'Numbered list',
+          () => _text.setKind(ParaKind.numbered),
+          on: para.kind == ParaKind.numbered,
+        ),
+        tool(
+          Icons.text_decrease,
+          'Smaller text',
+          () => _text.setBits(maskSize, flags & flagSmall != 0 ? 0 : flagSmall),
+          on: flags & flagSmall != 0,
+        ),
+        tool(
+          Icons.text_increase,
+          'Larger text',
+          () => _text.setBits(maskSize, flags & flagLarge != 0 ? 0 : flagLarge),
+          on: flags & flagLarge != 0,
+        ),
+        PopupMenuButton<int>(
+          tooltip: 'Text colour',
+          icon: Icon(
+            Icons.format_color_text,
+            color: _swatch[colorIndex(flags)],
+          ),
+          onSelected: (i) => _text.setBits(maskColor, i << colorShift),
+          itemBuilder: (_) => [
+            for (var i = 0; i < _swatch.length; i++)
+              PopupMenuItem(
+                value: i,
+                child: Row(
+                  children: [
+                    Icon(Icons.circle, color: _swatch[i], size: 16),
+                    const SizedBox(width: 8),
+                    Text(_swatchNames[i]),
+                  ],
+                ),
+              ),
+          ],
         ),
         tool(
           Icons.format_align_left,

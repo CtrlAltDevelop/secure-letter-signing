@@ -45,6 +45,7 @@ void main() {
         await write('android/app/src/main/res/mipmap-${e.key}/ic_launcher.png', e.value);
       }
       await write('assets/brand/icon_1024.png', 1024);
+      await writeIco('windows/runner/resources/app_icon.ico', svg);
     });
   });
 }
@@ -54,4 +55,28 @@ Future<int> decodeSize(File f) async {
   final b = f.readAsBytesSync();
   if (b.length < 24) return 0;
   return ByteData.sublistView(b).getUint32(16);
+}
+
+/// Windows .ico with PNG-compressed images of 16..256 px.
+Future<void> writeIco(String path, String svg) async {
+  final f = File(path);
+  if (!f.parent.existsSync()) return;
+  const sizes = [16, 32, 48, 64, 128, 256];
+  final images = [for (final px in sizes) await render(svg, px)];
+  final head = ByteData(6 + 16 * sizes.length)
+    ..setUint16(2, 1, Endian.little)
+    ..setUint16(4, sizes.length, Endian.little);
+  var offset = 6 + 16 * sizes.length;
+  for (var i = 0; i < sizes.length; i++) {
+    final e = 6 + 16 * i;
+    head
+      ..setUint8(e, sizes[i] % 256)
+      ..setUint8(e + 1, sizes[i] % 256)
+      ..setUint16(e + 4, 1, Endian.little)
+      ..setUint16(e + 6, 32, Endian.little)
+      ..setUint32(e + 8, images[i].length, Endian.little)
+      ..setUint32(e + 12, offset, Endian.little);
+    offset += images[i].length;
+  }
+  f.writeAsBytesSync([...head.buffer.asUint8List(), for (final img in images) ...img]);
 }

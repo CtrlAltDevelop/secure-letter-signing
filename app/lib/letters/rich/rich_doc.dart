@@ -4,8 +4,16 @@ import 'package:flutter/foundation.dart';
 const int flagBold = 1;
 const int flagItalic = 2;
 const int flagUnderline = 4;
+const int flagSmall = 8;
+const int flagLarge = 16;
+const int maskSize = flagSmall | flagLarge;
+const int colorShift = 5;
+const int maskColor = 3 << colorShift; // 0 ink, 1 blue, 2 red, 3 green
 
-enum ParaKind { normal, h1, h2, bullet }
+int colorIndex(int flags) => (flags & maskColor) >> colorShift;
+
+// New kinds only at the end: the index is stored in saved letters.
+enum ParaKind { normal, h1, h2, bullet, numbered }
 
 enum ParaAlign { start, center, end, justify }
 
@@ -143,6 +151,15 @@ class RichDoc {
       for (var i = 0; i < paras.length; i++)
         if (i >= from && i <= to) change(paras[i]) else paras[i],
     ]);
+  }
+
+  /// Replaces the [mask] bits with [value] on [start, end).
+  RichDoc setBits(int start, int end, int mask, int value) {
+    if (start >= end) return this;
+    return RichDoc(text, [
+      for (var i = 0; i < flags.length; i++)
+        if (i >= start && i < end) (flags[i] & ~mask) | value else flags[i],
+    ], paras);
   }
 
   RichDoc withText(String t) => RichDoc.plain(t);

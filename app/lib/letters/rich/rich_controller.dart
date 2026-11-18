@@ -72,6 +72,18 @@ class RichController extends TextEditingController {
     _apply(_doc.toggleFlag(sel.start, sel.end, flag));
   }
 
+  /// Sets the [mask] bits to [value] on the selection (or for the next typed text when nothing is selected).
+  void setBits(int mask, int value) {
+    final sel = selection;
+    if (!sel.isValid || sel.isCollapsed) {
+      _typing = (activeFlags & ~mask) | value;
+      _typingPinned = true;
+      notifyListeners();
+      return;
+    }
+    _apply(_doc.setBits(sel.start, sel.end, mask, value));
+  }
+
   void setKind(ParaKind kind) {
     final sel = selection.isValid
         ? selection

@@ -61,6 +61,57 @@ void main() {
     });
   });
 
+  group('size, colour and numbered lists', () {
+    test('setBits replaces only its own bits', () {
+      final d = RichDoc.plain('abc')
+          .toggleFlag(0, 3, flagBold)
+          .setBits(0, 3, maskColor, 2 << colorShift)
+          .setBits(0, 3, maskSize, flagLarge);
+      expect(d.flags.first & flagBold, flagBold);
+      expect(colorIndex(d.flags.first), 2);
+      expect(d.flags.first & flagLarge, flagLarge);
+      final cleared = d.setBits(0, 3, maskSize, 0);
+      expect(cleared.flags.first & maskSize, 0);
+      expect(colorIndex(cleared.flags.first), 2);
+    });
+
+    test('numbered kind survives json and old kinds keep their index', () {
+      final d = RichDoc.plain('a\nb')
+          .mapParas(0, 3, (p) => p.copyWith(kind: ParaKind.numbered));
+      expect(
+        RichDoc.fromJson('a\nb', d.toJson()).paras.first.kind,
+        ParaKind.numbered,
+      );
+      expect(ParaKind.bullet.index, 3);
+    });
+
+    testWidgets(
+      'numbered paragraphs are counted 1., 2. and restart after a break',
+      (t) async {
+        final d = RichDoc.plain('a\nb\nc\nd')
+            .mapParas(0, 7, (p) => p.copyWith(kind: ParaKind.numbered));
+        final broken = d
+            .mapParas(4, 4, (p) => p.copyWith(kind: ParaKind.normal))
+            .mapParas(6, 6, (p) => p.copyWith(kind: ParaKind.numbered));
+        final slices = paginateRich(broken, 12).first;
+        await t.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: PaperBody(
+                doc: broken,
+                slices: slices,
+                font: 12,
+                ink: const Color(0xFF000000),
+              ),
+            ),
+          ),
+        );
+        expect(find.text('1.'), findsNWidgets(2));
+        expect(find.text('2.'), findsOneWidget);
+      },
+    );
+  });
+
   group('RichController', () {
     test('toggle on a selection styles it and undo/redo restore it', () {
       final c = RichController(RichDoc.plain('hello'));

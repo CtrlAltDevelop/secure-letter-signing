@@ -10,7 +10,16 @@ const double headerHeight = 112;
 const double titleHeight = 72;
 const double footerHeight = 36;
 const double signatureHeight = 104;
-const double bulletIndent = 16;
+const double bulletIndent = 22;
+
+bool isListKind(ParaKind k) => k == ParaKind.bullet || k == ParaKind.numbered;
+
+const List<Color?> _palette = [
+  null,
+  Color(0xFF165EF6),
+  Color(0xFFB3261E),
+  Color(0xFF1F8F78),
+];
 const double lineHeightFactor = 1.5;
 const double contentWidth = a4Width - 2 * pageMargin;
 
@@ -33,7 +42,11 @@ double kindScale(ParaKind k) => switch (k) {
 
 TextStyle _style(int flags, ParaKind kind, double font, TextStyle? base) =>
     (base ?? const TextStyle()).copyWith(
-      fontSize: font * kindScale(kind),
+      color: _palette[colorIndex(flags)] ?? base?.color,
+      fontSize:
+          font *
+          kindScale(kind) *
+          (flags & flagLarge != 0 ? 1.35 : (flags & flagSmall != 0 ? 0.8 : 1)),
       height: lineHeightFactor,
       fontWeight:
           (flags & flagBold != 0 || kind == ParaKind.h1 || kind == ParaKind.h2)
@@ -132,7 +145,7 @@ List<List<PageSlice>> paginateRich(
       used += h + _gap(font);
       continue;
     }
-    final width = contentWidth - (kind == ParaKind.bullet ? bulletIndent : 0);
+    final width = contentWidth - (isListKind(kind) ? bulletIndent : 0);
     final painter = TextPainter(
       text: richSpan(doc, ps, pe, font, null),
       textDirection: isRtlText(doc.text.substring(ps, pe))
@@ -203,6 +216,15 @@ class PaperBody extends StatelessWidget {
     children: [for (final s in slices) _slice(s)],
   );
 
+  /// 1-based position of paragraph [i] in its run of consecutive numbered paragraphs.
+  int _number(int i) {
+    var n = 1;
+    while (i - n >= 0 && doc.paras[i - n].kind == ParaKind.numbered) {
+      n++;
+    }
+    return n;
+  }
+
   Widget _slice(PageSlice s) {
     final style = doc.paras[s.para];
     final gap = s.last ? _gap(font) : 0.0;
@@ -227,7 +249,7 @@ class PaperBody extends StatelessWidget {
       padding: EdgeInsets.only(bottom: gap),
       child: Directionality(
         textDirection: dir,
-        child: style.kind == ParaKind.bullet
+        child: isListKind(style.kind)
             ? Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -235,7 +257,9 @@ class PaperBody extends StatelessWidget {
                     width: bulletIndent,
                     child: s.first
                         ? Text(
-                            '•',
+                            style.kind == ParaKind.numbered
+                                ? '${_number(s.para)}.'
+                                : '•',
                             style: TextStyle(
                               color: ink,
                               fontSize: font,
