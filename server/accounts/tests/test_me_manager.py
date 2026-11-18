@@ -113,3 +113,12 @@ def test_manager_issues_reset_token_when_email_is_unavailable(api, manager, make
     reset = api.call("post", f"/manage/users/{target.id}/reset-token", token=token).data["token"]
     resp = api.call("post", "/auth/password-reset/confirm", {"token": reset, "new_password": "Fr3sh-Str0ng-Pass!!"})
     assert resp.status_code == 200
+
+
+def test_manager_cannot_touch_superuser_permissions_or_reset_token(api, manager, make_user):
+    root = make_user("root@corp.test")
+    root.is_superuser = True
+    root.save(update_fields=["is_superuser"])
+    token = api.login(manager.email)["access"]
+    assert api.call("put", f"/manage/users/{root.id}/permissions", {"codes": ["user"]}, token=token).status_code == 403
+    assert api.call("post", f"/manage/users/{root.id}/reset-token", token=token).status_code == 403

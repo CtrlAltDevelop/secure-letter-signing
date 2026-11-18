@@ -69,13 +69,15 @@ def permissions(request):
 @router.get("/users", response=list[UserOut])
 def users(request):
     require_manager(request)
-    return [UserOut.of(u) for u in User.objects.order_by("email")]
+    return [UserOut.of(u) for u in User.objects.prefetch_related("grants").order_by("email")]
 
 
 @router.put("/users/{user_id}/permissions", response=UserOut)
 def set_permissions(request, user_id: int, data: GrantsIn):
     manager = require_manager(request)
     target = get_object_or_404(User, pk=user_id)
+    if target.is_superuser:
+        raise HttpError(403, "This account cannot be changed here")
     codes = set(data.codes) | {BASE_PERMISSION}
     found = Permission.objects.filter(code__in=codes)
     if found.count() != len(codes):
@@ -105,6 +107,8 @@ def reset_token(request, user_id: int):
     """For when email is not configured: the manager hands this token to the user."""
     manager = require_manager(request)
     target = get_object_or_404(User, pk=user_id, is_active=True)
+    if target.is_superuser:
+        raise HttpError(403, "This account cannot be changed here")
     token = signing.dumps({"u": target.id, "p": target.password[-16:]}, salt="password-reset")
     audit(manager, "reset_token_issued", target.email)
     return {"token": token}

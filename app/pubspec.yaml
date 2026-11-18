@@ -38,6 +38,7 @@ dependencies:
   http: ^1.6.0
   flutter_svg: ^2.4.0
   pointycastle: ^4.0.0
+  flutter_secure_storage: ^11.2.0
 
 dev_dependencies:
   flutter_test:

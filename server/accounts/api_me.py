@@ -35,7 +35,7 @@ def update_profile(request, data: ProfileIn):
     user = user_of(request)
     changes = data.dict(exclude_none=True)
     for field, value in changes.items():
-        setattr(user, field, value[:150])
+        setattr(user, field, value.strip()[:user._meta.get_field(field).max_length])
     user.save(update_fields=list(changes))
     return UserOut.of(user)
 

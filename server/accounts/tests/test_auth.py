@@ -145,3 +145,15 @@ def test_login_is_throttled(api, make_user):
     make_user("a@corp.test")
     codes = {api.call("post", "/auth/login", {"email": "a@corp.test", "password": "bad"}).status_code for _ in range(25)}
     assert 429 in codes
+
+
+def test_verify_email_cannot_reactivate_a_deactivated_user(api, company, settings):
+    from django.core import signing
+
+    user = User.objects.create_user("a@corp.test", PASSWORD, is_active=False)
+    user.email_verified = True  # already verified once, then deactivated by the manager
+    user.save(update_fields=["email_verified"])
+    token = signing.dumps({"u": user.id}, salt="verify-email")
+    api.call("post", "/auth/verify-email", {"token": token})
+    user.refresh_from_db()
+    assert not user.is_active

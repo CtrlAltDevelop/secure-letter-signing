@@ -3,7 +3,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import F
 from django.utils import timezone
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
@@ -68,6 +69,14 @@ def _create_user(email: str, password: str, full_name: str, *, active: bool) -> 
     return user
 
 
+def _create_or_409(email: str, data, *, active: bool) -> User:
+    try:
+        with transaction.atomic():  # a concurrent signup for the same email loses here, not with a 500
+            return _create_user(email, data.password, data.full_name, active=active)
+    except IntegrityError as exc:
+        raise HttpError(409, "Email already registered") from exc
+
+
 @router.post("/signup", auth=None, throttle=throttle, response={201: Detail, 202: Detail})
 @transaction.atomic
 def signup(request, data: SignupIn):
@@ -89,9 +98,10 @@ def signup(request, data: SignupIn):
         )
         if not usable:
             raise HttpError(403, "Invalid or expired invitation code")
-        user = _create_user(email, data.password, data.full_name, active=True)
-        invite.uses += 1
-        invite.save(update_fields=["uses"])
+        user = _create_or_409(email, data, active=True)
+        # Atomic bump: select_for_update is a no-op on SQLite.
+        if not InviteCode.objects.filter(pk=invite.pk, uses__lt=F("max_uses")).update(uses=F("uses") + 1):
+            raise HttpError(403, "Invalid or expired invitation code")
         audit(user, "signup_invite", email, invite=invite.id)
         return Status(201, {"detail": "Registered"})
 
@@ -100,7 +110,7 @@ def signup(request, data: SignupIn):
         raise HttpError(403, "Signup is not available for this email")
     if not mailer.email_configured(cs):
         raise HttpError(503, "Email is not configured; ask the manager for an invitation code")
-    user = _create_user(email, data.password, data.full_name, active=False)
+    user = _create_or_409(email, data, active=False)
     token = signing.dumps({"u": user.id}, salt="verify-email")
     if not mailer.send(email, "Verify your email", f"Your verification token:\n\n{token}\n"):
         raise HttpError(503, "Could not send the verification email")  # rolls the signup back
@@ -114,7 +124,8 @@ def verify_email(request, data: TokenIn):
         uid = signing.loads(data.token, salt="verify-email", max_age=VERIFY_MAX_AGE)["u"]
     except signing.BadSignature as exc:
         raise HttpError(400, "Invalid or expired token") from exc
-    User.objects.filter(pk=uid).update(is_active=True, email_verified=True)
+    # Only unverified accounts: a manager-deactivated user must not reactivate themselves with an old token.
+    User.objects.filter(pk=uid, email_verified=False).update(is_active=True, email_verified=True)
     return {"detail": "Email verified"}
 
 

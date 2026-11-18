@@ -68,7 +68,7 @@ class Session(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="sessions")
     refresh_hash = models.CharField(max_length=64, unique=True)
-    prev_refresh_hash = models.CharField(max_length=64, blank=True)  # detects refresh-token reuse
+    prev_refresh_hash = models.CharField(max_length=64, blank=True, db_index=True)  # detects refresh-token reuse
     device_name = models.CharField(max_length=100, blank=True)
     platform = models.CharField(max_length=30, blank=True)
     ip = models.GenericIPAddressField(null=True, blank=True)

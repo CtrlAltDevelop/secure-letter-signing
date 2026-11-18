@@ -22,7 +22,7 @@ class UserOut(Schema):
         return UserOut(
             id=user.id, email=user.email, full_name=user.full_name, title=user.title,
             department=user.department, is_manager=user.is_manager, is_superuser=user.is_superuser,
-            is_active=user.is_active, permissions=sorted(user.grants.values_list("code", flat=True)),
+            is_active=user.is_active, permissions=sorted(g.code for g in user.grants.all()),
         )
 
 

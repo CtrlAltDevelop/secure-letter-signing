@@ -20,7 +20,8 @@ Object? _sortKeys(Object? v) {
     final keys = v.keys.cast<String>().toList()..sort();
     return {for (final k in keys) k: _sortKeys(v[k])};
   }
-  if (v is double) throw FormatException('Floats are not allowed in signed payloads: $v');
+  if (v is double)
+    throw FormatException('Floats are not allowed in signed payloads: $v');
   return v;
 }
 
@@ -53,53 +54,99 @@ Uint8List _bigIntTo32(BigInt v) {
 
 /// SHA-256 over canonical public keys, first 128 bits, grouped xxxx-xxxx-...
 String fingerprint(Map<String, dynamic> pub) {
-  Map<String, String> strip(Map<String, dynamic> j) =>
-      {'kty': j['kty'] as String, 'crv': j['crv'] as String, 'x': j['x'] as String, 'y': j['y'] as String};
+  Map<String, String> strip(Map<String, dynamic> j) => {
+    'kty': j['kty'] as String,
+    'crv': j['crv'] as String,
+    'x': j['x'] as String,
+    'y': j['y'] as String,
+  };
   final text = canonicalJson({
     'sign': strip(pub['sign'] as Map<String, dynamic>),
     'enc': strip(pub['enc'] as Map<String, dynamic>),
   });
-  final hex = _hex(SHA256Digest().process(Uint8List.fromList(utf8.encode(text)))).substring(0, 32);
+  final hex = _hex(
+    SHA256Digest().process(Uint8List.fromList(utf8.encode(text))),
+  ).substring(0, 32);
   return RegExp('.{4}').allMatches(hex).map((m) => m.group(0)!).join('-');
 }
 
-String _hex(Uint8List bytes) => bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+String _hex(Uint8List bytes) =>
+    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
 /// ECDSA P-256 / SHA-256 signature as raw r||s (64 bytes), the WebCrypto format.
 Uint8List signBytes(Uint8List message, Map<String, dynamic> privateJwk) {
   final signer = ECDSASigner(SHA256Digest(), HMac(SHA256Digest(), 64))
-    ..init(true, ParametersWithRandom(PrivateKeyParameter<ECPrivateKey>(_privateKey(privateJwk)), SecureRandom('Fortuna')..seed(KeyParameter(Uint8List(32)))));
+    ..init(
+      true,
+      ParametersWithRandom(
+        PrivateKeyParameter<ECPrivateKey>(_privateKey(privateJwk)),
+        SecureRandom('Fortuna')..seed(KeyParameter(Uint8List(32))),
+      ),
+    );
   final sig = signer.generateSignature(message) as ECSignature;
   return Uint8List.fromList([..._bigIntTo32(sig.r), ..._bigIntTo32(sig.s)]);
 }
 
-bool verifyBytes(Uint8List message, Uint8List rawSig, Map<String, dynamic> publicJwk) {
+bool verifyBytes(
+  Uint8List message,
+  Uint8List rawSig,
+  Map<String, dynamic> publicJwk,
+) {
   if (rawSig.length != 64) return false;
-  final verifier = ECDSASigner(SHA256Digest())..init(false, PublicKeyParameter<ECPublicKey>(_publicKey(publicJwk)));
-  final sig = ECSignature(_bytesToBigInt(rawSig.sublist(0, 32)), _bytesToBigInt(rawSig.sublist(32)));
+  final verifier = ECDSASigner(SHA256Digest())
+    ..init(false, PublicKeyParameter<ECPublicKey>(_publicKey(publicJwk)));
+  final sig = ECSignature(
+    _bytesToBigInt(rawSig.sublist(0, 32)),
+    _bytesToBigInt(rawSig.sublist(32)),
+  );
   return verifier.verifySignature(message, sig);
 }
 
 /// Verifies a `.signed` file against the pinned manager public key (same checks as JS verifySigned).
 bool verifySigned(Map<String, dynamic> file, Map<String, dynamic> pinnedPub) {
-  if (file['v'] != 1 || file['type'] != 'signed' || file['payload'] == null || file['sig'] == null) return false;
+  if (file['v'] != 1 ||
+      file['type'] != 'signed' ||
+      file['payload'] == null ||
+      file['sig'] == null)
+    return false;
   final payload = file['payload'] as Map<String, dynamic>;
   final signer = payload['signer'] as Map<String, dynamic>?;
   if (signer?['fp'] != fingerprint(pinnedPub)) return false;
   final message = Uint8List.fromList(utf8.encode(canonicalJson(payload)));
-  return verifyBytes(message, base64.decode(file['sig'] as String), pinnedPub['sign'] as Map<String, dynamic>);
+  return verifyBytes(
+    message,
+    base64.decode(file['sig'] as String),
+    pinnedPub['sign'] as Map<String, dynamic>,
+  );
 }
 
 /// Decrypts a `.letter` file: ECDH(epk, enc private) -> HKDF-SHA256 -> AES-256-GCM, AAD = recipient fingerprint.
-Map<String, dynamic> decryptLetter(Map<String, dynamic> file, Map<String, dynamic> encPrivateJwk, String fp) {
-  if (file['v'] != 1 || file['type'] != 'letter') throw const FormatException('Invalid letter file');
-  if (file['to'] != fp) throw const FormatException('Letter is encrypted for another key');
+Map<String, dynamic> decryptLetter(
+  Map<String, dynamic> file,
+  Map<String, dynamic> encPrivateJwk,
+  String fp,
+) {
+  if (file['v'] != 1 || file['type'] != 'letter')
+    throw const FormatException('Invalid letter file');
+  if (file['to'] != fp)
+    throw const FormatException('Letter is encrypted for another key');
 
   final agreement = ECDHBasicAgreement()..init(_privateKey(encPrivateJwk));
-  final shared = _bigIntTo32(agreement.calculateAgreement(_publicKey(file['epk'] as Map<String, dynamic>)));
+  final shared = _bigIntTo32(
+    agreement.calculateAgreement(
+      _publicKey(file['epk'] as Map<String, dynamic>),
+    ),
+  );
 
   final hkdf = HKDFKeyDerivator(SHA256Digest())
-    ..init(HkdfParameters(shared, 32, Uint8List(0), Uint8List.fromList(utf8.encode(_hkdfInfo))));
+    ..init(
+      HkdfParameters(
+        shared,
+        32,
+        Uint8List(0),
+        Uint8List.fromList(utf8.encode(_hkdfInfo)),
+      ),
+    );
   final aesKey = hkdf.process(Uint8List(0));
 
   final gcm = GCMBlockCipher(AESEngine())
