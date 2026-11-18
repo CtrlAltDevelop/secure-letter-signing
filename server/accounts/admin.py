@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import Group
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect
@@ -22,6 +23,11 @@ from .api_manager import LETTERHEAD_MAX_LOGO, LETTERHEAD_TEXT_FIELDS, clean_lett
 from .models import (
     BASE_PERMISSION, AuditEvent, audit, verify_audit_chain, CompanySettings, InviteCode, Permission, Session, User,
 )
+
+
+# Groups are not used (permissions come from `grants`): hide them from the admin.
+if admin.site.is_registered(Group):
+    admin.site.unregister(Group)
 
 
 class NoDelete:
@@ -73,12 +79,12 @@ class UserAdmin(NoDelete, BaseUserAdmin, ModelAdmin):
     list_display = ("email", "full_name", "is_manager", "is_active", "is_superuser")
     list_filter = ("is_manager", "is_active", "is_superuser")
     search_fields = ("email", "full_name")
-    filter_horizontal = ("grants", "groups", "user_permissions")
+    filter_horizontal = ("grants", "user_permissions")
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Profile", {"fields": ("full_name", "title", "department", "email_verified")}),
         ("Roles", {"fields": ("is_manager", "is_active", "is_staff", "is_superuser")}),
-        ("Permissions", {"fields": ("grants", "groups", "user_permissions")}),
+        ("Permissions", {"fields": ("grants", "user_permissions")}),
     )
     add_fieldsets = ((None, {"classes": ("wide",), "fields": ("email", "password1", "password2", "is_manager")}),)
 

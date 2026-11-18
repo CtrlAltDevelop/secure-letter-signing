@@ -81,3 +81,10 @@ def test_import_users_csv_creates_skips_and_reports_invalid(root, make_user):
     dev = Client()
     dev.force_login(root)
     assert dev.get("/admin/accounts/user/import-users/").status_code == 200
+
+
+def test_groups_are_hidden_from_the_admin(root):
+    dev = Client()
+    dev.force_login(root)
+    assert dev.get("/admin/auth/group/").status_code == 404
+    assert 'name="groups"' not in dev.get(f"/admin/accounts/user/{root.pk}/change/").content.decode()
