@@ -183,10 +183,13 @@ class _AdminTabState extends State<AdminTab> {
             ),
             ListTile(
               title: const Text('Invitation codes'),
-              trailing: IconButton(
-                tooltip: 'New code',
-                icon: const Icon(Icons.add),
+              subtitle: data.invites.isEmpty
+                  ? const Text('No codes yet')
+                  : null,
+              trailing: FilledButton.icon(
                 onPressed: _newInvite,
+                icon: const Icon(Icons.add),
+                label: const Text('New code'),
               ),
             ),
             for (final i in data.invites)
