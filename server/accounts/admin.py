@@ -11,7 +11,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from .models import AuditEvent, verify_audit_chain, CompanySettings, InviteCode, Permission, Session, User
+from .models import AuditEvent, audit, verify_audit_chain, CompanySettings, InviteCode, Permission, Session, User
 
 
 class NoDelete:
@@ -85,8 +85,19 @@ class CompanySettingsAdmin(NoDelete, ModelAdmin):
 
 
 @admin.register(InviteCode)
-class InviteCodeAdmin(ReadOnly, ModelAdmin):
+class InviteCodeAdmin(NoDelete, ModelAdmin):
+    """The superuser may issue and deactivate codes (the manager does it in the app). Never deleted."""
+
     list_display = ("code", "created_by", "uses", "max_uses", "active", "expires_at")
+    fields = ("code", "max_uses", "expires_at", "active", "uses", "created_by")
+    readonly_fields = ("code", "uses", "created_by")
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+        if not change:
+            audit(request.user, "invite_created", str(obj.pk), max_uses=obj.max_uses, via="admin")
 
 
 @admin.register(Session)

@@ -37,3 +37,16 @@ def test_second_manager_is_refused_by_the_admin_form(manager, make_user):
     form = UserEditForm(data, instance=other)
     assert not form.is_valid()
     assert "already the manager" in str(form.errors)
+
+
+def test_superuser_can_issue_an_invite_code_but_not_delete_it(root):
+    from accounts.models import InviteCode
+
+    dev = Client()
+    dev.force_login(root)
+    assert dev.get("/admin/accounts/invitecode/add/").status_code == 200
+    resp = dev.post("/admin/accounts/invitecode/add/", {"max_uses": 3, "active": "on"})
+    assert resp.status_code == 302
+    code = InviteCode.objects.get()
+    assert code.created_by == root and code.max_uses == 3 and code.code
+    assert dev.get(f"/admin/accounts/invitecode/{code.pk}/delete/").status_code == 403
