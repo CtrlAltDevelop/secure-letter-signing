@@ -4,7 +4,7 @@ PORT ?= 8090
 PROJECT := letters-$(BRAND)
 SERVER_ENV := DJANGO_DEBUG=1 BRAND=$(BRAND)
 
-.PHONY: help up down logs dev superuser test app macos
+.PHONY: help up down logs dev superuser test app macos icons
 
 help:
 	@echo "make up         run backend in Docker (Postgres + Redis) for BRAND=$(BRAND); needs brands/$(BRAND)/.env"
@@ -43,6 +43,9 @@ app: app-assets
 
 macos: app-assets
 	cd app && flutter pub get && flutter run -d macos --dart-define=BRAND=$(BRAND)
+
+icons: app-assets
+	cd app && BRAND=$(BRAND) flutter test tool/gen_icons_test.dart
 
 .PHONY: app-assets
 app-assets:
