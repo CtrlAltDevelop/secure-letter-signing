@@ -6,6 +6,7 @@ import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/api/auth_controller.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/screens/home_screen.dart';
+import 'package:letter_signing/theme/app_theme.dart';
 
 import 'brand.dart';
 
@@ -36,9 +37,9 @@ class LetterApp extends StatelessWidget {
     return MaterialApp(
       title: brand.name,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: brand.primary),
-      ),
+      theme: AppTheme.light(brand),
+      darkTheme: AppTheme.dark(brand),
+      themeMode: ThemeMode.system,
       home: ListenableBuilder(
         listenable: auth,
         builder: (context, _) => auth.user == null

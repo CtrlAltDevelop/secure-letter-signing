@@ -1,1 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#081528"/><path d="M16 42 L28 22 L36 34 L42 26 L48 42" fill="none" stroke="#BFA46F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Signed letter">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E1F1A"/>
+      <stop offset="1" stop-color="#1B1210"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F2C75C"/>
+      <stop offset="1" stop-color="#E0A526"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#bg)"/>
+  <!-- the letter -->
+  <path d="M80 50h64l38 38v108a12 12 0 0 1-12 12H80a12 12 0 0 1-12-12V62a12 12 0 0 1 12-12z" fill="#F3F0E6"/>
+  <path d="M144 50v26a12 12 0 0 0 12 12h26z" fill="#D9CFB4"/>
+  <rect x="88" y="108" width="68" height="8" rx="4" fill="#D9B7AA"/>
+  <rect x="88" y="128" width="84" height="8" rx="4" fill="#D9B7AA" opacity=".65"/>
+  <!-- signature stroke -->
+  <path d="M86 178c13-26 21-31 25-19s8 22 18 2 17-14 29-4" fill="none" stroke="#B4472A" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- seal -->
+  <circle cx="184" cy="190" r="35" fill="#1B1210"/>
+  <circle cx="184" cy="190" r="29" fill="url(#gold)"/>
+  <path d="M170 190l10 10 18-21" fill="none" stroke="#1B1210" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
