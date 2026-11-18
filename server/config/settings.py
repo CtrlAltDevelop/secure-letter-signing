@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -68,12 +69,29 @@ if os.environ.get("POSTGRES_HOST"):
 else:  # local dev and tests only
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 
+# Redis in Docker; without REDIS_URL (make dev) use in-memory equivalents, no Redis needed.
+REDIS_URL = os.environ.get("REDIS_URL", "")
+if REDIS_URL:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [REDIS_URL]}}}
+    CELERY_BROKER_URL = REDIS_URL
+else:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    CELERY_BROKER_URL = "memory://"
+    CELERY_TASK_ALWAYS_EAGER = True  # run tasks inline in dev and tests
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+AUTH_USER_MODEL = "accounts.User"
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "http://localhost:8000")
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+)
 
 LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"

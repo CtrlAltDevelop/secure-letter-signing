@@ -29,6 +29,7 @@ services:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
       POSTGRES_HOST: db
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./brands:/brands:ro
       - attachments:/app/attachments
