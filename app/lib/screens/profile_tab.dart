@@ -42,11 +42,7 @@ class _ProfileTabState extends State<ProfileTab> {
     });
     final ok = await runGuarded(
       context,
-      () => widget.auth.updateProfile(
-        fullName: _name.text,
-        title: _title.text,
-        department: _department.text,
-      ),
+      () => widget.auth.updateProfile(fullName: _name.text, title: _title.text),
     );
     if (!mounted) return;
     setState(() {
@@ -83,8 +79,10 @@ class _ProfileTabState extends State<ProfileTab> {
     String label,
     IconData icon, {
     String? Function(String?)? validator,
+    bool enabled = true,
   }) => TextFormField(
     controller: c,
+    enabled: enabled,
     validator: validator,
     autovalidateMode: AutovalidateMode.onUserInteraction,
     decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
@@ -156,7 +154,12 @@ class _ProfileTabState extends State<ProfileTab> {
                     const SizedBox(height: 14),
                     _field(_title, 'Job title', Icons.work_outline),
                     const SizedBox(height: 14),
-                    _field(_department, 'Department', Icons.apartment_outlined),
+                    _field(
+                      _department,
+                      'Department (set by the manager)',
+                      Icons.apartment_outlined,
+                      enabled: false,
+                    ),
                     const SizedBox(height: 16),
                     Align(
                       alignment: AlignmentDirectional.centerEnd,

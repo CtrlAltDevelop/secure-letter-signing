@@ -24,7 +24,7 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 
 from .api_manager import LETTERHEAD_MAX_LOGO, LETTERHEAD_TEXT_FIELDS, clean_letterhead
 from .models import (
-    BASE_PERMISSION, AuditEvent, audit, verify_audit_chain, CompanySettings, InviteCode, Permission, User,
+    BASE_PERMISSION, AuditEvent, audit, verify_audit_chain, CompanySettings, Department, InviteCode, Permission, User,
 )
 
 
@@ -96,7 +96,7 @@ class UserAdmin(NoDelete, BaseUserAdmin, ModelAdmin):
         q = request.GET.get("q", "").strip()
         users = User.objects.order_by("email")
         if q:
-            users = users.filter(Q(email__icontains=q) | Q(full_name__icontains=q) | Q(department__icontains=q))
+            users = users.filter(Q(email__icontains=q) | Q(full_name__icontains=q) | Q(department__name__icontains=q))
         page = Paginator(users, 48).get_page(request.GET.get("p"))
         context = {
             **self.admin_site.each_context(request),
@@ -146,7 +146,13 @@ def import_users_from_csv(text: str) -> dict:
         if User.objects.filter(email__iexact=email).exists():
             report["skipped"].append(email)
             continue
-        user = User.objects.create_user(email, None, **{c: row.get(c, "") for c in IMPORT_COLUMNS[1:]})
+        dept_name = row.get("department", "")
+        dept = Department.objects.filter(name__iexact=dept_name, active=True).first() if dept_name else None
+        if dept_name and not dept:
+            report["invalid"].append(f"line {n}: unknown department '{dept_name}' (user created without one)")
+        user = User.objects.create_user(
+            email, None, full_name=row.get("full_name", ""), title=row.get("title", ""), department=dept,
+        )
         if base:
             user.grants.add(base)
         report["created"].append(email)
@@ -155,6 +161,18 @@ def import_users_from_csv(text: str) -> dict:
 
 class ImportUsersForm(forms.Form):
     file = forms.FileField(help_text="CSV, UTF-8, header: email, full_name, title, department (only email is required).")
+
+
+@admin.register(Department)
+class DepartmentAdmin(ReadOnly, ModelAdmin):
+    """Read-only here: the manager creates and renames departments in the app."""
+
+    list_display = ("name", "active", "member_count")
+    search_fields = ("name",)
+
+    @admin.display(description="Members")
+    def member_count(self, obj):
+        return obj.users.count()
 
 
 LOGO_MAGIC = (b"\x89PNG", b"\xff\xd8\xff")

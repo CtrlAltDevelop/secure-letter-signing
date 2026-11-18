@@ -6,6 +6,7 @@ import 'package:letter_signing/keys/company_key_service.dart';
 import 'package:letter_signing/keys/key_vault.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/screens/company_key_card.dart';
+import 'package:letter_signing/screens/departments_card.dart';
 import 'package:letter_signing/screens/letterhead_card.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
@@ -177,6 +178,12 @@ class _AdminTabState extends State<AdminTab> {
     }
   }
 
+  Future<void> _setDepartment(UserInfo user) async {
+    if (await pickDepartment(context, widget.auth.api, user) && mounted) {
+      _reload();
+    }
+  }
+
   Future<void> _newInvite() async {
     final uses = TextEditingController(text: '1');
     final ok = await showDialog<bool>(
@@ -261,6 +268,7 @@ class _AdminTabState extends State<AdminTab> {
                       ),
                     ),
                     ..._signupSection(data.company),
+                    DepartmentsCard(api: widget.auth.api, onChanged: _reload),
                     ..._invitesSection(data.invites),
                     ..._peopleSection(data),
                     const SizedBox(height: Tokens.gap),
@@ -333,6 +341,7 @@ class _AdminTabState extends State<AdminTab> {
         user: u,
         onSelected: (action) => switch (action) {
           'perms' => _editPermissions(u, data.permissionCodes),
+          'dept' => _setDepartment(u),
           'active' => _call('POST', '/manage/users/${u.id}/active', {
             'active': !u.isActive,
           }),
@@ -438,6 +447,7 @@ class _PersonCard extends StatelessWidget {
                   children: [
                     if (user.isManager)
                       const StatusPill('Manager', tone: Tone.info),
+                    if (user.department.isNotEmpty) StatusPill(user.department),
                     if (!user.isActive)
                       const StatusPill('Deactivated', tone: Tone.error)
                     else
@@ -453,6 +463,7 @@ class _PersonCard extends StatelessWidget {
             onSelected: onSelected,
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'perms', child: Text('Permissions')),
+              const PopupMenuItem(value: 'dept', child: Text('Department')),
               PopupMenuItem(
                 value: 'active',
                 child: Text(user.isActive ? 'Deactivate' : 'Reactivate'),

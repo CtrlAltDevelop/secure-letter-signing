@@ -12,6 +12,7 @@ class UserOut(Schema):
     full_name: str
     title: str
     department: str
+    department_id: int | None
     is_manager: bool
     is_superuser: bool
     is_active: bool
@@ -21,7 +22,8 @@ class UserOut(Schema):
     def of(user: User) -> "UserOut":
         return UserOut(
             id=user.id, email=user.email, full_name=user.full_name, title=user.title,
-            department=user.department, is_manager=user.is_manager, is_superuser=user.is_superuser,
+            department=user.department.name if user.department else "", department_id=user.department_id,
+            is_manager=user.is_manager, is_superuser=user.is_superuser,
             is_active=user.is_active, permissions=sorted(g.code for g in user.grants.all()),
         )
 

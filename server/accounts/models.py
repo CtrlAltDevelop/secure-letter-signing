@@ -40,12 +40,25 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra)
 
 
+class Department(models.Model):
+    """Company departments. Managed by the manager only (API); never deleted, only deactivated."""
+
+    name = models.CharField(max_length=100, unique=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=150, blank=True)
     title = models.CharField(max_length=100, blank=True)
-    department = models.CharField(max_length=100, blank=True)
+    department = models.ForeignKey(Department, null=True, blank=True, on_delete=models.PROTECT, related_name="users")
     email_verified = models.BooleanField(default=False)
     # Exactly one manager per company; only the superuser sets this (in the admin).
     is_manager = models.BooleanField(default=False)

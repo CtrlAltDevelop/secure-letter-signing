@@ -9,7 +9,7 @@ from ninja.errors import HttpError
 from . import mailer
 from .api_auth import Detail
 from .auth import BearerAuth, require_manager
-from .models import BASE_PERMISSION, CompanySettings, InviteCode, Permission, Session, User, audit
+from .models import BASE_PERMISSION, CompanySettings, Department, InviteCode, Permission, Session, User, audit
 from .schemas import UserOut
 from django.utils import timezone
 
@@ -118,6 +118,79 @@ def set_active(request, user_id: int, data: ActiveIn):
     if not data.active:
         Session.objects.filter(user=target, revoked_at__isnull=True).update(revoked_at=timezone.now())
     audit(manager, "user_activated" if data.active else "user_deactivated", target.email)
+    return UserOut.of(target)
+
+
+class DepartmentIn(Schema):
+    name: str | None = None
+    active: bool | None = None
+
+
+class DepartmentOut(Schema):
+    id: int
+    name: str
+    active: bool
+    members: int
+
+
+class UserDepartmentIn(Schema):
+    department_id: int | None = None
+
+
+def _department_out(d: Department) -> DepartmentOut:
+    return DepartmentOut(id=d.id, name=d.name, active=d.active, members=d.users.count())
+
+
+@router.get("/departments", response=list[DepartmentOut])
+def departments(request):
+    require_manager(request)
+    return [_department_out(d) for d in Department.objects.all()]
+
+
+@router.post("/departments", response=DepartmentOut)
+def create_department(request, data: DepartmentIn):
+    manager = require_manager(request)
+    name = (data.name or "").strip()[:100]
+    if not name:
+        raise HttpError(422, "Name is required")
+    if Department.objects.filter(name__iexact=name).exists():
+        raise HttpError(409, "A department with this name already exists")
+    dept = Department.objects.create(name=name)
+    audit(manager, "department_created", str(dept.pk), name=name)
+    return _department_out(dept)
+
+
+@router.patch("/departments/{dept_id}", response=DepartmentOut)
+def update_department(request, dept_id: int, data: DepartmentIn):
+    manager = require_manager(request)
+    dept = get_object_or_404(Department, pk=dept_id)
+    changes = {}
+    if data.name is not None:
+        name = data.name.strip()[:100]
+        if not name:
+            raise HttpError(422, "Name is required")
+        if Department.objects.filter(name__iexact=name).exclude(pk=dept.pk).exists():
+            raise HttpError(409, "A department with this name already exists")
+        changes["name"] = name
+    if data.active is not None:
+        changes["active"] = data.active
+    for field, value in changes.items():
+        setattr(dept, field, value)
+    dept.save(update_fields=list(changes))
+    audit(manager, "department_changed", str(dept.pk), **changes)
+    return _department_out(dept)
+
+
+@router.put("/users/{user_id}/department", response=UserOut)
+def set_user_department(request, user_id: int, data: UserDepartmentIn):
+    manager = require_manager(request)
+    target = get_object_or_404(User, pk=user_id)
+    dept = None
+    if data.department_id is not None:
+        dept = get_object_or_404(Department, pk=data.department_id, active=True)
+    target.department = dept
+    target.save(update_fields=["department"])
+    audit(manager, "user_department_set", target.email, department=dept.name if dept else "")
     return UserOut.of(target)
 
 

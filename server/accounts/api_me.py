@@ -19,7 +19,6 @@ router = Router(tags=["me"], auth=BearerAuth())
 class ProfileIn(Schema):
     full_name: str | None = None
     title: str | None = None
-    department: str | None = None
 
 
 class PasswordIn(Schema):

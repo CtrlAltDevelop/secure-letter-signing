@@ -11,6 +11,7 @@ class UserInfo {
     required this.title,
     required this.department,
     required this.isManager,
+    this.departmentId,
     required this.permissions,
     this.isActive = true,
   });
@@ -20,6 +21,7 @@ class UserInfo {
   final String fullName;
   final String title;
   final String department;
+  final int? departmentId;
   final bool isManager;
   final bool isActive;
   final List<String> permissions;
@@ -30,6 +32,7 @@ class UserInfo {
     fullName: j['full_name'] as String,
     title: j['title'] as String,
     department: j['department'] as String,
+    departmentId: j['department_id'] as int?,
     isManager: j['is_manager'] as bool,
     isActive: j['is_active'] as bool,
     permissions: List<String>.from(j['permissions'] as List),
@@ -133,19 +136,11 @@ class AuthController extends ChangeNotifier {
     body: {'token': token, 'new_password': newPassword},
   );
 
-  Future<void> updateProfile({
-    String? fullName,
-    String? title,
-    String? department,
-  }) async {
+  Future<void> updateProfile({String? fullName, String? title}) async {
     final data = await api.call(
       'PATCH',
       '/me',
-      body: {
-        'full_name': ?fullName,
-        'title': ?title,
-        'department': ?department,
-      },
+      body: {'full_name': ?fullName, 'title': ?title},
     ) as Map<String, dynamic>;
     _user = UserInfo.fromJson(data);
     notifyListeners();

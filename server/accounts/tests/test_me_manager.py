@@ -10,8 +10,8 @@ def token_for(api, email):
 def test_profile_update(api, make_user):
     make_user("a@corp.test")
     token = token_for(api, "a@corp.test")
-    resp = api.call("patch", "/me", {"full_name": "Ada", "department": "R&D"}, token)
-    assert resp.data["full_name"] == "Ada" and resp.data["department"] == "R&D"
+    resp = api.call("patch", "/me", {"full_name": "Ada"}, token)
+    assert resp.data["full_name"] == "Ada" and resp.data["department"] == ""
 
 
 def test_sessions_list_marks_current_and_can_revoke_another(api, make_user):
@@ -168,3 +168,31 @@ def test_letterhead_rejects_non_image_logo_and_non_manager(api, make_user):
     bad = api.call("patch", "/manage/company", {"letterhead": {"logo": "http://evil/x.png"}}, boss)
     assert bad.status_code == 422
     assert api.call("patch", "/manage/company", {"letterhead": {}}, token_for(api, "a@corp.test")).status_code == 403
+
+
+# --- departments --------------------------------------------------------------------------------
+
+def test_manager_manages_departments_and_assigns_users(api, make_user):
+    make_user("boss@corp.test", manager=True)
+    ann = make_user("a@corp.test")
+    boss = token_for(api, "boss@corp.test")
+    made = api.call("post", "/manage/departments", {"name": " R&D "}, boss)
+    assert made.data["name"] == "R&D" and made.data["members"] == 0
+    assert api.call("post", "/manage/departments", {"name": "r&d"}, boss).status_code == 409
+    did = made.data["id"]
+    out = api.call("put", f"/manage/users/{ann.id}/department", {"department_id": did}, boss)
+    assert out.data["department"] == "R&D"
+    assert api.call("patch", f"/manage/departments/{did}", {"name": "Research"}, boss).data["members"] == 1
+    api.call("patch", f"/manage/departments/{did}", {"active": False}, boss)
+    assert api.call("put", f"/manage/users/{ann.id}/department", {"department_id": did}, boss).status_code == 404
+    cleared = api.call("put", f"/manage/users/{ann.id}/department", {"department_id": None}, boss)
+    assert cleared.data["department"] == ""
+
+
+def test_departments_are_manager_only_and_users_cannot_self_assign(api, make_user):
+    make_user("a@corp.test")
+    tok = token_for(api, "a@corp.test")
+    assert api.call("get", "/manage/departments", token=tok).status_code == 403
+    assert api.call("post", "/manage/departments", {"name": "X"}, tok).status_code == 403
+    me = api.call("patch", "/me", {"department": "Hack"}, tok)
+    assert me.data["department"] == ""
