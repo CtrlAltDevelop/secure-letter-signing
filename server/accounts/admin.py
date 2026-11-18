@@ -80,12 +80,12 @@ class UserAdmin(NoDelete, BaseUserAdmin, ModelAdmin):
     list_display = ("email", "full_name", "is_manager", "is_active", "is_superuser")
     list_filter = ("is_manager", "is_active", "is_superuser")
     search_fields = ("email", "full_name")
-    filter_horizontal = ("grants", "user_permissions")
+    filter_horizontal = ("grants",)
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Profile", {"fields": ("full_name", "title", "department", "email_verified")}),
         ("Roles", {"fields": ("is_manager", "is_active", "is_staff", "is_superuser")}),
-        ("Permissions", {"fields": ("grants", "user_permissions")}),
+        ("Permissions", {"fields": ("grants",)}),
     )
     add_fieldsets = ((None, {"classes": ("wide",), "fields": ("email", "password1", "password2", "is_manager")}),)
 
@@ -138,12 +138,6 @@ def import_users_from_csv(text: str) -> dict:
 
 class ImportUsersForm(forms.Form):
     file = forms.FileField(help_text="CSV, UTF-8, header: email, full_name, title, department (only email is required).")
-
-
-@admin.register(Permission)
-class PermissionAdmin(ModelAdmin):
-    list_display = ("code", "description")
-    search_fields = ("code",)
 
 
 LOGO_MAGIC = (b"\x89PNG", b"\xff\xd8\xff")

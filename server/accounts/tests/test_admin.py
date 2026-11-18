@@ -109,3 +109,10 @@ def test_audit_admin_lists_with_badges_and_detail_page(root, manager):
     assert "invite created" in html and "max_uses: 3" in html
     assert dev.get("/admin/accounts/auditevent/?q=invite").status_code == 200
     assert "max_uses" in dev.get(f"/admin/accounts/auditevent/{ev.pk}/change/").content.decode()
+
+
+def test_permission_catalog_is_not_in_the_admin(root):
+    dev = Client()
+    dev.force_login(root)
+    assert dev.get("/admin/accounts/permission/").status_code == 404
+    assert dev.get(f"/admin/accounts/user/{root.pk}/change/").status_code == 200
