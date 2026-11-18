@@ -74,9 +74,13 @@ class DraftInput {
     this.order = 'parallel',
     this.parentId,
     this.dueAt,
+    this.rich,
   });
   final String title;
   final String text;
+
+  /// Formatting of [text] (bold, headings, alignment...), stored inside the encrypted body. Null = plain.
+  final Map<String, dynamic>? rich;
   final List<int> signerIds;
   final List<int> viewerIds;
   final List<PendingAttachment> attachments;
@@ -116,8 +120,10 @@ class DecryptedLetter {
     required this.text,
     required this.attachments,
     required this.docKey,
+    this.rich,
   });
   final String text;
+  final Object? rich; // raw formatting JSON, see RichDoc.fromJson
   final List<AttachmentMeta> attachments;
   final Uint8List docKey;
 }
@@ -138,10 +144,12 @@ class LetterCryptoService {
 
   static Map<String, dynamic> bodyJson(
     String text,
-    List<AttachmentMeta> attachments,
-  ) => {
+    List<AttachmentMeta> attachments, {
+    Map<String, dynamic>? rich,
+  }) => {
     'text': text,
     'attachments': [for (final a in attachments) a.toJson()],
+    'rich': ?rich,
   };
 
   /// One wrap per active key of [users] (optionally only [onlyKeyIds]).
@@ -186,7 +194,9 @@ class LetterCryptoService {
     return DraftPayload(
       title: input.title.trim(),
       body: encryptJson(
-        bodyJson(input.text, [for (final a in input.attachments) a.meta]),
+        bodyJson(input.text, [
+          for (final a in input.attachments) a.meta,
+        ], rich: input.rich),
         docKey,
       ),
       visibility: input.visibility,
@@ -307,6 +317,7 @@ class LetterCryptoService {
     final body = decryptJson(letter.body, docKey) as Map<String, dynamic>;
     return DecryptedLetter(
       text: (body['text'] as String?) ?? '',
+      rich: body['rich'],
       attachments: [
         for (final a in (body['attachments'] as List?) ?? const [])
           AttachmentMeta.fromJson(Map<String, dynamic>.from(a as Map)),

@@ -8,6 +8,8 @@ import 'package:printing/printing.dart';
 
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/paper_pages.dart';
+import 'package:letter_signing/letters/rich/rich_doc.dart';
+import 'package:letter_signing/letters/rich/rich_layout.dart';
 
 const double _printScale = 3; // 3x A4 points = ~216 dpi
 
@@ -26,7 +28,7 @@ class PaperDocument {
   final String title;
   final String number;
   final String date;
-  final String text;
+  final RichDoc text;
   final List<PaperSignature> signatures;
 }
 
@@ -73,11 +75,9 @@ class PaperPreviewState extends State<PaperPreview> {
   @override
   Widget build(BuildContext context) {
     final d = widget.doc;
-    final rtl = isRtlText(d.text);
-    final pages = paginate(
+    final pages = paginateRich(
       d.text,
       widget.fontSize,
-      rtl: rtl,
       signatureCount: d.signatures.length,
     );
     _count = pages.length;
@@ -108,9 +108,9 @@ class PaperPreviewState extends State<PaperPreview> {
                       head: d.head,
                       index: i,
                       count: pages.length,
-                      text: pages[i],
+                      doc: d.text,
+                      slices: pages[i],
                       fontSize: widget.fontSize,
-                      rtl: rtl,
                       title: d.title,
                       number: d.number,
                       date: d.date,

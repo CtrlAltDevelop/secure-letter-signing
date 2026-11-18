@@ -166,9 +166,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    debugPrint(
-      "S=${find.byType(SignScreen).evaluate().length} R=${find.textContaining("Reject").evaluate().length} T=${find.byType(Text).evaluate().length} ${tester.takeException()}",
-    );
     await tester.tap(find.text('Reject'));
     await tester.pump();
     await tester.tap(find.text('Unlock key and sign'));

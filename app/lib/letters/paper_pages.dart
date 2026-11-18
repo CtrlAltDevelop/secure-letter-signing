@@ -1,81 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/letters/letterhead.dart';
+import 'package:letter_signing/letters/rich/rich_doc.dart';
+import 'package:letter_signing/letters/rich/rich_layout.dart';
 
-/// A4 in logical points (72 per inch).
-const double a4Width = 595;
-const double a4Height = 842;
-const double pageMargin = 54;
-const double _headerHeight = 112;
-const double _titleHeight = 72;
-const double signatureHeight = 104; // per signature block
-const double _footerHeight = 36;
 const Color _ink = paperInk;
-
-/// True when the first letter with a strong direction is Arabic-script/Hebrew.
-bool isRtlText(String s) {
-  for (final r in s.runes) {
-    if ((r >= 0x0590 && r <= 0x08FF) || (r >= 0xFB1D && r <= 0xFEFC)) {
-      return true;
-    }
-    if ((r >= 0x41 && r <= 0x5A) || (r >= 0x61 && r <= 0x7A)) return false;
-  }
-  return false;
-}
-
-/// Splits [text] into per-page strings at line boundaries for an A4 page at [fontSize].
-/// The first page has less room (header + title block).
-List<String> paginate(
-  String text,
-  double fontSize, {
-  required bool rtl,
-  int signatureCount = 0,
-}) {
-  const contentWidth = a4Width - 2 * pageMargin;
-  final painter = TextPainter(
-    text: TextSpan(text: text, style: bodyStyle(fontSize)),
-    textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-  )..layout(maxWidth: contentWidth);
-  final lines = painter.computeLineMetrics();
-  final pages = <String>[];
-  var start = 0;
-  var used = 0.0;
-  var capacity = _bodyCapacity(first: true);
-  var pageStart = 0;
-  for (var i = 0; i < lines.length; i++) {
-    final m = lines[i];
-    final top = m.baseline - m.ascent;
-    final y = top + m.height / 2;
-    final b = painter.getLineBoundary(
-      painter.getPositionForOffset(Offset(contentWidth / 2, y)),
-    );
-    if (used + m.height > capacity && i > 0) {
-      pages.add(text.substring(pageStart, start).trimRight());
-      pageStart = b.start;
-      used = 0;
-      capacity = _bodyCapacity(first: false);
-    }
-    start = b.end;
-    used += m.height;
-  }
-  pages.add(text.substring(pageStart).trimRight());
-  // The signature blocks sit under the text of the last page; if they do not fit, they get their own page.
-  if (signatureCount > 0 &&
-      used + signatureCount * signatureHeight > capacity) {
-    pages.add('');
-  }
-  painter.dispose();
-  return pages;
-}
-
-double _bodyCapacity({required bool first}) =>
-    a4Height -
-    2 * pageMargin -
-    _footerHeight -
-    (first ? _headerHeight + _titleHeight : 0);
-
-TextStyle bodyStyle(double fontSize) =>
-    TextStyle(color: _ink, fontSize: fontSize, height: 1.5);
 
 /// One A4 sheet. Wrap in a RepaintBoundary to rasterize for printing.
 class PaperPage extends StatelessWidget {
@@ -84,9 +13,9 @@ class PaperPage extends StatelessWidget {
     required this.head,
     required this.index,
     required this.count,
-    required this.text,
+    required this.doc,
+    required this.slices,
     required this.fontSize,
-    required this.rtl,
     required this.title,
     required this.number,
     required this.date,
@@ -95,9 +24,9 @@ class PaperPage extends StatelessWidget {
   final Letterhead head;
   final int index;
   final int count;
-  final String text;
+  final RichDoc doc;
+  final List<PageSlice> slices;
   final double fontSize;
-  final bool rtl;
   final String title;
   final String number;
   final String date;
@@ -105,7 +34,7 @@ class PaperPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dir = rtl ? TextDirection.rtl : TextDirection.ltr;
+    final dir = isRtlText(doc.text) ? TextDirection.rtl : TextDirection.ltr;
     return Container(
       width: a4Width,
       height: a4Height,
@@ -118,14 +47,14 @@ class PaperPage extends StatelessWidget {
           children: [
             if (index == 0) ...[
               SizedBox(
-                height: _headerHeight,
+                height: headerHeight,
                 child: Align(
                   alignment: Alignment.topCenter,
                   child: LetterheadHeader(head: head),
                 ),
               ),
               SizedBox(
-                height: _titleHeight,
+                height: titleHeight,
                 child: Directionality(
                   textDirection: dir,
                   child: Column(
@@ -162,15 +91,17 @@ class PaperPage extends StatelessWidget {
               ),
             ],
             Expanded(
-              child: Directionality(
-                textDirection: dir,
-                child: Text(text, style: bodyStyle(fontSize)),
+              child: PaperBody(
+                doc: doc,
+                slices: slices,
+                font: fontSize,
+                ink: _ink,
               ),
             ),
             if (index == count - 1)
               for (final sig in signatures) SignatureBlock(sig: sig),
             SizedBox(
-              height: _footerHeight,
+              height: footerHeight,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [

@@ -6,6 +6,9 @@ import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/paper_preview.dart';
 import 'package:letter_signing/letters/paper_screen.dart';
+import 'package:letter_signing/letters/rich/rich_controller.dart';
+import 'package:letter_signing/letters/rich/rich_doc.dart';
+import 'package:letter_signing/letters/rich/rich_layout.dart';
 
 const double _wideBreakpoint = 900;
 
@@ -16,13 +19,13 @@ class PaperEditorScreen extends StatefulWidget {
     super.key,
     required this.head,
     required this.title,
-    required this.initialText,
+    required this.initial,
     this.number = '(new)',
     this.date = '',
   });
   final Letterhead head;
   final String title;
-  final String initialText;
+  final RichDoc initial;
   final String number;
   final String date;
 
@@ -31,12 +34,16 @@ class PaperEditorScreen extends StatefulWidget {
 }
 
 class _PaperEditorScreenState extends State<PaperEditorScreen> {
-  late final _text = TextEditingController(text: widget.initialText);
+  late final _text = RichController(widget.initial)..addListener(_changed);
   final _preview = GlobalKey<PaperPreviewState>();
   double _font = defaultPaperFont;
   bool _showPreview = false;
   bool _busy = false;
   String? _error;
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -63,7 +70,7 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
     title: widget.title,
     number: widget.number,
     date: widget.date.isEmpty ? _today() : widget.date,
-    text: _text.text,
+    text: _text.doc,
   );
 
   static String _today() {
@@ -79,7 +86,7 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Letter text', style: Theme.of(context).textTheme.titleMedium),
+          _toolbar(),
           const SizedBox(height: 8),
           Expanded(
             child: TextField(
@@ -89,17 +96,110 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
               maxLines: null,
               minLines: null,
               textAlignVertical: TextAlignVertical.top,
-              onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 hintText: 'Write the letter here...',
                 alignLabelWithHint: true,
               ),
             ),
           ),
+          const SizedBox(height: 6),
+          _status(context),
         ],
       ),
     ),
   );
+
+  Widget _status(BuildContext context) {
+    final pages = paginateRich(_text.doc, _font).length;
+    return Text(
+      '${_text.doc.wordCount} words  |  ${_text.text.length} characters  |  '
+      '$pages A4 page${pages == 1 ? '' : 's'} at ${_font.round()} pt',
+      style: Theme.of(context).textTheme.bodySmall,
+    );
+  }
+
+  Widget _toolbar() {
+    final flags = _text.activeFlags;
+    final para = _text.currentPara;
+    Widget tool(
+      IconData icon,
+      String tip,
+      VoidCallback? onTap, {
+      bool on = false,
+    }) => IconButton(
+      tooltip: tip,
+      isSelected: on,
+      onPressed: onTap,
+      icon: Icon(icon),
+      visualDensity: VisualDensity.compact,
+    );
+    return Wrap(
+      children: [
+        tool(Icons.undo, 'Undo', _text.canUndo ? _text.undo : null),
+        tool(Icons.redo, 'Redo', _text.canRedo ? _text.redo : null),
+        tool(
+          Icons.format_bold,
+          'Bold',
+          () => _text.toggle(flagBold),
+          on: flags & flagBold != 0,
+        ),
+        tool(
+          Icons.format_italic,
+          'Italic',
+          () => _text.toggle(flagItalic),
+          on: flags & flagItalic != 0,
+        ),
+        tool(
+          Icons.format_underlined,
+          'Underline',
+          () => _text.toggle(flagUnderline),
+          on: flags & flagUnderline != 0,
+        ),
+        tool(
+          Icons.title,
+          'Heading',
+          () => _text.setKind(ParaKind.h1),
+          on: para.kind == ParaKind.h1,
+        ),
+        tool(
+          Icons.text_fields,
+          'Subheading',
+          () => _text.setKind(ParaKind.h2),
+          on: para.kind == ParaKind.h2,
+        ),
+        tool(
+          Icons.format_list_bulleted,
+          'Bullet list',
+          () => _text.setKind(ParaKind.bullet),
+          on: para.kind == ParaKind.bullet,
+        ),
+        tool(
+          Icons.format_align_left,
+          'Align to start',
+          () => _text.setAlign(ParaAlign.start),
+          on: para.align == ParaAlign.start,
+        ),
+        tool(
+          Icons.format_align_center,
+          'Center',
+          () => _text.setAlign(ParaAlign.center),
+          on: para.align == ParaAlign.center,
+        ),
+        tool(
+          Icons.format_align_right,
+          'Align to end',
+          () => _text.setAlign(ParaAlign.end),
+          on: para.align == ParaAlign.end,
+        ),
+        tool(
+          Icons.format_align_justify,
+          'Justify',
+          () => _text.setAlign(ParaAlign.justify),
+          on: para.align == ParaAlign.justify,
+        ),
+      ],
+    );
+  }
 
   Widget _previewPane() =>
       PaperPreview(key: _preview, doc: _doc, fontSize: _font);
@@ -110,7 +210,7 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) Navigator.of(context).pop(_text.text);
+        if (!didPop) Navigator.of(context).pop(_text.doc);
       },
       child: Scaffold(
         appBar: AppBar(
@@ -119,7 +219,7 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
             if (wide || _showPreview)
               PrintButton(busy: _busy, onPressed: () => unawaited(_print())),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(_text.text),
+              onPressed: () => Navigator.of(context).pop(_text.doc),
               child: const Text('Done'),
             ),
           ],

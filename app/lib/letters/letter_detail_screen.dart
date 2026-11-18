@@ -11,6 +11,8 @@ import 'package:letter_signing/letters/models.dart';
 import 'package:letter_signing/letters/paper_pages.dart';
 import 'package:letter_signing/letters/paper_preview.dart';
 import 'package:letter_signing/letters/paper_screen.dart';
+import 'package:letter_signing/letters/rich/rich_doc.dart';
+import 'package:letter_signing/letters/rich/rich_layout.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/sign_screen.dart';
 import 'package:letter_signing/theme/app_theme.dart';
@@ -447,7 +449,7 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
       title: l.title,
       number: '#${l.brief.no}',
       date: fmtDateTime(l.brief.sentAt ?? l.brief.createdAt),
-      text: plain.text,
+      text: RichDoc.fromJson(plain.text, plain.rich),
       signatures: [
         for (final s in l.signatures)
           PaperSignature(
@@ -474,10 +476,12 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
     final plain = _plain;
     final Widget content;
     if (plain != null) {
-      content = SelectableText(
-        plain.text.isEmpty ? '(No text)' : plain.text,
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6),
-      );
+      final doc = RichDoc.fromJson(plain.text, plain.rich);
+      content = plain.text.isEmpty
+          ? const Text('(No text)')
+          : SelectableText.rich(
+              editorSpan(doc, 16, Theme.of(context).textTheme.bodyLarge),
+            );
     } else if (_decryptError != null) {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,

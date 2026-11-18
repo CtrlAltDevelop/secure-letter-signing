@@ -9,6 +9,8 @@ import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/models.dart';
 import 'package:letter_signing/letters/paper_editor_screen.dart';
+import 'package:letter_signing/letters/rich/rich_doc.dart';
+import 'package:letter_signing/letters/rich/rich_layout.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
@@ -26,6 +28,9 @@ class CreateLetterScreen extends StatefulWidget {
 class _CreateLetterScreenState extends State<CreateLetterScreen> {
   final _title = TextEditingController();
   final _body = TextEditingController();
+
+  /// Set when the letter was written in the A4 editor with formatting; the plain box is then read-only.
+  RichDoc? _rich;
   List<DirectoryUser> _directory = const [];
   final List<int> _signers = [];
   final Set<int> _viewers = {};
@@ -169,6 +174,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
   DraftInput _input() => DraftInput(
     title: _title.text,
     text: _body.text,
+    rich: _rich?.toJson(),
     signerIds: List.of(_signers),
     viewerIds: _viewers.where((v) => !_signers.contains(v)).toList(),
     attachments: List.of(_files),
@@ -266,16 +272,20 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
       // Writing still works without a letterhead.
     }
     if (!mounted) return;
-    final text = await Navigator.of(context).push<String>(
+    final result = await Navigator.of(context).push<RichDoc>(
       MaterialPageRoute(
         builder: (_) => PaperEditorScreen(
           head: head,
           title: _title.text.trim(),
-          initialText: _body.text,
+          initial: _rich ?? RichDoc.plain(_body.text),
         ),
       ),
     );
-    if (text != null && mounted) setState(() => _body.text = text);
+    if (result == null || !mounted) return;
+    setState(() {
+      _body.text = result.text;
+      _rich = result.hasFormatting ? result : null;
+    });
   }
 
   Widget _contentCard() => _card(
@@ -300,15 +310,30 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
         label: const Text('Write on A4 paper (preview and print)'),
       ),
       const SizedBox(height: 8),
-      TextField(
-        controller: _body,
-        minLines: 6,
-        maxLines: 16,
-        decoration: const InputDecoration(
-          labelText: 'Body (encrypted)',
-          alignLabelWithHint: true,
+      if (_rich != null)
+        InkWell(
+          onTap: _writeOnPaper,
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Body (formatted, encrypted)',
+            ),
+            child: Text.rich(
+              editorSpan(_rich!, 14, Theme.of(context).textTheme.bodyMedium),
+              maxLines: 8,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        )
+      else
+        TextField(
+          controller: _body,
+          minLines: 6,
+          maxLines: 16,
+          decoration: const InputDecoration(
+            labelText: 'Body (encrypted)',
+            alignLabelWithHint: true,
+          ),
         ),
-      ),
     ],
   );
 
