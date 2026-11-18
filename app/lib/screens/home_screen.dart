@@ -30,8 +30,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _keyStore = KeyStore();
   late final LettersEnv _env = _buildEnv();
-  int _keysVersion =
-      0; // bumped when the local key changes so the Keys tab rebuilds
+  late Future<StoredKey?> _localKey = _keyStore.load();
 
   LettersEnv _buildEnv() {
     final user = widget.auth.user!;
@@ -64,32 +63,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = widget.auth;
-    final user = auth.user;
+    final user = widget.auth.user;
     if (user == null) return const SizedBox.shrink();
+    // A signing key is part of signing up: nobody enters the app on a device that has none.
+    return FutureBuilder<StoredKey?>(
+      future: _localKey,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snap.data == null) return _keyGate();
+        return _tabs(user);
+      },
+    );
+  }
+
+  Widget _keyGate() => Scaffold(
+    appBar: AppBar(
+      title: const Text('Set up your signing key'),
+      actions: [
+        IconButton(
+          tooltip: 'Sign out',
+          icon: const Icon(Icons.logout),
+          onPressed: widget.auth.logout,
+        ),
+      ],
+    ),
+    body: KeySetupScreen(
+      api: widget.auth.api,
+      store: _keyStore,
+      deviceName: defaultTargetPlatform.name,
+      onChanged: () => setState(() => _localKey = _keyStore.load()),
+    ),
+  );
+
+  Widget _tabs(UserInfo user) {
+    final auth = widget.auth;
     final tabs = <(String, Widget)>[
       ('Letters', LettersListScreen(env: _env)),
-      (
-        'Keys',
-        FutureBuilder<StoredKey?>(
-          key: ValueKey(_keysVersion),
-          future: _keyStore.load(),
-          builder: (context, snap) {
-            if (snap.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snap.data == null) {
-              return KeySetupScreen(
-                api: auth.api,
-                store: _keyStore,
-                deviceName: Theme.of(context).platform.name,
-                onChanged: () => setState(() => _keysVersion++),
-              );
-            }
-            return MyKeysScreen(api: auth.api, store: _keyStore);
-          },
-        ),
-      ),
+      ('Keys', MyKeysScreen(api: auth.api, store: _keyStore)),
       if (user.isManager) ('Approvals', KeyApprovalsScreen(api: auth.api)),
       if (user.isManager) ('All letters', LettersAdminScreen(env: _env)),
       ('Profile', ProfileTab(auth: auth)),
