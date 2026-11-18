@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div class="max-w-2xl">
+  {% if report %}
+    <p class="mb-2"><strong>{{ report.created|length }}</strong> created, <strong>{{ report.skipped|length }}</strong> already existed, <strong>{{ report.invalid|length }}</strong> invalid.</p>
+    {% if report.invalid %}<p class="mb-2 text-red-600">Invalid: {{ report.invalid|join:"; " }}</p>{% endif %}
+    <p class="mb-4">New users have no password: they set one with "Forgot password" (or the manager issues a reset token).</p>
+  {% endif %}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="bg-primary-600 text-white font-semibold px-4 py-2 rounded">Import</button>
+  </form>
+</div>
+{% endblock %}
