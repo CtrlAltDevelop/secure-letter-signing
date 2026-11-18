@@ -6,8 +6,9 @@ class KeysApi {
   const KeysApi(this.api);
   final ApiClient api;
 
-  List<Map<String, dynamic>> _maps(Object? json) =>
-      [for (final e in json as List) e as Map<String, dynamic>];
+  List<Map<String, dynamic>> _maps(Object? json) => [
+    for (final e in json as List) e as Map<String, dynamic>,
+  ];
 
   Future<UserKeyInfo> upload({
     required String deviceName,
@@ -16,16 +17,15 @@ class KeysApi {
     required String fingerprint,
   }) async => UserKeyInfo.fromJson(
     await api.call(
-          'POST',
-          '/keys',
-          body: {
-            'device_name': deviceName,
-            'sign_pub': signPub,
-            'enc_pub': encPub,
-            'fingerprint': fingerprint,
-          },
-        )
-        as Map<String, dynamic>,
+      'POST',
+      '/keys',
+      body: {
+        'device_name': deviceName,
+        'sign_pub': signPub,
+        'enc_pub': encPub,
+        'fingerprint': fingerprint,
+      },
+    ) as Map<String, dynamic>,
   );
 
   Future<List<UserKeyInfo>> mine() async => [
@@ -43,7 +43,8 @@ class KeysApi {
       DirectoryUser.fromJson(j),
   ];
 
-  Future<void> approve(String keyId) => api.call('POST', '/keys/$keyId/approve');
+  Future<void> approve(String keyId) =>
+      api.call('POST', '/keys/$keyId/approve');
 
   Future<void> retire(String keyId) => api.call('POST', '/keys/$keyId/retire');
 

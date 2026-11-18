@@ -13,9 +13,8 @@ class DeviceKeyVault implements KeyVault {
   final KeyStore store;
   final KeysApi _api;
 
-  Future<bool> _isActive(StoredKey stored) async => (await _api.mine()).any(
-    (k) => k.id == stored.keyId && k.isActive,
-  );
+  Future<bool> _isActive(StoredKey stored) async =>
+      (await _api.mine()).any((k) => k.id == stored.keyId && k.isActive);
 
   @override
   Future<bool> hasActiveKey() async {

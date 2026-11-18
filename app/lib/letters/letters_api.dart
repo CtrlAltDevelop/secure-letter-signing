@@ -52,7 +52,9 @@ class LettersApi {
       LetterDetail.fromJson(await _map('GET', '/letters/$id'));
 
   Future<LetterBrief> createDraft(DraftPayload draft) async =>
-      LetterBrief.fromJson(await _map('POST', '/letters', body: draft.toJson()));
+      LetterBrief.fromJson(
+        await _map('POST', '/letters', body: draft.toJson()),
+      );
 
   Future<LetterBrief> updateDraft(String id, DraftPayload draft) async =>
       LetterBrief.fromJson(
@@ -65,7 +67,8 @@ class LettersApi {
   Future<LetterBrief> cancel(String id) async =>
       LetterBrief.fromJson(await _map('POST', '/letters/$id/cancel'));
 
-  Future<void> markOpened(String id) => client.call('POST', '/letters/$id/opened');
+  Future<void> markOpened(String id) =>
+      client.call('POST', '/letters/$id/opened');
 
   Future<LetterBrief> sign(
     String id, {
@@ -100,7 +103,10 @@ class LettersApi {
 
   // Manager
   Future<List<AdminLetter>> adminList({int limit = 200, int offset = 0}) =>
-      _list('/letters/admin${_query({'limit': limit, 'offset': offset})}', AdminLetter.fromJson);
+      _list(
+        '/letters/admin${_query({'limit': limit, 'offset': offset})}',
+        AdminLetter.fromJson,
+      );
 
   Future<LetterBrief> setUnlisted(String id, {required bool unlisted}) async =>
       LetterBrief.fromJson(
@@ -133,17 +139,24 @@ class LettersApi {
               'iv': iv,
               'label': label,
             })
-            ..files.add(http.MultipartFile.fromBytes('file', cipher, filename: 'blob'))
+            ..files.add(
+              http.MultipartFile.fromBytes('file', cipher, filename: 'blob'),
+            )
             ..headers['Authorization'] = 'Bearer $token';
       return http.Response.fromStream(await _http.send(req));
     });
     return AttachmentInfo.fromJson(_decode(res) as Map<String, dynamic>);
   }
 
-  Future<Uint8List> downloadAttachment(String letterId, String attachmentId) async {
+  Future<Uint8List> downloadAttachment(
+    String letterId,
+    String attachmentId,
+  ) async {
     final res = await _withAuth(
       (token) => _http.get(
-        Uri.parse('${client.baseUrl}/api/letters/$letterId/attachments/$attachmentId'),
+        Uri.parse(
+          '${client.baseUrl}/api/letters/$letterId/attachments/$attachmentId',
+        ),
         headers: {'Authorization': 'Bearer $token'},
       ),
     );

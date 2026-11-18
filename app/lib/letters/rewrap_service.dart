@@ -33,10 +33,16 @@ class RewrapService {
     final failed = <String, String>{};
     for (final entry in byLetter.entries) {
       try {
-        final docKey = await crypto.documentKey(await api.detail(entry.key), key);
+        final docKey = await crypto.documentKey(
+          await api.detail(entry.key),
+          key,
+        );
         await api.addWraps(entry.key, [
           for (final k in entry.value)
-            WrapEntry(keyId: k.id, wrap: wrapDocKey(docKey, k.encPub, k.fingerprint)),
+            WrapEntry(
+              keyId: k.id,
+              wrap: wrapDocKey(docKey, k.encPub, k.fingerprint),
+            ),
         ]);
         done++;
       } on LetterException catch (e) {

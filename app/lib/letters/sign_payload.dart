@@ -12,7 +12,9 @@ import 'package:letter_signing/keys/key_vault.dart';
 /// SHA-256 hex of the canonical JSON of the encrypted body `{iv, ct}`: what a signature binds to.
 String contentHashOf(Map<String, dynamic> body) => hexOf(
   SHA256Digest().process(
-    Uint8List.fromList(utf8.encode(canonicalJson({'iv': body['iv'], 'ct': body['ct']}))),
+    Uint8List.fromList(
+      utf8.encode(canonicalJson({'iv': body['iv'], 'ct': body['ct']})),
+    ),
   ),
 );
 

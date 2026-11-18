@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The rules behind `strongKeyPassword`, as (label, passes) pairs for a checklist.
 List<(String, bool)> passwordRules(String p) => [

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/crypto/identity.dart';
@@ -119,7 +119,9 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
         );
         if (mounted) setState(() => _stored = stored);
       } on Object {
-        await _api.retire(server.id); // do not leave an orphan key on the server
+        await _api.retire(
+          server.id,
+        ); // do not leave an orphan key on the server
         rethrow;
       }
     });
@@ -217,13 +219,11 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
     final status = server?.status ?? 'pending';
     return [
       ListTile(
-        leading: Icon(
-          switch (status) {
-            'active' => Icons.verified_user,
-            'pending' => Icons.hourglass_top,
-            _ => Icons.block,
-          },
-        ),
+        leading: Icon(switch (status) {
+          'active' => Icons.verified_user,
+          'pending' => Icons.hourglass_top,
+          _ => Icons.block,
+        }),
         title: Text(statusLabel(status)),
         subtitle: Text(
           stored.sealed ? 'Biometric-sealed key' : 'Password-protected key',

@@ -33,9 +33,7 @@ class KeyTransfer {
     final mine = await api.mine();
     final server = mine.where((k) => k.id == env.keyId && k.isActive);
     if (server.isEmpty || server.first.fingerprint != identity.fp) {
-      throw const KeyException(
-        'This key is not an active key of your account',
-      );
+      throw const KeyException('This key is not an active key of your account');
     }
     await api.transferEvent(env.keyId, 'import');
     return store.saveWrapped(env.keyId, env.keyFile);

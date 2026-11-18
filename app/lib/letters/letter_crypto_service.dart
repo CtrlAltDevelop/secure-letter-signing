@@ -30,7 +30,11 @@ class LetterException implements Exception {
 /// Real file name/type/size live only inside the encrypted body.
 @immutable
 class AttachmentMeta {
-  const AttachmentMeta({required this.name, required this.type, required this.size});
+  const AttachmentMeta({
+    required this.name,
+    required this.type,
+    required this.size,
+  });
   final String name;
   final String type;
   final int size;
@@ -44,11 +48,16 @@ class AttachmentMeta {
 }
 
 class PendingAttachment {
-  const PendingAttachment({required this.name, required this.type, required this.bytes});
+  const PendingAttachment({
+    required this.name,
+    required this.type,
+    required this.bytes,
+  });
   final String name;
   final String type;
   final Uint8List bytes;
-  AttachmentMeta get meta => AttachmentMeta(name: name, type: type, size: bytes.length);
+  AttachmentMeta get meta =>
+      AttachmentMeta(name: name, type: type, size: bytes.length);
 }
 
 /// Everything the create screen collects.
@@ -89,7 +98,11 @@ class DraftInput {
 
 @immutable
 class DraftSaved {
-  const DraftSaved({required this.brief, required this.docKey, required this.uploaded});
+  const DraftSaved({
+    required this.brief,
+    required this.docKey,
+    required this.uploaded,
+  });
   final LetterBrief brief;
   final Uint8List docKey;
 
@@ -99,7 +112,11 @@ class DraftSaved {
 
 @immutable
 class DecryptedLetter {
-  const DecryptedLetter({required this.text, required this.attachments, required this.docKey});
+  const DecryptedLetter({
+    required this.text,
+    required this.attachments,
+    required this.docKey,
+  });
   final String text;
   final List<AttachmentMeta> attachments;
   final Uint8List docKey;
@@ -107,7 +124,11 @@ class DecryptedLetter {
 
 /// Encrypt/wrap on create, unwrap/decrypt on read, attachments. The server only ever gets ciphertext.
 class LetterCryptoService {
-  LetterCryptoService({required this.api, required this.companyKeys, required this.userId});
+  LetterCryptoService({
+    required this.api,
+    required this.companyKeys,
+    required this.userId,
+  });
 
   final LettersApi api;
   final CompanyKeys companyKeys;
@@ -115,7 +136,10 @@ class LetterCryptoService {
   /// The signed-in user (creator of new letters).
   final int userId;
 
-  static Map<String, dynamic> bodyJson(String text, List<AttachmentMeta> attachments) => {
+  static Map<String, dynamic> bodyJson(
+    String text,
+    List<AttachmentMeta> attachments,
+  ) => {
     'text': text,
     'attachments': [for (final a in attachments) a.toJson()],
   };
@@ -129,7 +153,10 @@ class LetterCryptoService {
     for (final u in users)
       for (final k in u.keys)
         if (onlyKeyIds == null || onlyKeyIds.contains(k.id))
-          WrapEntry(keyId: k.id, wrap: wrapDocKey(docKey, k.encPub, k.fingerprint)),
+          WrapEntry(
+            keyId: k.id,
+            wrap: wrapDocKey(docKey, k.encPub, k.fingerprint),
+          ),
   ];
 
   /// Builds the request for a draft: encrypts the body and wraps for every reader (+ company key if public).
@@ -140,12 +167,19 @@ class LetterCryptoService {
     UnlockedKey? key,
   }) async {
     final readers = input.readerIds(userId);
-    final wraps = wrapsFor(docKey, directory.where((u) => readers.contains(u.id)));
+    final wraps = wrapsFor(
+      docKey,
+      directory.where((u) => readers.contains(u.id)),
+    );
     ({int version, Map<String, dynamic> wrap})? company;
     if (input.isPublic) {
-      if (key == null) throw const LetterException('Unlock your key to publish a public letter');
+      if (key == null)
+        throw const LetterException(
+          'Unlock your key to publish a public letter',
+        );
       company = await companyKeys.wrapForCompany(docKey, key);
-      if (company == null) throw const LetterException('No company key exists yet');
+      if (company == null)
+        throw const LetterException('No company key exists yet');
     }
     return DraftPayload(
       title: input.title.trim(),
@@ -183,14 +217,23 @@ class LetterCryptoService {
       }
     }
     final dk = docKey ?? newDocKey();
-    final payload = await buildDraft(input, dk, await api.directory(), key: key);
+    final payload = await buildDraft(
+      input,
+      dk,
+      await api.directory(),
+      key: key,
+    );
     final brief = letterId == null
         ? await api.createDraft(payload)
         : await api.updateDraft(letterId, payload);
     for (var i = uploaded; i < input.attachments.length; i++) {
       await uploadAttachment(brief.id, input.attachments[i], dk, i);
     }
-    return DraftSaved(brief: brief, docKey: dk, uploaded: input.attachments.length);
+    return DraftSaved(
+      brief: brief,
+      docKey: dk,
+      uploaded: input.attachments.length,
+    );
   }
 
   Future<AttachmentInfo> uploadAttachment(
@@ -210,24 +253,45 @@ class LetterCryptoService {
   }
 
   /// Plaintext bytes of attachment [info] (decrypted in the app).
-  Future<Uint8List> downloadAttachment(String letterId, AttachmentInfo info, Uint8List docKey) async {
+  Future<Uint8List> downloadAttachment(
+    String letterId,
+    AttachmentInfo info,
+    Uint8List docKey,
+  ) async {
     final cipher = await api.downloadAttachment(letterId, info.id);
     return aesGcm(false, docKey, base64Decode(info.iv), cipher);
   }
 
   /// Sends a draft. On 409 "Missing document-key wraps" (a key was approved since) adds those wraps and retries once.
   /// [docKey] is known right after creating; otherwise [key] is used to unwrap it.
-  Future<LetterBrief> send(String letterId, {Uint8List? docKey, UnlockedKey? key}) async {
+  Future<LetterBrief> send(
+    String letterId, {
+    Uint8List? docKey,
+    UnlockedKey? key,
+  }) async {
     try {
       return await api.send(letterId);
     } on ApiException catch (e) {
       if (e.status != 409 || !e.message.startsWith(_missingWraps)) rethrow;
-      final missing = e.message.split(':').skip(1).join(':').split(',').map((s) => s.trim()).toSet();
-      final detail = await api.detail(letterId);
-      final dk = docKey ?? (key == null ? null : (await open(detail, key)).docKey);
-      if (dk == null) throw const LetterException('Unlock your key to finish sending');
+      final missing = e.message
+          .split(':')
+          .skip(1)
+          .join(':')
+          .split(',')
+          .map((s) => s.trim())
+          .toSet();
+      final dk =
+          docKey ??
+          (key == null
+              ? null
+              : await documentKey(await api.detail(letterId), key));
+      if (dk == null)
+        throw const LetterException('Unlock your key to finish sending');
       final wraps = wrapsFor(dk, await api.directory(), onlyKeyIds: missing);
-      if (wraps.isEmpty) throw const LetterException('A reader has no usable key for this letter');
+      if (wraps.isEmpty)
+        throw const LetterException(
+          'A reader has no usable key for this letter',
+        );
       await api.addWraps(letterId, wraps);
       return api.send(letterId);
     }
@@ -249,7 +313,8 @@ class LetterCryptoService {
 
   Future<Uint8List> documentKey(LetterDetail letter, UnlockedKey key) async {
     for (final w in letter.myWraps) {
-      if (w.keyId == key.keyId) return unwrapDocKey(w.wrap, key.identity.encJwk, key.identity.fp);
+      if (w.keyId == key.keyId)
+        return unwrapDocKey(w.wrap, key.identity.encJwk, key.identity.fp);
     }
     final version = letter.companyKeyVersion;
     final wrap = letter.companyWrap;
@@ -257,6 +322,8 @@ class LetterCryptoService {
       final companyKey = await companyKeys.get(version, key);
       if (companyKey != null) return decryptBytes(wrap, companyKey);
     }
-    throw const LetterException('This device cannot read the letter yet. Ask a participant to re-wrap it.');
+    throw const LetterException(
+      'This device cannot read the letter yet. Ask a participant to re-wrap it.',
+    );
   }
 }

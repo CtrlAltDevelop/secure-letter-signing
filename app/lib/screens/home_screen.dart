@@ -1,18 +1,97 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
 import 'package:letter_signing/screens/admin_screen.dart';
+import 'package:letter_signing/keys/company_key_service.dart';
+import 'package:letter_signing/keys/device_key_vault.dart';
+import 'package:letter_signing/keys/key_approvals_screen.dart';
+import 'package:letter_signing/keys/key_setup_screen.dart';
+import 'package:letter_signing/keys/key_store.dart';
+import 'package:letter_signing/keys/my_keys_screen.dart';
+import 'package:letter_signing/letters/letters_admin_screen.dart';
+import 'package:letter_signing/letters/letters_api.dart';
+import 'package:letter_signing/letters/letters_env.dart';
+import 'package:letter_signing/letters/letters_list_screen.dart';
+import 'package:letter_signing/letters/live_service.dart';
+import 'package:letter_signing/letters/notifications_screen.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.auth});
   final AuthController auth;
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _keyStore = KeyStore();
+  late final LettersEnv _env = _buildEnv();
+  int _keysVersion =
+      0; // bumped when the local key changes so the Keys tab rebuilds
+
+  LettersEnv _buildEnv() {
+    final user = widget.auth.user!;
+    final api = widget.auth.api;
+    return LettersEnv(
+      api: LettersApi(api),
+      vault: DeviceKeyVault(api, _keyStore),
+      companyKeys: CompanyKeyService(api, _keyStore),
+      live: LiveService(api: api, cursor: SecureCursorStore(user.id)),
+      userId: user.id,
+      canCreate: user.permissions.contains('letter.create'),
+      isManager: user.isManager,
+      deviceName: defaultTargetPlatform
+          .name, // not Theme.of(context): this runs in initState
+      sessionId: () => widget.auth.sessionId,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _env.live.start();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_env.live.dispose());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final auth = widget.auth;
     final user = auth.user;
     if (user == null) return const SizedBox.shrink();
     final tabs = <(String, Widget)>[
+      ('Letters', LettersListScreen(env: _env)),
+      (
+        'Keys',
+        FutureBuilder<StoredKey?>(
+          key: ValueKey(_keysVersion),
+          future: _keyStore.load(),
+          builder: (context, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snap.data == null) {
+              return KeySetupScreen(
+                api: auth.api,
+                store: _keyStore,
+                deviceName: Theme.of(context).platform.name,
+                onChanged: () => setState(() => _keysVersion++),
+              );
+            }
+            return MyKeysScreen(api: auth.api, store: _keyStore);
+          },
+        ),
+      ),
+      if (user.isManager) ('Approvals', KeyApprovalsScreen(api: auth.api)),
+      if (user.isManager) ('All letters', LettersAdminScreen(env: _env)),
       ('Profile', ProfileTab(auth: auth)),
       ('Devices', SessionsTab(auth: auth)),
       if (user.isManager) ('Admin', AdminTab(auth: auth)),
@@ -23,13 +102,17 @@ class HomeScreen extends StatelessWidget {
         appBar: AppBar(
           title: Text(user.fullName.isEmpty ? user.email : user.fullName),
           actions: [
+            NotificationBell(env: _env),
             IconButton(
               tooltip: 'Sign out',
               icon: const Icon(Icons.logout),
               onPressed: auth.logout,
             ),
           ],
-          bottom: TabBar(tabs: [for (final t in tabs) Tab(text: t.$1)]),
+          bottom: TabBar(
+            isScrollable: true,
+            tabs: [for (final t in tabs) Tab(text: t.$1)],
+          ),
         ),
         body: TabBarView(children: [for (final t in tabs) t.$2]),
       ),

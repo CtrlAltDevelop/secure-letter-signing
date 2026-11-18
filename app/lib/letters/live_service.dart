@@ -58,7 +58,8 @@ class SecureCursorStore implements CursorStore {
   static const _storage = FlutterSecureStorage();
   String get _key => 'live_cursor_$userId';
   @override
-  Future<int> read() async => int.tryParse(await _storage.read(key: _key) ?? '') ?? 0;
+  Future<int> read() async =>
+      int.tryParse(await _storage.read(key: _key) ?? '') ?? 0;
   @override
   Future<void> write(int id) => _storage.write(key: _key, value: '$id');
 }

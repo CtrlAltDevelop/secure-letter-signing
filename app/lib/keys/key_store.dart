@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 
@@ -36,12 +35,9 @@ class StoredKey {
 /// Everything persisted about this device's key, on top of [SecureKv].
 /// One key per device. The server decides whether it is active.
 class KeyStore {
-  KeyStore({
-    SecureKv? kv,
-    Biometrics? biometrics,
-    DateTime Function()? clock,
-  }) : kv = kv ?? const FlutterSecureKv(),
-       biometrics = biometrics ?? const LocalAuthBiometrics() {
+  KeyStore({SecureKv? kv, Biometrics? biometrics, DateTime Function()? clock})
+    : kv = kv ?? const FlutterSecureKv(),
+      biometrics = biometrics ?? const LocalAuthBiometrics() {
     attempts = AttemptLimiter(this.kv, clock: clock);
   }
 
@@ -97,7 +93,10 @@ class KeyStore {
   }
 
   /// Stores an already-wrapped, password-protected [keyFile] (transfer import).
-  Future<StoredKey> saveWrapped(String keyId, Map<String, dynamic> keyFile) async {
+  Future<StoredKey> saveWrapped(
+    String keyId,
+    Map<String, dynamic> keyFile,
+  ) async {
     await clear();
     await kv.write(_fileKey, jsonEncode(keyFile));
     await kv.write(_idKey, keyId);

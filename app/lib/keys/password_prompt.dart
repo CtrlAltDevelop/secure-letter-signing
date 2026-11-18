@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/crypto/crypto_primitives.dart';
 import 'package:letter_signing/keys/key_models.dart';
@@ -15,7 +15,8 @@ Future<T?> showPasswordPrompt<T>(
 }) => showDialog<T>(
   context: context,
   barrierDismissible: false,
-  builder: (_) => _PasswordPrompt<T>(title: title, reason: reason, verify: verify),
+  builder: (_) =>
+      _PasswordPrompt<T>(title: title, reason: reason, verify: verify),
 );
 
 class _PasswordPrompt<T> extends StatefulWidget {

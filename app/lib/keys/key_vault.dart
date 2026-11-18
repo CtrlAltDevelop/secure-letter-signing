@@ -31,5 +31,8 @@ abstract interface class CompanyKeys {
   Future<Uint8List?> get(int version, UnlockedKey key);
 
   /// Wraps a letter's document key under the newest company key: `{version, wrap: {iv, ct}}`; null if none exists.
-  Future<({int version, Map<String, dynamic> wrap})?> wrapForCompany(Uint8List docKey, UnlockedKey key);
+  Future<({int version, Map<String, dynamic> wrap})?> wrapForCompany(
+    Uint8List docKey,
+    UnlockedKey key,
+  );
 }

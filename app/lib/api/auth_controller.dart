@@ -50,6 +50,7 @@ class AuthController extends ChangeNotifier {
   final ApiClient api;
   UserInfo? _user;
   UserInfo? get user => _user;
+  String? sessionId; // from the login response; null after an app restart (decoded from the token instead)
 
   Future<void> restore() async {
     if (await api.restore()) {
@@ -81,6 +82,7 @@ class AuthController extends ChangeNotifier {
       access: data['access'] as String,
       refresh: data['refresh'] as String,
     );
+    sessionId = data['session_id'] as String?;
     _user = UserInfo.fromJson(data['user'] as Map<String, dynamic>);
     notifyListeners();
   }

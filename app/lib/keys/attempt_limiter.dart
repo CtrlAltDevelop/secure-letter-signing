@@ -35,9 +35,8 @@ class AttemptLimiter {
     final count = await failures();
     final last = int.tryParse(await _kv.read(lastFailureKey) ?? '');
     if (last == null) return Duration.zero;
-    final until = DateTime.fromMillisecondsSinceEpoch(
-      last,
-    ).add(lockoutFor(count));
+    final until = DateTime.fromMillisecondsSinceEpoch(last)
+        .add(lockoutFor(count));
     final left = until.difference(_now());
     return left.isNegative ? Duration.zero : left;
   }
