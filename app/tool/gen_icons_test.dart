@@ -1,82 +1,51 @@
-// Renders brands/<BRAND>/logo.svg into every platform's app icon files.
-//   cd app && BRAND=demo flutter test tool/gen_icons_test.dart
+// Renders brands/<BRAND>/logo.svg into the source PNGs the icon and splash
+// packages need, so one SVG drives every image:
+//   assets/brand/icon_1024.png         full-bleed app icon (iOS, macOS, Windows, legacy Android)
+//   assets/brand/icon_foreground.png   Android adaptive-icon foreground (logo without its tile, in the safe zone)
+//   assets/brand/splash.png            native splash logo (transparent)
+//   assets/brand/splash_android12.png  Android 12+ splash icon (fits the circular mask)
+// Run through `make icons BRAND=<id>`, which then runs flutter_launcher_icons
+// and flutter_native_splash to write the per-platform files.
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:vector_graphics/vector_graphics.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_test/flutter_test.dart';
 
-Future<Uint8List> render(String svg, int px) async {
+/// The logo's background tile (a full-size `<rect>`); removed for transparent variants.
+final _tile = RegExp(r'<rect[^>]*width="256"[^>]*height="256"[^>]*/>');
+
+/// Draws [svg] centred on a transparent [canvasPx] square, scaled to [logoFraction] of it.
+Future<Uint8List> render(String svg, int canvasPx, {double logoFraction = 1}) async {
   final info = await vg.loadPicture(SvgStringLoader(svg), null);
   final recorder = ui.PictureRecorder();
   final canvas = ui.Canvas(recorder);
-  canvas.scale(px / info.size.width, px / info.size.height);
+  final logoPx = canvasPx * logoFraction;
+  canvas.translate((canvasPx - logoPx) / 2, (canvasPx - logoPx) / 2);
+  canvas.scale(logoPx / info.size.width, logoPx / info.size.height);
   canvas.drawPicture(info.picture);
-  final image = await recorder.endRecording().toImage(px, px);
+  final image = await recorder.endRecording().toImage(canvasPx, canvasPx);
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   return data!.buffer.asUint8List();
 }
 
 void main() {
-  testWidgets('generate icons', (tester) async {
+  testWidgets('generate icon and splash source images', (tester) async {
     final brand = Platform.environment['BRAND'] ?? 'demo';
     final svg = File('../brands/$brand/logo.svg').readAsStringSync();
+    final bare = svg.replaceFirst(_tile, '');
     await tester.runAsync(() async {
-      Future<void> write(String path, int px) async {
-        final f = File(path);
-        if (!f.parent.existsSync()) return;
-        f.writeAsBytesSync(await render(svg, px));
+      final out = {
+        'icon_1024.png': await render(svg, 1024),
+        'icon_foreground.png': await render(bare, 1024, logoFraction: 0.62),
+        'splash.png': await render(bare, 768),
+        'splash_android12.png': await render(bare, 960, logoFraction: 0.6),
+      };
+      Directory('assets/brand').createSync(recursive: true);
+      for (final e in out.entries) {
+        File('assets/brand/${e.key}').writeAsBytesSync(e.value);
       }
-
-      for (final px in [16, 32, 64, 128, 256, 512, 1024]) {
-        await write('macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_$px.png', px);
-      }
-      final ios = Directory('ios/Runner/Assets.xcassets/AppIcon.appiconset');
-      if (ios.existsSync()) {
-        for (final f in ios.listSync().whereType<File>().where((f) => f.path.endsWith('.png'))) {
-          final dim = await decodeSize(f);
-          if (dim > 0) f.writeAsBytesSync(await render(svg, dim));
-        }
-      }
-      const android = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192};
-      for (final e in android.entries) {
-        await write('android/app/src/main/res/mipmap-${e.key}/ic_launcher.png', e.value);
-      }
-      await write('assets/brand/icon_1024.png', 1024);
-      await writeIco('windows/runner/resources/app_icon.ico', svg);
     });
   });
-}
-
-/// Width of an existing PNG (reads the IHDR chunk), so iOS icons keep their sizes.
-Future<int> decodeSize(File f) async {
-  final b = f.readAsBytesSync();
-  if (b.length < 24) return 0;
-  return ByteData.sublistView(b).getUint32(16);
-}
-
-/// Windows .ico with PNG-compressed images of 16..256 px.
-Future<void> writeIco(String path, String svg) async {
-  final f = File(path);
-  if (!f.parent.existsSync()) return;
-  const sizes = [16, 32, 48, 64, 128, 256];
-  final images = [for (final px in sizes) await render(svg, px)];
-  final head = ByteData(6 + 16 * sizes.length)
-    ..setUint16(2, 1, Endian.little)
-    ..setUint16(4, sizes.length, Endian.little);
-  var offset = 6 + 16 * sizes.length;
-  for (var i = 0; i < sizes.length; i++) {
-    final e = 6 + 16 * i;
-    head
-      ..setUint8(e, sizes[i] % 256)
-      ..setUint8(e + 1, sizes[i] % 256)
-      ..setUint16(e + 4, 1, Endian.little)
-      ..setUint16(e + 6, 32, Endian.little)
-      ..setUint32(e + 8, images[i].length, Endian.little)
-      ..setUint32(e + 12, offset, Endian.little);
-    offset += images[i].length;
-  }
-  f.writeAsBytesSync([...head.buffer.asUint8List(), for (final img in images) ...img]);
 }

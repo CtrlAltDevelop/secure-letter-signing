@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.letters" "\0"
-            VALUE "FileDescription", "letter_signing" "\0"
+            VALUE "FileDescription", "Letter Signing" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "letter_signing" "\0"
+            VALUE "InternalName", "Letter Signing" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.letters. All rights reserved." "\0"
             VALUE "OriginalFilename", "letter_signing.exe" "\0"
-            VALUE "ProductName", "letter_signing" "\0"
+            VALUE "ProductName", "Letter Signing" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
