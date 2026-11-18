@@ -6,6 +6,9 @@ import 'package:letter_signing/keys/company_key_service.dart';
 import 'package:letter_signing/keys/key_vault.dart';
 import 'package:letter_signing/screens/company_key_card.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
+import 'package:letter_signing/screens/ui_bits.dart';
+import 'package:letter_signing/theme/app_theme.dart';
+import 'package:letter_signing/theme/widgets.dart';
 
 /// Manager-only: people & permissions, signup switches, invitation codes.
 class AdminTab extends StatefulWidget {
@@ -73,15 +76,27 @@ class _AdminTabState extends State<AdminTab> {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Reset token for ${user.email}'),
-        content: SelectableText(token ?? ''),
+        icon: const Icon(Icons.key_outlined),
+        title: const Text('Password reset token'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Give this token to ${user.email}. It is shown only once.'),
+            const SizedBox(height: 12),
+            SelectableText(
+              token ?? '',
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 15),
+            ),
+          ],
+        ),
         actions: [
-          TextButton(
-            onPressed: () =>
-                Clipboard.setData(ClipboardData(text: token ?? '')),
-            child: const Text('Copy'),
+          TextButton.icon(
+            onPressed: () => _copy(token ?? '', 'Token copied'),
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Copy'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Close'),
           ),
@@ -90,30 +105,55 @@ class _AdminTabState extends State<AdminTab> {
     );
   }
 
+  Future<void> _copy(String value, String done) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(done)));
+  }
+
   Future<void> _editPermissions(UserInfo user, List<String> all) async {
     final chosen = {...user.permissions};
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: Text(user.email),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final code in all)
-                CheckboxListTile(
-                  title: Text(code),
-                  value: chosen.contains(code),
-                  // The base "user" grant is always kept by the server.
-                  onChanged: code == 'user'
-                      ? null
-                      : (v) => setLocal(
-                          () => v == true
-                              ? chosen.add(code)
-                              : chosen.remove(code),
-                        ),
+          title: const Text('Permissions'),
+          content: SizedBox(
+            width: 360,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.email,
+                  style: TextStyle(
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-            ],
+                const SizedBox(height: 8),
+                for (final code in all)
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(permissionLabel(code)),
+                    subtitle: code == 'user'
+                        ? const Text('Always granted')
+                        : Text(code),
+                    value: chosen.contains(code),
+                    // The base "user" grant is always kept by the server.
+                    onChanged: code == 'user'
+                        ? null
+                        : (v) {
+                            setLocal(() {
+                              if (v == true) {
+                                chosen.add(code);
+                              } else {
+                                chosen.remove(code);
+                              }
+                            });
+                          },
+                  ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -128,10 +168,11 @@ class _AdminTabState extends State<AdminTab> {
         ),
       ),
     );
-    if (saved == true)
+    if (saved == true) {
       await _call('PUT', '/manage/users/${user.id}/permissions', {
         'codes': chosen.toList(),
       });
+    }
   }
 
   Future<void> _newInvite() async {
@@ -139,13 +180,20 @@ class _AdminTabState extends State<AdminTab> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.confirmation_number_outlined),
         title: const Text('New invitation code'),
-        content: TextField(
-          controller: uses,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Max uses',
-            helperText: 'Leave empty for unlimited',
+        content: SizedBox(
+          width: 320,
+          child: TextField(
+            controller: uses,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: 'Max uses',
+              helperText: 'Leave empty for unlimited',
+              prefixIcon: Icon(Icons.tag),
+            ),
           ),
         ),
         actions: [
@@ -162,8 +210,9 @@ class _AdminTabState extends State<AdminTab> {
     );
     final maxUses = int.tryParse(uses.text.trim()); // empty = unlimited
     uses.dispose();
-    if (ok == true)
+    if (ok == true) {
       await _call('POST', '/manage/invites', {'max_uses': maxUses});
+    }
   }
 
   @override
@@ -171,99 +220,240 @@ class _AdminTabState extends State<AdminTab> {
     return FutureBuilder(
       future: _data,
       builder: (context, snap) {
-        if (snap.hasError) return Center(child: Text('${snap.error}'));
+        if (snap.hasError) {
+          return EmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Could not load admin data',
+            message: '${snap.error}',
+            action: OutlinedButton(
+              onPressed: _reload,
+              child: const Text('Retry'),
+            ),
+          );
+        }
         final data = snap.data;
-        if (data == null)
+        if (data == null) {
           return const Center(child: CircularProgressIndicator());
-        final company = data.company;
-        return ListView(
-          children: [
-            CompanyKeyCard(
-              api: widget.auth.api,
-              vault: widget.vault,
-              service: widget.companyKeys,
-            ),
-            const ListTile(title: Text('Signup')),
-            SwitchListTile(
-              title: const Text('Company-email signup'),
-              subtitle: Text(
-                company['email_configured'] == true
-                    ? 'Domain: ${company['allowed_domain']}'
-                    : 'Needs email to be configured by the superuser',
-              ),
-              value: company['signup_domain_enabled'] as bool,
-              onChanged: (v) => _call('PATCH', '/manage/company', {
-                'signup_domain_enabled': v,
-              }),
-            ),
-            SwitchListTile(
-              title: const Text('Invitation-code signup'),
-              value: company['signup_invite_enabled'] as bool,
-              onChanged: (v) => _call('PATCH', '/manage/company', {
-                'signup_invite_enabled': v,
-              }),
-            ),
-            ListTile(
-              title: const Text('Invitation codes'),
-              subtitle: data.invites.isEmpty
-                  ? const Text('No codes yet')
-                  : null,
-              trailing: FilledButton.icon(
-                onPressed: _newInvite,
-                icon: const Icon(Icons.add),
-                label: const Text('New code'),
-              ),
-            ),
-            for (final i in data.invites)
-              ListTile(
-                title: SelectableText('${i['code']}'),
-                subtitle: Text('${i['uses']}/${i['max_uses'] ?? '∞'} used'),
-                trailing: i['active'] == true
-                    ? TextButton(
-                        onPressed: () => _call(
-                          'POST',
-                          '/manage/invites/${i['id']}/deactivate',
-                        ),
-                        child: const Text('Deactivate'),
-                      )
-                    : const Text('inactive'),
-              ),
-            const ListTile(title: Text('People')),
-            for (final u in data.users)
-              ListTile(
-                title: Text(
-                  u.fullName.isEmpty ? u.email : '${u.fullName} · ${u.email}',
-                ),
-                subtitle: Text(
-                  u.isActive ? u.permissions.join(', ') : 'deactivated',
-                ),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (action) => switch (action) {
-                    'perms' => _editPermissions(u, data.permissionCodes),
-                    'active' => _call('POST', '/manage/users/${u.id}/active', {
-                      'active': !u.isActive,
-                    }),
-                    _ => _resetToken(u),
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'perms',
-                      child: Text('Permissions'),
+        }
+        return RefreshIndicator(
+          onRefresh: () async => _reload(),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              PageBody(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CompanyKeyCard(
+                      api: widget.auth.api,
+                      vault: widget.vault,
+                      service: widget.companyKeys,
                     ),
-                    PopupMenuItem(
-                      value: 'active',
-                      child: Text(u.isActive ? 'Deactivate' : 'Reactivate'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'reset',
-                      child: Text('Issue reset token'),
-                    ),
+                    ..._signupSection(data.company),
+                    ..._invitesSection(data.invites),
+                    ..._peopleSection(data),
+                    const SizedBox(height: Tokens.gap),
                   ],
                 ),
               ),
-          ],
+            ],
+          ),
         );
       },
+    );
+  }
+
+  List<Widget> _signupSection(Map<String, dynamic> company) => [
+    const SectionHeader('Signup', subtitle: 'How new people can join'),
+    AppCard(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        children: [
+          SwitchListTile(
+            title: const Text('Company-email signup'),
+            subtitle: Text(
+              company['email_configured'] == true
+                  ? 'Domain: ${company['allowed_domain']}'
+                  : 'Needs email to be configured by the superuser',
+            ),
+            value: company['signup_domain_enabled'] as bool,
+            onChanged: (v) =>
+                _call('PATCH', '/manage/company', {'signup_domain_enabled': v}),
+          ),
+          const Divider(indent: 16, endIndent: 16),
+          SwitchListTile(
+            title: const Text('Invitation-code signup'),
+            value: company['signup_invite_enabled'] as bool,
+            onChanged: (v) =>
+                _call('PATCH', '/manage/company', {'signup_invite_enabled': v}),
+          ),
+        ],
+      ),
+    ),
+  ];
+
+  List<Widget> _invitesSection(List<Map<String, dynamic>> invites) => [
+    SectionHeader(
+      'Invitation codes',
+      trailing: FilledButton.tonalIcon(
+        onPressed: _newInvite,
+        icon: const Icon(Icons.add),
+        label: const Text('New code'),
+      ),
+    ),
+    if (invites.isEmpty)
+      const AppCard(child: Text('No codes yet'))
+    else
+      for (final i in invites) ...[
+        _InviteCard(
+          invite: i,
+          onCopy: () => _copy('${i['code']}', 'Code copied'),
+          onDeactivate: () =>
+              _call('POST', '/manage/invites/${i['id']}/deactivate'),
+        ),
+        const SizedBox(height: 8),
+      ],
+  ];
+
+  List<Widget> _peopleSection(_AdminData data) => [
+    const SectionHeader('People'),
+    for (final u in data.users) ...[
+      _PersonCard(
+        user: u,
+        onSelected: (action) => switch (action) {
+          'perms' => _editPermissions(u, data.permissionCodes),
+          'active' => _call('POST', '/manage/users/${u.id}/active', {
+            'active': !u.isActive,
+          }),
+          _ => _resetToken(u),
+        },
+      ),
+      const SizedBox(height: 8),
+    ],
+  ];
+}
+
+class _InviteCard extends StatelessWidget {
+  const _InviteCard({
+    required this.invite,
+    required this.onCopy,
+    required this.onDeactivate,
+  });
+  final Map<String, dynamic> invite;
+  final VoidCallback onCopy;
+  final VoidCallback onDeactivate;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final active = invite['active'] == true;
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectableText(
+                  '${invite['code']}',
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  '${invite['uses']}/${invite['max_uses'] ?? '\u221e'} used',
+                  style: TextStyle(color: muted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Copy code',
+            icon: const Icon(Icons.copy),
+            onPressed: onCopy,
+          ),
+          if (active)
+            TextButton(onPressed: onDeactivate, child: const Text('Deactivate'))
+          else
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: StatusPill('Inactive'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PersonCard extends StatelessWidget {
+  const _PersonCard({required this.user, required this.onSelected});
+  final UserInfo user;
+  final void Function(String action) onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          UserAvatar(fullName: user.fullName, email: user.email),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.fullName.isEmpty ? user.email : user.fullName,
+                  style: text.titleSmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (user.fullName.isNotEmpty)
+                  Text(
+                    user.email,
+                    style: text.bodySmall?.copyWith(color: muted),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (user.isManager)
+                      const StatusPill('Manager', tone: Tone.info),
+                    if (!user.isActive)
+                      const StatusPill('Deactivated', tone: Tone.error)
+                    else
+                      for (final p in user.permissions)
+                        StatusPill(permissionLabel(p)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Actions',
+            onSelected: onSelected,
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'perms', child: Text('Permissions')),
+              PopupMenuItem(
+                value: 'active',
+                child: Text(user.isActive ? 'Deactivate' : 'Reactivate'),
+              ),
+              const PopupMenuItem(
+                value: 'reset',
+                child: Text('Issue reset token'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

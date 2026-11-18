@@ -5,7 +5,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:letter_signing/letters/letters_api.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/live_service.dart';
+import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/models.dart';
+import 'package:letter_signing/theme/app_theme.dart';
+import 'package:letter_signing/theme/widgets.dart';
 
 /// In-app notifications: GET /me/notifications plus live pushes (the fallback when SMTP is not configured).
 class NotificationsController extends ChangeNotifier {
@@ -104,54 +107,163 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  static String _group(DateTime? at) {
+    if (at == null) return 'Earlier';
+    final now = DateTime.now();
+    final d = at.toLocal();
+    final days = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).difference(DateTime(d.year, d.month, d.day)).inDays;
+    if (days <= 0) return 'Today';
+    if (days == 1) return 'Yesterday';
+    return 'Earlier';
+  }
+
+  Widget _list() {
+    final groups = <String, List<AppNotification>>{};
+    for (final n in c.items) {
+      groups.putIfAbsent(_group(n.at), () => []).add(n);
+    }
+    return ListView(
+      children: [
+        for (final g in groups.entries) ...[
+          SectionHeader(g.key),
+          for (final n in g.value)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _NotificationTile(
+                n: n,
+                onTap: n.letterId == null || widget.onOpenLetter == null
+                    ? null
+                    : () => widget.onOpenLetter!(n.letterId!),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Notifications'),
       actions: [
-        TextButton(onPressed: _markRead, child: const Text('Mark all read')),
+        TextButton.icon(
+          onPressed: _markRead,
+          icon: const Icon(Icons.done_all),
+          label: const Text('Mark all read'),
+        ),
       ],
     ),
-    body: ListenableBuilder(
-      listenable: c,
-      builder: (context, _) {
-        if (c.error != null && c.items.isEmpty)
-          return Center(child: Text('${c.error}'));
-        return RefreshIndicator(
-          onRefresh: c.refresh,
-          child: c.items.isEmpty
-              ? ListView(
-                  children: const [
-                    SizedBox(height: 120),
-                    Center(child: Text('Nothing yet')),
-                  ],
-                )
-              : ListView(
-                  children: [
-                    for (final n in c.items)
-                      ListTile(
-                        leading: Icon(
-                          n.read
-                              ? Icons.notifications_none
-                              : Icons.notifications_active,
-                        ),
-                        title: Text(
-                          n.title,
-                          style: n.read
-                              ? null
-                              : const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: n.at == null
-                            ? null
-                            : Text(n.at!.toLocal().toString().split('.').first),
-                        onTap: n.letterId == null || widget.onOpenLetter == null
-                            ? null
-                            : () => widget.onOpenLetter!(n.letterId!),
+    body: PageBody(
+      child: ListenableBuilder(
+        listenable: c,
+        builder: (context, _) {
+          if (c.error != null && c.items.isEmpty) {
+            return EmptyState(
+              icon: Icons.cloud_off_outlined,
+              title: 'Could not load notifications',
+              message: '${c.error}',
+              action: OutlinedButton.icon(
+                onPressed: c.refresh,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: c.refresh,
+            child: c.items.isEmpty
+                ? ListView(
+                    children: const [
+                      SizedBox(height: 48),
+                      EmptyState(
+                        icon: Icons.notifications_none,
+                        title: 'Nothing yet',
+                        message: 'You will be told when a letter needs you.',
                       ),
-                  ],
-                ),
-        );
-      },
+                    ],
+                  )
+                : _list(),
+          );
+        },
+      ),
     ),
   );
+}
+
+(IconData, Color?) _kindStyle(String kind) {
+  if (kind.contains('reject')) return (Icons.cancel_outlined, Tokens.error);
+  if (kind.contains('approv') || kind.contains('publish')) {
+    return (Icons.check_circle_outline, Tokens.ok);
+  }
+  if (kind.contains('sign') || kind.contains('turn')) {
+    return (Icons.draw_outlined, Tokens.warn);
+  }
+  if (kind.contains('key')) return (Icons.vpn_key_outlined, null);
+  return (Icons.mail_outline, null);
+}
+
+class _NotificationTile extends StatelessWidget {
+  const _NotificationTile({required this.n, this.onTap});
+  final AppNotification n;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (icon, tint) = _kindStyle(n.kind);
+    final color = tint ?? scheme.primary;
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: 0.14),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  n.title,
+                  style: TextStyle(
+                    fontWeight: n.read ? FontWeight.w400 : FontWeight.w700,
+                  ),
+                ),
+                if (n.at != null)
+                  Text(
+                    fmtDateTime(n.at!),
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 12.5,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (!n.read)
+            Container(
+              width: 10,
+              height: 10,
+              margin: const EdgeInsets.only(left: 8),
+              decoration: BoxDecoration(
+                color: scheme.secondary,
+                shape: BoxShape.circle,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

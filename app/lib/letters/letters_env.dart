@@ -7,6 +7,7 @@ import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/letters/notifications_screen.dart';
 import 'package:letter_signing/letters/rewrap_service.dart';
 import 'package:letter_signing/letters/sign_payload.dart';
+import 'package:letter_signing/theme/widgets.dart';
 
 /// Everything the letter screens need, built once by the integrator after login.
 class LettersEnv {
@@ -61,22 +62,19 @@ String statusLabel(String status) => switch (status) {
   _ => status,
 };
 
+Tone statusTone(String status) => switch (status) {
+  'published' => Tone.ok,
+  'rejected' => Tone.error,
+  'in_signing' => Tone.warn,
+  'draft' => Tone.info,
+  _ => Tone.neutral,
+};
+
 class StatusChip extends StatelessWidget {
   const StatusChip(this.status, {super.key});
   final String status;
 
   @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      'published' => const Color(0xFF4CD8B9),
-      'rejected' => const Color(0xFFD65959),
-      'in_signing' => const Color(0xFFCFA44B),
-      _ => Colors.grey,
-    };
-    return Chip(
-      label: Text(statusLabel(status)),
-      backgroundColor: color.withValues(alpha: 0.2),
-      visualDensity: VisualDensity.compact,
-    );
-  }
+  Widget build(BuildContext context) =>
+      StatusPill(statusLabel(status), tone: statusTone(status));
 }

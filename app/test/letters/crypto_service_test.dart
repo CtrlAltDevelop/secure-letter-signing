@@ -163,8 +163,9 @@ void main() {
                 }, 409)
               : json(briefJson('L1', status: 'in_signing'));
         }
-        if (path == '/api/keys/directory')
+        if (path == '/api/keys/directory') {
           return json([for (final u in everyone) u.directoryJson]);
+        }
         if (path == '/api/letters/L1/wraps') {
           posted = {'wraps': jsonDecode(req.body)};
           return json({'detail': 'Stored'});

@@ -173,13 +173,15 @@ class LetterCryptoService {
     );
     ({int version, Map<String, dynamic> wrap})? company;
     if (input.isPublic) {
-      if (key == null)
+      if (key == null) {
         throw const LetterException(
           'Unlock your key to publish a public letter',
         );
+      }
       company = await companyKeys.wrapForCompany(docKey, key);
-      if (company == null)
+      if (company == null) {
         throw const LetterException('No company key exists yet');
+      }
     }
     return DraftPayload(
       title: input.title.trim(),
@@ -285,13 +287,15 @@ class LetterCryptoService {
           (key == null
               ? null
               : await documentKey(await api.detail(letterId), key));
-      if (dk == null)
+      if (dk == null) {
         throw const LetterException('Unlock your key to finish sending');
+      }
       final wraps = wrapsFor(dk, await api.directory(), onlyKeyIds: missing);
-      if (wraps.isEmpty)
+      if (wraps.isEmpty) {
         throw const LetterException(
           'A reader has no usable key for this letter',
         );
+      }
       await api.addWraps(letterId, wraps);
       return api.send(letterId);
     }
@@ -313,8 +317,9 @@ class LetterCryptoService {
 
   Future<Uint8List> documentKey(LetterDetail letter, UnlockedKey key) async {
     for (final w in letter.myWraps) {
-      if (w.keyId == key.keyId)
+      if (w.keyId == key.keyId) {
         return unwrapDocKey(w.wrap, key.identity.encJwk, key.identity.fp);
+      }
     }
     final version = letter.companyKeyVersion;
     final wrap = letter.companyWrap;

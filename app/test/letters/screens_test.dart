@@ -55,17 +55,17 @@ void main() {
       await tester.pumpAndSettle();
 
       double y(String t) => tester.getTopLeft(find.text(t)).dy;
-      expect(find.text('#2  Other'), findsOneWidget);
-      expect(y('#1  Parent') < y('#3  Child'), isTrue);
+      expect(find.text('Other'), findsOneWidget);
+      expect(y('Parent') < y('Child'), isTrue);
       expect(
-        tester.getTopLeft(find.text('#3  Child')).dx,
-        greaterThan(tester.getTopLeft(find.text('#1  Parent')).dx),
+        tester.getTopLeft(find.text('Child')).dx,
+        greaterThan(tester.getTopLeft(find.text('Parent')).dx),
       );
 
       await tester.tap(find.widgetWithText(FilterChip, 'In signing'));
       await tester.pumpAndSettle();
-      expect(find.text('#2  Other'), findsOneWidget);
-      expect(find.text('#1  Parent'), findsNothing);
+      expect(find.text('Other'), findsOneWidget);
+      expect(find.text('Parent'), findsNothing);
     },
   );
 

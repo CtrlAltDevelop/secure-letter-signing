@@ -10,13 +10,23 @@ import 'package:letter_signing/keys/key_transfer.dart';
 import 'package:letter_signing/keys/key_ui.dart';
 import 'package:letter_signing/keys/keys_api.dart';
 import 'package:letter_signing/keys/transfer_screens.dart';
+import 'package:letter_signing/theme/app_theme.dart';
+import 'package:letter_signing/theme/widgets.dart';
 
 /// Lists the user's keys with status and fingerprint; retire, export, import, compare fingerprint.
 /// Warns when a key's fingerprint differs from the one pinned on first sight.
 class MyKeysScreen extends StatefulWidget {
-  const MyKeysScreen({super.key, required this.api, required this.store});
+  const MyKeysScreen({
+    super.key,
+    required this.api,
+    required this.store,
+    this.embedded = false,
+  });
   final ApiClient api;
   final KeyStore store;
+
+  /// True when hosted by the app shell, which already provides the AppBar.
+  final bool embedded;
 
   @override
   State<MyKeysScreen> createState() => _MyKeysScreenState();
@@ -29,6 +39,7 @@ class _MyKeysScreenState extends State<MyKeysScreen> {
   Set<String> _mismatched = const {};
   StoredKey? _local;
   bool _loading = true;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -37,7 +48,7 @@ class _MyKeysScreenState extends State<MyKeysScreen> {
   }
 
   Future<void> _load() async {
-    await runKeyAction(context, () async {
+    final ok = await runKeyAction(context, () async {
       final keys = await _api.mine();
       final mismatched = <String>{
         for (final k in keys)
@@ -51,7 +62,12 @@ class _MyKeysScreenState extends State<MyKeysScreen> {
         _local = local;
       });
     });
-    if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _failed = !ok;
+      });
+    }
   }
 
   Future<void> _retire(UserKeyInfo key) async {
@@ -74,88 +90,190 @@ class _MyKeysScreenState extends State<MyKeysScreen> {
     if (await startKeyImport(context, _transfer)) await _load();
   }
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('My keys'),
-      actions: [
-        IconButton(
-          tooltip: 'Import key',
-          icon: const Icon(Icons.download),
-          onPressed: _import,
-        ),
-        IconButton(
-          tooltip: 'Add key for this device',
-          icon: const Icon(Icons.add),
-          onPressed: () =>
-              _push(KeySetupScreen(api: widget.api, store: widget.store)),
-        ),
-      ],
+  void _add() => _push(KeySetupScreen(api: widget.api, store: widget.store));
+
+  List<Widget> get _actions => [
+    IconButton(
+      tooltip: 'Import key',
+      icon: const Icon(Icons.download),
+      onPressed: _import,
     ),
+    IconButton(
+      tooltip: 'Add key for this device',
+      icon: const Icon(Icons.add),
+      onPressed: _add,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) => KeysPage(
+    title: 'My keys',
+    embedded: widget.embedded,
+    actions: _actions,
     body: _loading
         ? const Center(child: CircularProgressIndicator())
-        : RefreshIndicator(
-            onRefresh: _load,
-            child: ListView(children: [for (final k in _keys) _tile(k)]),
-          ),
+        : RefreshIndicator(onRefresh: _load, child: _list()),
   );
+
+  Widget _list() {
+    if (_keys.isEmpty) {
+      return ListView(
+        children: [
+          SizedBox(
+            height: 420,
+            child: EmptyState(
+              icon: _failed ? Icons.cloud_off : Icons.key_off,
+              title: _failed ? 'Could not load your keys' : 'No keys yet',
+              message: _failed
+                  ? 'Check your connection and pull down to retry.'
+                  : 'Create a signing key for this device, or import one from '
+                        'another device.',
+              action: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _failed ? _load : _add,
+                    icon: Icon(_failed ? Icons.refresh : Icons.add),
+                    label: Text(_failed ? 'Retry' : 'Create key'),
+                  ),
+                  if (!_failed)
+                    OutlinedButton.icon(
+                      onPressed: _import,
+                      icon: const Icon(Icons.download),
+                      label: const Text('Import key'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: [
+        PageBody(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (widget.embedded)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _import,
+                        icon: const Icon(Icons.download),
+                        label: const Text('Import key'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: _add,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add key'),
+                      ),
+                    ],
+                  ),
+                ),
+              for (final k in _keys) ...[
+                _tile(k),
+                const SizedBox(height: Tokens.gap),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _tile(UserKeyInfo key) {
     final here = _local?.keyId == key.id;
     final mismatch = _mismatched.contains(key.id);
-    return Card(
-      margin: const EdgeInsets.all(8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${key.deviceName}${here ? ' (this device)' : ''}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Text(statusLabel(key.status)),
-            const SizedBox(height: 4),
-            FingerprintText(key.fingerprint),
-            if (mismatch)
-              Text(
-                'Warning: this fingerprint changed since you last saw it. '
-                'Report it to the manager unless you changed the key yourself.',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+    final text = Theme.of(context).textTheme;
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                here ? Icons.smartphone : Icons.devices_other,
+                color: Theme.of(context).colorScheme.primary,
               ),
-            Wrap(
-              spacing: 8,
-              children: [
-                TextButton(
-                  onPressed: () => showFingerprintDialog(
-                    context,
-                    key.deviceName,
-                    key.fingerprint,
-                  ),
-                  child: const Text('Compare fingerprint'),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  key.deviceName,
+                  style: text.titleMedium,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                if (mismatch)
-                  TextButton(
-                    onPressed: () async {
-                      await widget.store.repin(key.id, key.fingerprint);
-                      await _load();
-                    },
-                    child: const Text('Accept change'),
-                  ),
-                if (here && key.isActive && !_local!.sealed)
-                  TextButton(
-                    onPressed: () => startKeyExport(context, _transfer),
-                    child: const Text('Export'),
-                  ),
-                if (!key.isRetired)
-                  TextButton(
-                    onPressed: () => _retire(key),
-                    child: const Text('Retire'),
-                  ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              StatusPill(statusLabel(key.status), tone: statusTone(key.status)),
+              if (here) const StatusPill('This device', tone: Tone.info),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FingerprintPanel(key.fingerprint),
+          if (mismatch) ...[
+            const SizedBox(height: 12),
+            const Notice(
+              'Warning: this fingerprint changed since you last saw it. '
+              'Report it to the manager unless you changed the key yourself.',
+              tone: Tone.error,
             ),
           ],
-        ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 4,
+            runSpacing: 0,
+            children: [
+              TextButton.icon(
+                onPressed: () => showFingerprintDialog(
+                  context,
+                  key.deviceName,
+                  key.fingerprint,
+                ),
+                icon: const Icon(Icons.compare_arrows),
+                label: const Text('Compare fingerprint'),
+              ),
+              if (mismatch)
+                TextButton.icon(
+                  onPressed: () async {
+                    await widget.store.repin(key.id, key.fingerprint);
+                    await _load();
+                  },
+                  icon: const Icon(Icons.check),
+                  label: const Text('Accept change'),
+                ),
+              if (here && key.isActive && !_local!.sealed)
+                TextButton.icon(
+                  onPressed: () => startKeyExport(context, _transfer),
+                  icon: const Icon(Icons.ios_share),
+                  label: const Text('Export'),
+                ),
+              if (!key.isRetired)
+                TextButton.icon(
+                  onPressed: () => _retire(key),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                  icon: const Icon(Icons.block),
+                  label: const Text('Retire'),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/keys/company_key_service.dart';
 import 'package:letter_signing/keys/key_vault.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
+import 'package:letter_signing/theme/widgets.dart';
 
 /// Manager: create / rotate the company key (public letters) and give it to new members and devices.
 class CompanyKeyCard extends StatefulWidget {
@@ -69,33 +70,62 @@ class _CompanyKeyCardState extends State<CompanyKeyCard> {
       builder: (context, snap) {
         final s = snap.data;
         if (s == null) {
-          return ListTile(
-            title: const Text('Company key'),
-            subtitle: Text(snap.hasError ? '${snap.error}' : 'Loading…'),
+          return AppCard(
+            child: Row(
+              children: [
+                if (!snap.hasError)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.2),
+                  ),
+                if (!snap.hasError) const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    snap.hasError ? '${snap.error}' : 'Loading company key…',
+                  ),
+                ),
+              ],
+            ),
           );
         }
-        return Card(
-          margin: const EdgeInsets.all(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Company key',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  s.version == 0
-                      ? 'None yet. Public letters cannot be sent until you create it.'
-                      : 'Version ${s.version}'
-                            '${s.rotate ? ' · a member left: rotate it' : ''}'
-                            '${s.missing > 0 ? ' · ${s.missing} key(s) do not have it yet' : ''}',
-                ),
-                const SizedBox(height: 8),
+        final scheme = Theme.of(context).colorScheme;
+        final (label, tone) = s.version == 0
+            ? ('Not created', Tone.warn)
+            : s.rotate
+            ? ('Rotate', Tone.warn)
+            : ('Version ${s.version}', Tone.ok);
+        return AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.shield_outlined, color: scheme.secondary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Company key',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  StatusPill(label, tone: tone),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                s.version == 0
+                    ? 'None yet. Public letters cannot be sent until you create it.'
+                    : 'Version ${s.version}'
+                          '${s.rotate ? ' · a member left: rotate it' : ''}'
+                          '${s.missing > 0 ? ' · ${s.missing} key(s) do not have it yet' : ''}',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+              if (s.version == 0 || s.rotate || s.missing > 0) ...[
+                const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
+                  runSpacing: 8,
                   children: [
                     if (s.version == 0 || s.rotate)
                       FilledButton(
@@ -122,7 +152,7 @@ class _CompanyKeyCardState extends State<CompanyKeyCard> {
                   ],
                 ),
               ],
-            ),
+            ],
           ),
         );
       },

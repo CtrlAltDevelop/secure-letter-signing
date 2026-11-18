@@ -17,7 +17,20 @@ import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letters_list_screen.dart';
 import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/letters/notifications_screen.dart';
-import 'package:letter_signing/screens/auth_screens.dart';
+import 'package:letter_signing/screens/profile_tab.dart';
+import 'package:letter_signing/screens/sessions_tab.dart';
+import 'package:letter_signing/screens/ui_bits.dart';
+import 'package:letter_signing/theme/widgets.dart';
+
+const _wideBreakpoint = 900.0;
+
+class _Dest {
+  const _Dest(this.label, this.icon, this.selectedIcon, this.page);
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+  final Widget Function() page;
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.auth});
@@ -32,6 +45,9 @@ class _HomeScreenState extends State<HomeScreen> {
   late final _companyKeys = CompanyKeyService(widget.auth.api, _keyStore);
   late final LettersEnv _env = _buildEnv();
   late Future<StoredKey?> _localKey = _loadKey();
+  int _index = 0;
+  final _visited = <int>{0};
+  final _pages = <int, Widget>{};
 
   /// This account's key on this device; adopts a key saved by an older build if the server says it is ours.
   Future<StoredKey?> _loadKey() async {
@@ -90,244 +106,238 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
         if (snap.data == null) return _keyGate();
-        return _tabs(user);
+        return _shell(user);
       },
     );
   }
 
-  Widget _keyGate() => Scaffold(
-    appBar: AppBar(
-      title: const Text('Set up your signing key'),
-      actions: [
-        IconButton(
-          tooltip: 'Sign out',
-          icon: const Icon(Icons.logout),
-          onPressed: widget.auth.logout,
-        ),
-      ],
-    ),
-    body: KeySetupScreen(
-      api: widget.auth.api,
-      store: _keyStore,
-      deviceName: defaultTargetPlatform.name,
-      onChanged: () {
-        // Block body on purpose: an arrow would make setState's callback return the Future.
-        setState(() {
-          _localKey = _keyStore.load();
-        });
-      },
-    ),
-  );
-
-  Widget _tabs(UserInfo user) {
-    final auth = widget.auth;
-    final tabs = <(String, Widget)>[
-      ('Letters', LettersListScreen(env: _env)),
-      ('Keys', MyKeysScreen(api: auth.api, store: _keyStore)),
-      if (user.isManager) ('Approvals', KeyApprovalsScreen(api: auth.api)),
-      if (user.isManager) ('All letters', LettersAdminScreen(env: _env)),
-      ('Profile', ProfileTab(auth: auth)),
-      ('Devices', SessionsTab(auth: auth)),
-      if (user.isManager)
-        (
-          'Admin',
-          AdminTab(auth: auth, vault: _env.vault, companyKeys: _companyKeys),
-        ),
-    ];
-    return DefaultTabController(
-      length: tabs.length,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(user.fullName.isEmpty ? user.email : user.fullName),
-          actions: [
-            NotificationBell(env: _env),
-            IconButton(
-              tooltip: 'Sign out',
-              icon: const Icon(Icons.logout),
-              onPressed: auth.logout,
-            ),
-          ],
-          bottom: TabBar(
-            isScrollable: true,
-            tabs: [for (final t in tabs) Tab(text: t.$1)],
-          ),
-        ),
-        body: TabBarView(children: [for (final t in tabs) t.$2]),
-      ),
-    );
-  }
-}
-
-class ProfileTab extends StatefulWidget {
-  const ProfileTab({super.key, required this.auth});
-  final AuthController auth;
-
-  @override
-  State<ProfileTab> createState() => _ProfileTabState();
-}
-
-class _ProfileTabState extends State<ProfileTab> {
-  late final _name = TextEditingController(text: widget.auth.user?.fullName);
-  late final _title = TextEditingController(text: widget.auth.user?.title);
-  late final _department = TextEditingController(
-    text: widget.auth.user?.department,
-  );
-  final _current = TextEditingController();
-  final _next = TextEditingController();
-
-  @override
-  void dispose() {
-    for (final c in [_name, _title, _department, _current, _next]) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  Future<void> _saveProfile() async {
-    final ok = await runGuarded(
-      context,
-      () => widget.auth.updateProfile(
-        fullName: _name.text,
-        title: _title.text,
-        department: _department.text,
-      ),
-    );
-    if (ok && mounted) _toast('Saved');
-  }
-
-  Future<void> _changePassword() async {
-    final ok = await runGuarded(
-      context,
-      () => widget.auth.changePassword(_current.text, _next.text),
-    );
-    if (!ok || !mounted) return;
-    _current.clear();
-    _next.clear();
-    _toast('Password changed; other devices were signed out');
-  }
-
-  void _toast(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-
-  @override
-  Widget build(BuildContext context) {
-    final user = widget.auth.user;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(user?.email ?? '', style: Theme.of(context).textTheme.titleMedium),
-        Wrap(
-          spacing: 8,
-          children: [
-            for (final p in user?.permissions ?? const <String>[])
-              Chip(label: Text(p)),
-          ],
-        ),
-        TextField(
-          controller: _name,
-          decoration: const InputDecoration(labelText: 'Full name'),
-        ),
-        TextField(
-          controller: _title,
-          decoration: const InputDecoration(labelText: 'Job title'),
-        ),
-        TextField(
-          controller: _department,
-          decoration: const InputDecoration(labelText: 'Department'),
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: FilledButton(
-            onPressed: _saveProfile,
-            child: const Text('Save'),
-          ),
-        ),
-        const Divider(height: 32),
-        TextField(
-          controller: _current,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'Current password'),
-        ),
-        TextField(
-          controller: _next,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'New password'),
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: OutlinedButton(
-            onPressed: _changePassword,
-            child: const Text('Change password'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class SessionsTab extends StatefulWidget {
-  const SessionsTab({super.key, required this.auth});
-  final AuthController auth;
-
-  @override
-  State<SessionsTab> createState() => _SessionsTabState();
-}
-
-class _SessionsTabState extends State<SessionsTab> {
-  late Future<List<Map<String, dynamic>>> _sessions = _load();
-
-  Future<List<Map<String, dynamic>>> _load() async =>
-      List<Map<String, dynamic>>.from(
-        await widget.auth.api.call('GET', '/me/sessions') as List,
-      );
-
-  Future<void> _revoke(String id) async {
-    final ok = await runGuarded(
-      context,
-      () => widget.auth.api.call('POST', '/me/sessions/$id/revoke'),
-    );
-    if (ok && mounted) {
+  Widget _keyGate() => KeySetupScreen(
+    api: widget.auth.api,
+    store: _keyStore,
+    deviceName: defaultTargetPlatform.name,
+    onSignOut: widget.auth.logout,
+    onChanged: () {
+      // Block body on purpose: an arrow would make setState's callback return the Future.
       setState(() {
-        _sessions = _load();
+        _localKey = _keyStore.load();
       });
-    }
+    },
+  );
+
+  /// Primary destinations first (they fill the phone bottom bar), manager items after.
+  List<_Dest> _destinations(UserInfo user) {
+    final auth = widget.auth;
+    return [
+      _Dest(
+        'Letters',
+        Icons.mail_outline,
+        Icons.mail,
+        () => LettersListScreen(env: _env, embedded: true),
+      ),
+      _Dest(
+        'Keys',
+        Icons.vpn_key_outlined,
+        Icons.vpn_key,
+        () => MyKeysScreen(api: auth.api, store: _keyStore, embedded: true),
+      ),
+      _Dest(
+        'Profile',
+        Icons.person_outline,
+        Icons.person,
+        () => ProfileTab(auth: auth),
+      ),
+      _Dest(
+        'Devices',
+        Icons.devices_other_outlined,
+        Icons.devices_other,
+        () => SessionsTab(auth: auth),
+      ),
+      if (user.isManager) ...[
+        _Dest(
+          'Approvals',
+          Icons.how_to_reg_outlined,
+          Icons.how_to_reg,
+          () => KeyApprovalsScreen(api: auth.api, embedded: true),
+        ),
+        _Dest(
+          'All letters',
+          Icons.inventory_2_outlined,
+          Icons.inventory_2,
+          () => LettersAdminScreen(env: _env, embedded: true),
+        ),
+        _Dest(
+          'Admin',
+          Icons.admin_panel_settings_outlined,
+          Icons.admin_panel_settings,
+          () => AdminTab(
+            auth: auth,
+            vault: _env.vault,
+            companyKeys: _companyKeys,
+          ),
+        ),
+      ],
+    ];
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _sessions,
-      builder: (context, snap) {
-        if (snap.hasError) return Center(child: Text('${snap.error}'));
-        final rows = snap.data;
-        if (rows == null)
-          return const Center(child: CircularProgressIndicator());
-        return ListView(
+  void _select(int i) {
+    setState(() {
+      _index = i;
+      _visited.add(i);
+    });
+  }
+
+  Widget _body(List<_Dest> dests) => IndexedStack(
+    index: _index,
+    children: [
+      for (final (i, d) in dests.indexed)
+        if (_visited.contains(i))
+          _pages.putIfAbsent(i, d.page)
+        else
+          const SizedBox.shrink(),
+    ],
+  );
+
+  Widget _shell(UserInfo user) {
+    final dests = _destinations(user);
+    final wide = MediaQuery.sizeOf(context).width >= _wideBreakpoint;
+    final title = dests[_index].label;
+    final appBar = AppBar(
+      title: Text(title),
+      actions: [
+        NotificationBell(env: _env),
+        if (!wide)
+          IconButton(
+            tooltip: 'Sign out',
+            icon: const Icon(Icons.logout),
+            onPressed: widget.auth.logout,
+          ),
+      ],
+    );
+    if (!wide) {
+      return Scaffold(
+        appBar: appBar,
+        body: _body(dests),
+        bottomNavigationBar: _bottomBar(dests, user),
+      );
+    }
+    return Scaffold(
+      appBar: appBar,
+      body: Row(
+        children: [
+          _rail(dests, user),
+          const VerticalDivider(width: 1, thickness: 1),
+          Expanded(child: _body(dests)),
+        ],
+      ),
+    );
+  }
+
+  static const _primaryCount = 4;
+
+  Widget _bottomBar(List<_Dest> dests, UserInfo user) {
+    final primary = dests.take(_primaryCount).toList();
+    final inMore = _index >= _primaryCount;
+    return NavigationBar(
+      selectedIndex: inMore ? _primaryCount : _index,
+      onDestinationSelected: (i) {
+        if (i < _primaryCount) {
+          _select(i);
+        } else {
+          unawaited(_openMore(dests));
+        }
+      },
+      destinations: [
+        for (final d in primary)
+          NavigationDestination(
+            icon: Icon(d.icon),
+            selectedIcon: Icon(d.selectedIcon),
+            label: d.label,
+          ),
+        if (user.isManager)
+          const NavigationDestination(
+            icon: Icon(Icons.more_horiz),
+            selectedIcon: Icon(Icons.more_horiz),
+            label: 'More',
+          ),
+      ],
+    );
+  }
+
+  Future<void> _openMore(List<_Dest> dests) async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            for (final s in rows)
+            for (final (i, d) in dests.indexed.skip(_primaryCount))
               ListTile(
-                leading: const Icon(Icons.devices),
-                title: Text(
-                  '${s['device_name']}'.isEmpty
-                      ? '${s['platform']}'
-                      : '${s['device_name']}',
-                ),
-                subtitle: Text(
-                  '${s['ip'] ?? ''}  ·  last active ${s['last_active']}',
-                ),
-                trailing: s['current'] == true
-                    ? const Chip(label: Text('This device'))
-                    : IconButton(
-                        tooltip: 'Sign out this device',
-                        icon: const Icon(Icons.close),
-                        onPressed: () => _revoke(s['id'] as String),
-                      ),
+                leading: Icon(i == _index ? d.selectedIcon : d.icon),
+                title: Text(d.label),
+                selected: i == _index,
+                onTap: () => Navigator.pop(ctx, i),
               ),
           ],
-        );
-      },
+        ),
+      ),
+    );
+    if (picked != null && mounted) _select(picked);
+  }
+
+  Widget _rail(List<_Dest> dests, UserInfo user) {
+    final text = Theme.of(context).textTheme;
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return NavigationRail(
+      extended: true,
+      minExtendedWidth: 220,
+      selectedIndex: _index,
+      onDestinationSelected: _select,
+      leading: const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: BrandLogo(size: 48),
+      ),
+      trailing: Expanded(
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: SizedBox(
+              width: 196,
+              child: Row(
+                children: [
+                  UserAvatar(
+                    fullName: user.fullName,
+                    email: user.email,
+                    radius: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      user.fullName.isEmpty ? user.email : user.fullName,
+                      style: text.bodyMedium?.copyWith(color: muted),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Sign out',
+                    icon: const Icon(Icons.logout),
+                    onPressed: widget.auth.logout,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      destinations: [
+        for (final d in dests)
+          NavigationRailDestination(
+            icon: Icon(d.icon),
+            selectedIcon: Icon(d.selectedIcon),
+            label: Text(d.label),
+          ),
+      ],
     );
   }
 }

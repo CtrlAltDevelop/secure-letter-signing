@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/theme/app_theme.dart';
+
 /// The rules behind `strongKeyPassword`, as (label, passes) pairs for a checklist.
 List<(String, bool)> passwordRules(String p) => [
   ('At least 10 characters', p.length >= 10),
@@ -22,34 +24,62 @@ class PasswordStrengthMeter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strength = passwordStrength(password);
-    final color = strength == 1
-        ? Colors.green
+    final scheme = Theme.of(context).colorScheme;
+    final strength = password.isEmpty ? 0.0 : passwordStrength(password);
+    final (label, color) = strength == 1
+        ? ('Strong', Tokens.ok)
         : strength >= 0.6
-        ? Colors.orange
-        : Colors.red;
+        ? ('Almost there', Tokens.warn)
+        : ('Weak', Tokens.error);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LinearProgressIndicator(
-          value: strength,
-          color: color,
-          minHeight: 6,
-          semanticsLabel: 'Password strength',
-        ),
-        const SizedBox(height: 8),
-        for (final (label, ok) in passwordRules(password))
-          Row(
-            children: [
-              Icon(
-                ok ? Icons.check_circle : Icons.circle_outlined,
-                size: 16,
-                color: ok ? Colors.green : null,
+        Row(
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: strength,
+                  color: color,
+                  backgroundColor: scheme.outlineVariant,
+                  minHeight: 6,
+                  semanticsLabel: 'Password strength',
+                ),
               ),
-              const SizedBox(width: 6),
-              Text(label),
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              password.isEmpty ? '' : label,
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 16,
+          runSpacing: 6,
+          children: [
+            for (final (text, ok) in passwordRules(password))
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    ok ? Icons.check_circle : Icons.circle_outlined,
+                    size: 16,
+                    color: ok ? Tokens.ok : scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    text,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ok ? scheme.onSurface : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ],
     );
   }

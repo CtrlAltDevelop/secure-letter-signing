@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/crypto/crypto_primitives.dart';
 import 'package:letter_signing/keys/key_models.dart';
+import 'package:letter_signing/keys/key_ui.dart';
+import 'package:letter_signing/theme/widgets.dart';
 
 /// Reusable key-password dialog. [verify] is the check (e.g. `store.unlockWithPassword`): it
 /// returns the result on success and throws [WrongPasswordException] / [KeyLockedException] /
@@ -36,6 +38,7 @@ class _PasswordPrompt<T> extends StatefulWidget {
 class _PasswordPromptState<T> extends State<_PasswordPrompt<T>> {
   final _controller = TextEditingController();
   String? _error;
+  KeyLockedException? _locked;
   bool _busy = false;
 
   @override
@@ -49,13 +52,16 @@ class _PasswordPromptState<T> extends State<_PasswordPrompt<T>> {
     setState(() {
       _busy = true;
       _error = null;
+      _locked = null;
     });
     try {
       final result = await widget.verify(_controller.text);
       if (mounted) Navigator.of(context).pop(result);
       return;
     } on WrongPasswordException {
-      _error = 'Wrong password';
+      _error = 'Wrong password. Check it and try again.';
+    } on KeyLockedException catch (e) {
+      _locked = e;
     } on KeyException catch (e) {
       _error = e.message;
     }
@@ -67,31 +73,39 @@ class _PasswordPromptState<T> extends State<_PasswordPrompt<T>> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(widget.title),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (widget.reason != null) ...[
-          Text(widget.reason!),
-          const SizedBox(height: 12),
-        ],
-        TextField(
-          controller: _controller,
-          obscureText: true,
-          autofocus: true,
-          enabled: !_busy,
-          onSubmitted: (_) => _submit(),
-          decoration: InputDecoration(
-            labelText: 'Key password',
+    content: SizedBox(
+      width: 400,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.reason != null) ...[
+            Text(widget.reason!),
+            const SizedBox(height: 12),
+          ],
+          PasswordField(
+            controller: _controller,
+            label: 'Key password',
+            autofocus: true,
+            enabled: !_busy,
+            onSubmitted: (_) => _submit(),
             errorText: _error,
           ),
-        ),
-        if (_busy)
-          const Padding(
-            padding: EdgeInsets.only(top: 12),
-            child: LinearProgressIndicator(),
-          ),
-      ],
+          if (_locked != null) ...[
+            const SizedBox(height: 12),
+            Notice(_locked!.message, tone: Tone.warn),
+          ],
+          if (_busy) ...[
+            const SizedBox(height: 16),
+            const LinearProgressIndicator(),
+            const SizedBox(height: 8),
+            Text(
+              'Checking the password. This takes a few seconds on purpose.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ],
+      ),
     ),
     actions: [
       TextButton(

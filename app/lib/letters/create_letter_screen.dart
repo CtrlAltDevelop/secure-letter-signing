@@ -5,7 +5,10 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/letters/letter_crypto_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
+import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/models.dart';
+import 'package:letter_signing/theme/app_theme.dart';
+import 'package:letter_signing/theme/widgets.dart';
 
 /// Create a letter: title, body, attachments, signers (ordered), viewers, visibility, publish timing, chain.
 /// Pops the saved/sent [LetterBrief].
@@ -29,6 +32,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
   String _publish = 'after_sign';
   String _order = 'parallel';
   bool _busy = false;
+  bool _submitted = false;
   String? _error;
   DraftSaved? _saved;
 
@@ -173,10 +177,12 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
   );
 
   Future<DraftSaved> _save() async {
-    if (_title.text.trim().isEmpty)
+    if (_title.text.trim().isEmpty) {
       throw const LetterException('Title is required');
-    if (_signers.isEmpty)
+    }
+    if (_signers.isEmpty) {
       throw const LetterException('Add at least one signer');
+    }
     final key = _visibility == 'public'
         ? await env.vault.unlock(context, reason: 'Wrap letter for the company')
         : null;
@@ -196,6 +202,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _submitted = true;
     });
     try {
       final saved = await _save();
@@ -203,16 +210,303 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
           ? await env.crypto.send(saved.brief.id, docKey: saved.docKey)
           : saved.brief;
       if (mounted) {
-        if (!send)
+        if (send) {
+          Navigator.of(context).pop(brief);
+        } else {
           ScaffoldMessenger.of(context)
               .showSnackBar(const SnackBar(content: Text('Draft saved')));
-        if (send) Navigator.of(context).pop(brief);
+        }
       }
     } on Object catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Widget _card(String title, String subtitle, List<Widget> children) => Padding(
+    padding: const EdgeInsets.only(bottom: Tokens.gap),
+    child: AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    ),
+  );
+
+  Widget _helper(String text) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: Text(
+      text,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        fontSize: 12.5,
+      ),
+    ),
+  );
+
+  Widget _contentCard() => _card(
+    'Content',
+    'The title is visible in lists. The body is encrypted.',
+    [
+      TextField(
+        controller: _title,
+        maxLength: 200,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          labelText: 'Title',
+          errorText: _submitted && _title.text.trim().isEmpty
+              ? 'Title is required'
+              : null,
+        ),
+      ),
+      const SizedBox(height: 8),
+      TextField(
+        controller: _body,
+        minLines: 6,
+        maxLines: 16,
+        decoration: const InputDecoration(
+          labelText: 'Body (encrypted)',
+          alignLabelWithHint: true,
+        ),
+      ),
+    ],
+  );
+
+  Widget _attachmentsCard() => _card(
+    'Attachments',
+    'PDF or image, up to 25 MB each. Files are encrypted before upload.',
+    [
+      for (final (i, f) in _files.indexed)
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(attachmentIcon(mimeFor(f.name) ?? '')),
+          title: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text(fmtSize(f.bytes.length)),
+          trailing: (_saved?.uploaded ?? 0) > i
+              ? const Icon(Icons.cloud_done_outlined, color: Tokens.ok)
+              : IconButton(
+                  tooltip: 'Remove',
+                  icon: const Icon(Icons.close),
+                  onPressed: () => setState(() => _files.removeAt(i)),
+                ),
+        ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          onPressed: _pickAttachments,
+          icon: const Icon(Icons.attach_file),
+          label: const Text('Attach PDF / image (max 25 MB)'),
+        ),
+      ),
+    ],
+  );
+
+  Widget _signerChips() {
+    if (_signers.isEmpty) {
+      return Text(
+        _submitted ? 'Add at least one signer' : 'No signers chosen yet',
+        style: TextStyle(
+          color: _submitted
+              ? Tokens.error
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+    final serial = _order == 'serial';
+    return ReorderableListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      onReorderItem: (from, to) =>
+          setState(() => _signers.insert(to, _signers.removeAt(from))),
+      children: [
+        for (final (i, id) in _signers.indexed)
+          ListTile(
+            key: ValueKey(id),
+            contentPadding: EdgeInsets.zero,
+            leading: PersonAvatar(
+              serial ? '${i + 1}' : (_user(id)?.displayName ?? '$id'),
+              size: 32,
+            ),
+            title: Text(
+              _user(id)?.displayName ?? '$id',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text('Signer ${i + 1}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Remove',
+                  icon: const Icon(Icons.close),
+                  onPressed: () => setState(() => _signers.remove(id)),
+                ),
+                ReorderableDragStartListener(
+                  index: i,
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.drag_handle),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _peopleCard() => _card(
+    'People',
+    'Who signs this letter and who may read it.',
+    [
+      Text('Signers', style: Theme.of(context).textTheme.titleSmall),
+      const SizedBox(height: 4),
+      _signerChips(),
+      const SizedBox(height: 8),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          onPressed: () => _pickUsers(signers: true),
+          icon: const Icon(Icons.person_add_alt_1_outlined),
+          label: const Text('Choose signers'),
+        ),
+      ),
+      const SizedBox(height: 16),
+      SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(value: 'parallel', label: Text('Parallel')),
+          ButtonSegment(value: 'serial', label: Text('In order')),
+        ],
+        selected: {_order},
+        onSelectionChanged: (s) => setState(() => _order = s.first),
+      ),
+      _helper(
+        _order == 'serial'
+            ? 'Signers sign one after another, top to bottom. Drag to reorder.'
+            : 'Every signer can sign at the same time.',
+      ),
+      const SizedBox(height: 16),
+      Text('Visibility', style: Theme.of(context).textTheme.titleSmall),
+      const SizedBox(height: 8),
+      SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(value: 'private', label: Text('Private')),
+          ButtonSegment(value: 'public', label: Text('Public')),
+        ],
+        selected: {_visibility},
+        onSelectionChanged: (s) => setState(() => _visibility = s.first),
+      ),
+      _helper(
+        _visibility == 'public'
+            ? 'Everyone in the company can read it once published.'
+            : 'Only the creator, signers and chosen viewers can read it.',
+      ),
+      if (_visibility == 'private') ...[
+        const SizedBox(height: 12),
+        if (_viewers.isEmpty)
+          const Text('No extra viewers')
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final v in _viewers)
+                InputChip(
+                  label: Text(_user(v)?.displayName ?? '$v'),
+                  onDeleted: () => setState(() => _viewers.remove(v)),
+                ),
+            ],
+          ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: () => _pickUsers(signers: false),
+            icon: const Icon(Icons.visibility_outlined),
+            label: const Text('Choose viewers'),
+          ),
+        ),
+        _helper(
+          'Removing a viewer later cannot revoke what they already decrypted.',
+        ),
+      ],
+    ],
+  );
+
+  Widget _deliveryCard() =>
+      _card('Delivery', 'When the letter becomes visible to its audience.', [
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'after_sign', label: Text('After all sign')),
+            ButtonSegment(value: 'now', label: Text('Right away')),
+          ],
+          selected: {_publish},
+          onSelectionChanged: (s) => setState(() => _publish = s.first),
+        ),
+        _helper(
+          _publish == 'now'
+              ? 'Viewers see the letter as soon as it is sent.'
+              : 'Viewers see the letter only after every signer has approved.',
+        ),
+      ]);
+
+  Widget _actionBar() {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerLow,
+      child: SafeArea(
+        top: false,
+        child: PageBody(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_error != null) ...[
+                ErrorBanner(_error!),
+                const SizedBox(height: 10),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _busy ? null : () => _run(send: false),
+                      child: const Text('Save draft'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _busy ? null : () => _run(send: true),
+                      icon: _busy
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_outlined),
+                      label: Text(_busy ? 'Working...' : 'Send'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -222,134 +516,19 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
         widget.parentId == null ? 'New letter' : 'New chained letter',
       ),
     ),
+    bottomNavigationBar: _actionBar(),
     body: ListView(
-      padding: const EdgeInsets.all(16),
       children: [
-        TextField(
-          controller: _title,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            labelText: 'Title (visible in lists)',
+        PageBody(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _contentCard(),
+              _attachmentsCard(),
+              _peopleCard(),
+              _deliveryCard(),
+            ],
           ),
-        ),
-        TextField(
-          controller: _body,
-          minLines: 6,
-          maxLines: 16,
-          decoration: const InputDecoration(
-            labelText: 'Body (encrypted)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 8),
-        for (final (i, f) in _files.indexed)
-          ListTile(
-            dense: true,
-            leading: const Icon(Icons.attach_file),
-            title: Text(f.name),
-            subtitle: Text('${(f.bytes.length / 1024).ceil()} KB'),
-            trailing: (_saved?.uploaded ?? 0) > i
-                ? const Icon(Icons.cloud_done)
-                : IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => setState(() => _files.removeAt(i)),
-                  ),
-          ),
-        TextButton.icon(
-          onPressed: _pickAttachments,
-          icon: const Icon(Icons.add),
-          label: const Text('Attach PDF / image (max 25 MB)'),
-        ),
-        const Divider(),
-        Text('Signers', style: Theme.of(context).textTheme.titleMedium),
-        if (_signers.isEmpty) const Text('None selected'),
-        ReorderableListView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          onReorderItem: (from, to) =>
-              setState(() => _signers.insert(to, _signers.removeAt(from))),
-          children: [
-            for (final (i, id) in _signers.indexed)
-              ListTile(
-                key: ValueKey(id),
-                dense: true,
-                leading: Text('${i + 1}'),
-                title: Text(_user(id)?.displayName ?? '$id'),
-              ),
-          ],
-        ),
-        TextButton(
-          onPressed: () => _pickUsers(signers: true),
-          child: const Text('Choose signers'),
-        ),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'parallel', label: Text('Parallel')),
-            ButtonSegment(value: 'serial', label: Text('In order')),
-          ],
-          selected: {_order},
-          onSelectionChanged: (s) => setState(() => _order = s.first),
-        ),
-        const Divider(),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'private', label: Text('Private')),
-            ButtonSegment(value: 'public', label: Text('Public')),
-          ],
-          selected: {_visibility},
-          onSelectionChanged: (s) => setState(() => _visibility = s.first),
-        ),
-        if (_visibility == 'private') ...[
-          Text(
-            _viewers.isEmpty
-                ? 'No extra viewers'
-                : 'Viewers: ${[for (final v in _viewers) _user(v)?.displayName ?? '$v'].join(', ')}',
-          ),
-          TextButton(
-            onPressed: () => _pickUsers(signers: false),
-            child: const Text('Choose viewers'),
-          ),
-          const Text(
-            'Removing a viewer later cannot revoke what they already decrypted.',
-          ),
-        ],
-        const SizedBox(height: 8),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(
-              value: 'after_sign',
-              label: Text('Publish after all sign'),
-            ),
-            ButtonSegment(value: 'now', label: Text('Publish now')),
-          ],
-          selected: {_publish},
-          onSelectionChanged: (s) => setState(() => _publish = s.first),
-        ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _busy ? null : () => _run(send: false),
-                child: const Text('Save draft'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed: _busy ? null : () => _run(send: true),
-                child: Text(_busy ? 'Working...' : 'Send'),
-              ),
-            ),
-          ],
         ),
       ],
     ),

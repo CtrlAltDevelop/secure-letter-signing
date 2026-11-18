@@ -14,6 +14,8 @@ import 'package:letter_signing/keys/key_transfer.dart';
 import 'package:letter_signing/keys/key_ui.dart';
 import 'package:letter_signing/keys/password_prompt.dart';
 import 'package:letter_signing/keys/transfer_codec.dart';
+import 'package:letter_signing/theme/app_theme.dart';
+import 'package:letter_signing/theme/widgets.dart';
 
 const _frameInterval = Duration(milliseconds: 1500);
 
@@ -82,20 +84,36 @@ class KeyExportScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Export key')),
     body: ListView(
-      padding: const EdgeInsets.all(24),
       children: [
-        const Text(
-          'This is your encrypted key. It is useless without the key password. '
-          'On the new device choose Import key and enter the same password.',
+        PageBody(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Notice(
+                'This is your encrypted key. It is useless without the key '
+                'password. On the new device choose Import key and enter the '
+                'same password.',
+              ),
+              const SizedBox(height: 20),
+              const SectionHeader('Option 1: file'),
+              FilledButton.icon(
+                onPressed: () => runKeyAction(context, _shareFile),
+                icon: const Icon(Icons.ios_share),
+                label: const Text('Save or share as file'),
+              ),
+              const SectionHeader(
+                'Option 2: QR code',
+                subtitle: 'Scan it with the new device.',
+              ),
+              AppCard(
+                child: Center(
+                  child: QrFrameSlideshow(frames: splitQrFrames(envelope)),
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: () => runKeyAction(context, _shareFile),
-          icon: const Icon(Icons.ios_share),
-          label: const Text('Save or share as file'),
-        ),
-        const SizedBox(height: 24),
-        QrFrameSlideshow(frames: splitQrFrames(envelope)),
       ],
     ),
   );
@@ -136,21 +154,29 @@ class _QrFrameSlideshowState extends State<QrFrameSlideshow> {
     final count = widget.frames.length;
     return Column(
       children: [
+        // The QR code needs a white quiet zone to scan, also in dark mode.
         Container(
-          color: Colors.white,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(Tokens.radiusSmall),
+          ),
           padding: const EdgeInsets.all(12),
           child: QrImageView(
             data: widget.frames[_index],
-            size: 280,
+            size: 260,
             errorCorrectionLevel: QrErrorCorrectLevel.L,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          count > 1
-              ? 'Frame ${_index + 1} of $count. Keep scanning until all are read.'
-              : 'Scan with the new device',
-        ),
+        const SizedBox(height: 12),
+        if (count > 1) ...[
+          StatusPill('Frame ${_index + 1} of $count', tone: Tone.info),
+          const SizedBox(height: 6),
+          const Text(
+            'Keep scanning until all frames are read.',
+            textAlign: TextAlign.center,
+          ),
+        ] else
+          const Text('Scan with the new device', textAlign: TextAlign.center),
       ],
     );
   }
@@ -181,24 +207,48 @@ class KeyImportSourceScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Import key')),
     body: ListView(
-      padding: const EdgeInsets.all(24),
       children: [
-        FilledButton.icon(
-          onPressed: () => runKeyAction(context, () => _pickFile(context)),
-          icon: const Icon(Icons.file_open),
-          label: const Text('Choose key file'),
-        ),
-        const SizedBox(height: 12),
-        if (qrScanSupported)
-          OutlinedButton.icon(
-            onPressed: () => _scan(context),
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Scan QR code'),
-          )
-        else
-          const Text(
-            'QR scanning is not available on this platform; use a file.',
+        PageBody(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Notice(
+                'Choose the key you exported on your old device. You will '
+                'confirm it with the key password next.',
+              ),
+              const SizedBox(height: 20),
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () =>
+                          runKeyAction(context, () => _pickFile(context)),
+                      icon: const Icon(Icons.file_open),
+                      label: const Text('Choose key file'),
+                    ),
+                    const SizedBox(height: 12),
+                    if (qrScanSupported)
+                      OutlinedButton.icon(
+                        onPressed: () => _scan(context),
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Scan QR code'),
+                      )
+                    else
+                      Text(
+                        'QR scanning is not available on this platform; use a '
+                        'file.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
+        ),
       ],
     ),
   );
@@ -240,13 +290,26 @@ class _QrScanScreenState extends State<QrScanScreen> {
         Align(
           alignment: Alignment.bottomCenter,
           child: Container(
+            width: double.infinity,
             color: Colors.black54,
             padding: const EdgeInsets.all(16),
-            child: Text(
-              _assembler.total == 0
-                  ? 'Point the camera at the QR code'
-                  : 'Read ${_assembler.received} of ${_assembler.total} frames',
-              style: const TextStyle(color: Colors.white),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_assembler.total > 0) ...[
+                  LinearProgressIndicator(
+                    value: _assembler.received / _assembler.total,
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                Text(
+                  _assembler.total == 0
+                      ? 'Point the camera at the QR code'
+                      : 'Read ${_assembler.received} of ${_assembler.total} frames',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ],
             ),
           ),
         ),
