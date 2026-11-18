@@ -122,3 +122,16 @@ def test_manager_cannot_touch_superuser_permissions_or_reset_token(api, manager,
     token = api.login(manager.email)["access"]
     assert api.call("put", f"/manage/users/{root.id}/permissions", {"codes": ["user"]}, token=token).status_code == 403
     assert api.call("post", f"/manage/users/{root.id}/reset-token", token=token).status_code == 403
+
+
+def test_notifications_list_and_mark_read(api, make_user):
+    from accounts.models import Notification
+
+    user = make_user("a@corp.test")
+    Notification.objects.create(user=user, kind="x", title="Hello")
+    Notification.objects.create(user=make_user("b@corp.test"), kind="x", title="Not yours")
+    token = api.login(user.email)["access"]
+    rows = api.call("get", "/me/notifications", token=token).data
+    assert [r["title"] for r in rows] == ["Hello"] and rows[0]["read"] is False
+    api.call("post", "/me/notifications/read", token=token)
+    assert api.call("get", "/me/notifications", token=token).data[0]["read"] is True

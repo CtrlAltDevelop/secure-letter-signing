@@ -6,3 +6,6 @@ server/.venv/
 server/db.sqlite3
 app/assets/brand/
 test-vectors/dart-signed.json
+test-vectors/dart-e2e.json
+server/attachments/
+backups/

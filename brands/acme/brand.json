@@ -1,0 +1,9 @@
+{
+  "id": "acme",
+  "name": "Acme Corporation",
+  "logo": "logo.svg",
+  "colors": { "primary": "#B4472A", "accent": "#E0A526", "dark": "#1B1210" },
+  "domain": "localhost",
+  "apiUrl": "http://localhost:8001",
+  "features": { "signupDomain": false, "signupInvite": false }
+}

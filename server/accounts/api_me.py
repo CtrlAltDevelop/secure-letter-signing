@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from django.contrib.auth.hashers import check_password as check_hash
@@ -9,7 +10,7 @@ from ninja.errors import HttpError
 from . import ratelimit
 from .api_auth import Detail, check_password
 from .auth import BearerAuth, user_of
-from .models import Session, audit
+from .models import Notification, Session, audit
 from .schemas import SessionOut, UserOut
 
 router = Router(tags=["me"], auth=BearerAuth())
@@ -78,3 +79,26 @@ def change_password(request, data: PasswordIn):
     )
     audit(user, "password_changed", user.email)
     return {"detail": "Password changed"}
+
+
+class NotificationOut(Schema):
+    id: int
+    kind: str
+    title: str
+    data: dict
+    at: datetime
+    read: bool
+
+
+@router.get("/notifications", response=list[NotificationOut])
+def notifications(request, after: int = 0, limit: int = 100):
+    """In-app notifications (the fallback when email is not configured); title only."""
+    rows = Notification.objects.filter(user=user_of(request), id__gt=after).order_by("id")[: min(limit, 200)]
+    return [NotificationOut(id=n.id, kind=n.kind, title=n.title, data=n.data, at=n.at, read=n.read_at is not None)
+            for n in rows]
+
+
+@router.post("/notifications/read", response=Detail)
+def mark_notifications_read(request):
+    Notification.objects.filter(user=user_of(request), read_at__isnull=True).update(read_at=timezone.now())
+    return {"detail": "ok"}
