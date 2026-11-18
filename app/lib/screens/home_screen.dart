@@ -109,7 +109,12 @@ class _HomeScreenState extends State<HomeScreen> {
       api: widget.auth.api,
       store: _keyStore,
       deviceName: defaultTargetPlatform.name,
-      onChanged: () => setState(() => _localKey = _keyStore.load()),
+      onChanged: () {
+        // Block body on purpose: an arrow would make setState's callback return the Future.
+        setState(() {
+          _localKey = _keyStore.load();
+        });
+      },
     ),
   );
 
