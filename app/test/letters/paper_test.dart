@@ -26,15 +26,26 @@ void main() {
     expect(paginate(text, 12, rtl: true).join('\n'), text);
   });
 
-  testWidgets('letterhead header shows name; footer falls back to contact line', (t) async {
-    const head = Letterhead(name: 'Acme', phone: '123', website: 'a.test');
-    await t.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: LetterheadHeader(head: head)),
-      ),
-    );
-    expect(find.text('Acme'), findsOneWidget);
-    expect(head.footerText, '123  |  a.test');
+  testWidgets(
+    'letterhead header shows name; footer falls back to contact line',
+    (t) async {
+      const head = Letterhead(name: 'Acme', phone: '123', website: 'a.test');
+      await t.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: LetterheadHeader(head: head)),
+        ),
+      );
+      expect(find.text('Acme'), findsOneWidget);
+      expect(head.footerText, '123  |  a.test');
+    },
+  );
+
+  test('signature blocks that do not fit move to their own page', () {
+    final text = List.generate(52, (i) => 'line $i').join('\n');
+    final without = paginate(text, 12, rtl: false);
+    final withSigs = paginate(text, 12, rtl: false, signatureCount: 3);
+    expect(withSigs.length, greaterThanOrEqualTo(without.length));
+    expect(paginate('short', 12, rtl: false, signatureCount: 1), ['short']);
   });
 
   testWidgets('paper editor returns the typed text on Done', (t) async {
@@ -59,7 +70,12 @@ void main() {
     );
     await t.tap(find.text('go'));
     await t.pumpAndSettle();
+    await t.tap(find.text('Preview'));
+    await t.pumpAndSettle();
     expect(find.text('Acme'), findsOneWidget);
+    expect(find.text('Subject: T'), findsOneWidget);
+    await t.tap(find.text('Edit'));
+    await t.pumpAndSettle();
     await t.enterText(find.byType(TextField), 'new text');
     await t.tap(find.text('Done'));
     await t.pumpAndSettle();

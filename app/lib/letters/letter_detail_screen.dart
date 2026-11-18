@@ -8,6 +8,8 @@ import 'package:letter_signing/letters/letter_crypto_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/models.dart';
+import 'package:letter_signing/letters/paper_pages.dart';
+import 'package:letter_signing/letters/paper_preview.dart';
 import 'package:letter_signing/letters/paper_screen.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/sign_screen.dart';
@@ -440,25 +442,31 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
       // Printing still works without a letterhead.
     }
     if (!mounted) return;
-    final signed = [
-      for (final s in l.signatures)
-        if (s.decision == 'approved')
-          '${l.signers.where((p) => p.userId == s.signerId).map((p) => p.displayName).firstOrNull ?? ''}'
-              '  (${fmtDateTime(s.createdAt)})',
-    ];
-    final text = signed.isEmpty
-        ? plain.text
-        : '${plain.text}\n\n${signed.join('\n')}';
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => PaperScreen(
-          head: head,
-          title: l.title,
-          subtitle: '#${l.brief.no}  -  ${fmtDateTime(l.brief.createdAt)}',
-          text: text,
-        ),
-      ),
+    final doc = PaperDocument(
+      head: head,
+      title: l.title,
+      number: '#${l.brief.no}',
+      date: fmtDateTime(l.brief.sentAt ?? l.brief.createdAt),
+      text: plain.text,
+      signatures: [
+        for (final s in l.signatures)
+          PaperSignature(
+            decision: s.decision,
+            note: s.note,
+            name:
+                l.signers
+                    .where((p) => p.userId == s.signerId)
+                    .map((p) => p.displayName)
+                    .firstOrNull ??
+                '',
+            date: fmtDateTime(s.createdAt),
+            fingerprint: s.fingerprint,
+            documentId: '${s.payload['contentHash'] ?? ''}',
+          ),
+      ],
     );
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute(builder: (_) => PaperScreen(doc: doc)));
   }
 
   Widget _paper() {

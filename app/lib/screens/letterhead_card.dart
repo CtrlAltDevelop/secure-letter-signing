@@ -78,12 +78,12 @@ class _LetterheadCardState extends State<LetterheadCard> {
 
   static const _labels = {
     'name': 'Company name',
-    'tagline': 'Tagline / department',
+    'tagline': 'Subtitle',
     'address': 'Address',
     'phone': 'Phone',
     'email': 'Email',
     'website': 'Website',
-    'footer': 'Footer text (every page)',
+    'footer': 'Address / phone (bottom of every page)',
   };
 
   @override
