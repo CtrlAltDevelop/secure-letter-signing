@@ -190,3 +190,14 @@ def test_verify_email_cannot_reactivate_a_deactivated_user(api, company, setting
     api.call("post", "/auth/verify-email", {"token": token})
     user.refresh_from_db()
     assert not user.is_active
+
+
+def test_invite_without_max_uses_is_unlimited(api, manager, company):
+    company.signup_invite_enabled = True
+    company.save()
+    invite = InviteCode.objects.create(created_by=manager, max_uses=None)
+    for i in range(3):
+        resp = api.call("post", "/auth/signup", {"email": f"u{i}@x.test", "password": PASSWORD, "invite_code": invite.code})
+        assert resp.status_code == 201
+    invite.refresh_from_db()
+    assert invite.uses == 3

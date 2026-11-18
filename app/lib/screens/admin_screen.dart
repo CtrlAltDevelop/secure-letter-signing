@@ -129,7 +129,10 @@ class _AdminTabState extends State<AdminTab> {
         content: TextField(
           controller: uses,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Max uses'),
+          decoration: const InputDecoration(
+            labelText: 'Max uses',
+            helperText: 'Leave empty for unlimited',
+          ),
         ),
         actions: [
           TextButton(
@@ -143,7 +146,7 @@ class _AdminTabState extends State<AdminTab> {
         ],
       ),
     );
-    final maxUses = int.tryParse(uses.text) ?? 1;
+    final maxUses = int.tryParse(uses.text.trim()); // empty = unlimited
     uses.dispose();
     if (ok == true)
       await _call('POST', '/manage/invites', {'max_uses': maxUses});
@@ -195,7 +198,7 @@ class _AdminTabState extends State<AdminTab> {
             for (final i in data.invites)
               ListTile(
                 title: SelectableText('${i['code']}'),
-                subtitle: Text('${i['uses']}/${i['max_uses']} used'),
+                subtitle: Text('${i['uses']}/${i['max_uses'] ?? '∞'} used'),
                 trailing: i['active'] == true
                     ? TextButton(
                         onPressed: () => _call(

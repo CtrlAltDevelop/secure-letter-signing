@@ -6,7 +6,7 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 from ninja import Router, Schema, Status
 from ninja.errors import HttpError
@@ -96,14 +96,17 @@ def signup(request, data: SignupIn):
     if data.invite_code:
         invite = InviteCode.objects.select_for_update().filter(code=data.invite_code, active=True).first()
         usable = (
-            cs.signup_invite_enabled and invite is not None and invite.uses < invite.max_uses
+            cs.signup_invite_enabled and invite is not None
+            and (invite.max_uses is None or invite.uses < invite.max_uses)
             and (invite.expires_at is None or invite.expires_at > timezone.now())
         )
         if not usable:
             raise HttpError(403, "Invalid or expired invitation code")
         user = _create_or_409(email, data, active=True)
         # Atomic bump: select_for_update is a no-op on SQLite.
-        if not InviteCode.objects.filter(pk=invite.pk, uses__lt=F("max_uses")).update(uses=F("uses") + 1):
+        if not InviteCode.objects.filter(Q(max_uses__isnull=True) | Q(uses__lt=F("max_uses")), pk=invite.pk).update(
+            uses=F("uses") + 1
+        ):
             raise HttpError(403, "Invalid or expired invitation code")
         audit(user, "signup_invite", email, invite=invite.id)
         return Status(201, {"detail": "Registered"})

@@ -99,7 +99,7 @@ def _new_invite_code() -> str:
 class InviteCode(models.Model):
     code = models.CharField(max_length=32, unique=True, default=_new_invite_code)
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
-    max_uses = models.PositiveIntegerField(default=1)
+    max_uses = models.PositiveIntegerField(default=1, null=True, blank=True, help_text="Leave empty for unlimited uses")
     uses = models.PositiveIntegerField(default=0)
     expires_at = models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=True)

@@ -47,14 +47,14 @@ class CompanyIn(Schema):
 
 
 class InviteIn(Schema):
-    max_uses: int = 1
+    max_uses: int | None = 1  # null = unlimited
     expires_at: datetime | None = None
 
 
 class InviteOut(Schema):
     id: int
     code: str
-    max_uses: int
+    max_uses: int | None
     uses: int
     expires_at: datetime | None
     active: bool
@@ -144,8 +144,8 @@ def update_company(request, data: CompanyIn):
 @router.post("/invites", response=InviteOut)
 def create_invite(request, data: InviteIn):
     manager = require_manager(request)
-    if data.max_uses < 1:
-        raise HttpError(422, "max_uses must be at least 1")
+    if data.max_uses is not None and data.max_uses < 1:
+        raise HttpError(422, "max_uses must be at least 1, or empty for unlimited")
     invite = InviteCode.objects.create(created_by=manager, max_uses=data.max_uses, expires_at=data.expires_at)
     audit(manager, "invite_created", str(invite.id), max_uses=invite.max_uses)
     return invite
