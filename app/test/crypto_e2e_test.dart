@@ -25,13 +25,27 @@ void main() {
   });
 
   test('unwraps the JS key file, wraps, decrypts body (JS vectors)', () async {
-    final id = await Identity.unwrap(v['keyFile'] as Map<String, dynamic>, v['password'] as String);
+    final id = await Identity.unwrap(
+      v['keyFile'] as Map<String, dynamic>,
+      v['password'] as String,
+    );
     expect(id.fp, v['fp']);
-    final docKey = unwrapDocKey(v['wrapped'] as Map<String, dynamic>, id.encJwk, id.fp);
+    final docKey = unwrapDocKey(
+      v['wrapped'] as Map<String, dynamic>,
+      id.encJwk,
+      id.fp,
+    );
     expect(base64.encode(docKey), v['docKey']);
-    expect(decryptJson(v['body'] as Map<String, dynamic>, docKey), v['bodyPlain']);
     expect(
-      () => unwrapDocKey(v['wrapped'] as Map<String, dynamic>, id.encJwk, 'other-fp'),
+      decryptJson(v['body'] as Map<String, dynamic>, docKey),
+      v['bodyPlain'],
+    );
+    expect(
+      () => unwrapDocKey(
+        v['wrapped'] as Map<String, dynamic>,
+        id.encJwk,
+        'other-fp',
+      ),
       throwsA(isA<DecryptionException>()),
     );
   });
@@ -51,31 +65,57 @@ void main() {
     expect(keyFile['kdf']['iter'], kdfIterations);
 
     final docKey = newDocKey();
-    final wrapped = wrapDocKey(docKey, id.publicFile['enc'] as Map<String, dynamic>, id.fp);
+    final wrapped = wrapDocKey(
+      docKey,
+      id.publicFile['enc'] as Map<String, dynamic>,
+      id.fp,
+    );
     expect(unwrapDocKey(wrapped, back.encJwk, back.fp), docKey);
     final tampered = {...wrapped, 'ct': base64.encode(Uint8List(48))};
-    expect(() => unwrapDocKey(tampered, back.encJwk, back.fp), throwsA(isA<DecryptionException>()));
+    expect(
+      () => unwrapDocKey(tampered, back.encJwk, back.fp),
+      throwsA(isA<DecryptionException>()),
+    );
 
-    final plain = {'subject': 'Dart é中', 'list': [1, 2]};
+    final plain = {
+      'subject': 'Dart é中',
+      'list': [1, 2],
+    };
     final box = encryptJson(plain, docKey);
     expect(decryptJson(box, docKey), plain);
-    expect(() => decryptJson(box, newDocKey()), throwsA(isA<DecryptionException>()));
+    expect(
+      () => decryptJson(box, newDocKey()),
+      throwsA(isA<DecryptionException>()),
+    );
 
-    final payload = {'v': 1, 'note': 'dart', 'signer': {'name': 'Dart User', 'fp': id.fp}};
+    final payload = {
+      'v': 1,
+      'note': 'dart',
+      'signer': {'name': 'Dart User', 'fp': id.fp},
+    };
     final sig = signPayload(payload, back.signJwk);
-    expect(verifyPayload(payload, sig, id.publicFile['sign'] as Map<String, dynamic>), isTrue);
+    expect(
+      verifyPayload(
+        payload,
+        sig,
+        id.publicFile['sign'] as Map<String, dynamic>,
+      ),
+      isTrue,
+    );
     expect(() => signPayload({'x': 1.5}, back.signJwk), throwsFormatException);
 
-    File('../test-vectors/dart-e2e.json').writeAsStringSync(jsonEncode({
-      'password': _password,
-      'keyFile': keyFile,
-      'pub': id.publicFile,
-      'docKey': base64.encode(docKey),
-      'wrapped': wrapped,
-      'plain': plain,
-      'body': box,
-      'payload': payload,
-      'sig': sig,
-    }));
+    File('../test-vectors/dart-e2e.json').writeAsStringSync(
+      jsonEncode({
+        'password': _password,
+        'keyFile': keyFile,
+        'pub': id.publicFile,
+        'docKey': base64.encode(docKey),
+        'wrapped': wrapped,
+        'plain': plain,
+        'body': box,
+        'payload': payload,
+        'sig': sig,
+      }),
+    );
   }, timeout: const Timeout(Duration(minutes: 2)));
 }

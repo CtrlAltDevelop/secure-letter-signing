@@ -14,9 +14,12 @@ const kCompanyKey = 'company';
 
 /// A user with one active key, as the directory returns it.
 class FakeUser {
-  FakeUser(this.id, this.email, {this.permissions = const ['letter.see', 'letter.sign']})
-    : identity = Identity.generate(email),
-      keyId = '00000000-0000-0000-0000-${id.toString().padLeft(12, '0')}';
+  FakeUser(
+    this.id,
+    this.email, {
+    this.permissions = const ['letter.see', 'letter.sign'],
+  }) : identity = Identity.generate(email),
+       keyId = '00000000-0000-0000-0000-${id.toString().padLeft(12, '0')}';
   final int id;
   final String email;
   final List<String> permissions;
@@ -52,7 +55,10 @@ class FakeVault implements KeyVault {
   @override
   Future<bool> hasActiveKey() async => key != null;
   @override
-  Future<UnlockedKey?> unlock(BuildContext context, {required String reason}) async {
+  Future<UnlockedKey?> unlock(
+    BuildContext context, {
+    required String reason,
+  }) async {
     reasons.add(reason);
     return key;
   }
@@ -64,34 +70,58 @@ class FakeCompanyKeys implements CompanyKeys {
   final bool empty;
   final Uint8List key = Uint8List.fromList(List.filled(32, 7));
   @override
-  Future<Uint8List?> get(int version, UnlockedKey k) async => version == 1 ? key : null;
+  Future<Uint8List?> get(int version, UnlockedKey k) async =>
+      version == 1 ? key : null;
   @override
-  Future<({int version, Map<String, dynamic> wrap})?> wrapForCompany(Uint8List docKey, UnlockedKey k) async =>
-      empty ? null : (version: 1, wrap: encryptBytes(docKey, key));
+  Future<({int version, Map<String, dynamic> wrap})?> wrapForCompany(
+    Uint8List docKey,
+    UnlockedKey k,
+  ) async => empty ? null : (version: 1, wrap: encryptBytes(docKey, key));
 }
 
 typedef Handler = http.Response Function(http.Request req, Object? body);
 
-http.Response json(Object? body, [int status = 200]) =>
-    http.Response(jsonEncode(body), status, headers: {'content-type': 'application/json'});
+http.Response json(Object? body, [int status = 200]) => http.Response(
+  jsonEncode(body),
+  status,
+  headers: {'content-type': 'application/json'},
+);
 
 /// ApiClient + LettersApi on a scripted in-memory server. [handler] returns null to fall through to defaults.
-({ApiClient client, LettersApi api, List<http.Request> calls}) fakeApi(Handler handler) {
+({ApiClient client, LettersApi api, List<http.Request> calls}) fakeApi(
+  Handler handler,
+) {
   final calls = <http.Request>[];
   final mock = MockClient((req) async {
     calls.add(req);
     Object? body;
-    if (req.body.isNotEmpty && req.headers['content-type']?.contains('json') == true) {
+    if (req.body.isNotEmpty &&
+        req.headers['content-type']?.contains('json') == true) {
       body = jsonDecode(req.body);
     }
     return handler(req, body);
   });
-  final client = ApiClient(baseUrl: 'http://x', store: MemoryTokenStore(), client: mock)
-    ..setSession(access: 'tok', refresh: 'r');
-  return (client: client, api: LettersApi(client, httpClient: mock), calls: calls);
+  final client = ApiClient(
+    baseUrl: 'http://x',
+    store: MemoryTokenStore(),
+    client: mock,
+  )..setSession(access: 'tok', refresh: 'r');
+  return (
+    client: client,
+    api: LettersApi(client, httpClient: mock),
+    calls: calls,
+  );
 }
 
-Map<String, dynamic> briefJson(String id, {String status = 'draft', int no = 1, String? parentId, String title = 'T', int creator = 1, String visibility = 'private'}) => {
+Map<String, dynamic> briefJson(
+  String id, {
+  String status = 'draft',
+  int no = 1,
+  String? parentId,
+  String title = 'T',
+  int creator = 1,
+  String visibility = 'private',
+}) => {
   'id': id,
   'no': no,
   'title': title,
@@ -126,7 +156,12 @@ Map<String, dynamic> detailJson(
   'attachments': [],
 };
 
-Map<String, dynamic> participantJson(FakeUser u, {String role = 'signer', int position = 0, String decision = ''}) => {
+Map<String, dynamic> participantJson(
+  FakeUser u, {
+  String role = 'signer',
+  int position = 0,
+  String decision = '',
+}) => {
   'user_id': u.id,
   'email': u.email,
   'full_name': u.email.split('@').first,
