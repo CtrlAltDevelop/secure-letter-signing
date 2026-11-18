@@ -2,10 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
-import 'package:letter_signing/keys/company_key_service.dart';
-import 'package:letter_signing/keys/key_vault.dart';
 import 'package:letter_signing/letters/letterhead.dart';
-import 'package:letter_signing/screens/company_key_card.dart';
 import 'package:letter_signing/screens/departments_card.dart';
 import 'package:letter_signing/screens/letterhead_card.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
@@ -15,15 +12,8 @@ import 'package:letter_signing/theme/widgets.dart';
 
 /// Manager-only: people & permissions, signup switches, invitation codes.
 class AdminTab extends StatefulWidget {
-  const AdminTab({
-    super.key,
-    required this.auth,
-    required this.vault,
-    required this.companyKeys,
-  });
+  const AdminTab({super.key, required this.auth});
   final AuthController auth;
-  final KeyVault vault;
-  final CompanyKeyService companyKeys;
 
   @override
   State<AdminTab> createState() => _AdminTabState();
@@ -323,11 +313,6 @@ class _AdminTabState extends State<AdminTab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    CompanyKeyCard(
-                      api: widget.auth.api,
-                      vault: widget.vault,
-                      service: widget.companyKeys,
-                    ),
                     LetterheadCard(
                       key: ValueKey(data.company['letterhead'].hashCode),
                       api: widget.auth.api,

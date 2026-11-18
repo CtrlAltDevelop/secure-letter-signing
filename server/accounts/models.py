@@ -63,6 +63,8 @@ class User(AbstractUser):
     # Exactly one manager per company; only the superuser sets this (in the admin).
     is_manager = models.BooleanField(default=False)
     grants = models.ManyToManyField(Permission, blank=True, related_name="users")
+    # 6-digit signing PIN, hashed with the Django password hasher. Empty = not set yet.
+    signing_pin_hash = models.CharField(max_length=256, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
@@ -95,6 +97,8 @@ class Session(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     last_active = models.DateTimeField(auto_now_add=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
+    # Set by the app that created the session: it can confirm a fingerprint/face check locally.
+    biometric = models.BooleanField(default=False)
 
 
 class RetiredRefresh(models.Model):

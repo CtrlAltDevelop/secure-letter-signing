@@ -3,10 +3,9 @@ from django.db import migrations
 
 NO_DELETE = [
     "accounts_user", "accounts_session", "accounts_auditevent", "accounts_notification", "accounts_invitecode",
-    "keys_userkey", "keys_companykeyversion", "keys_companykeywrap",
-    "letters_letter", "letters_participant", "letters_dockeywrap", "letters_signature",
-    "letters_attachment", "letters_letterevent",
-]
+    "letters_letter", "letters_participant", "letters_signature",
+    "letters_attachment", "letters_letterevent", "letters_signrequest",
+]  # sign requests change status, so only DELETE is blocked
 NO_UPDATE = ["accounts_auditevent", "letters_signature", "letters_letterevent"]
 MESSAGE = "deleting or rewriting this record is not allowed"
 
@@ -45,5 +44,5 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("letters", "0001_initial"), ("accounts", "0005_notification_auditevent_hash_auditevent_prev_hash_and_more"), ("keys", "0001_initial")]
+    dependencies = [("letters", "0001_initial"), ("accounts", "0005_notification_auditevent_hash_auditevent_prev_hash_and_more")]
     operations = [migrations.RunPython(forwards, backwards)]

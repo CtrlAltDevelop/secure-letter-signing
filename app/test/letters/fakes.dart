@@ -1,82 +1,90 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/painting.dart' show Size;
+import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:letter_signing/api/api_client.dart';
-import 'package:letter_signing/crypto/document_crypto.dart';
-import 'package:letter_signing/crypto/identity.dart';
-import 'package:letter_signing/keys/key_vault.dart';
+import 'package:letter_signing/auth/biometrics.dart';
 import 'package:letter_signing/letters/letters_api.dart';
+import 'package:letter_signing/letters/letters_env.dart';
+import 'package:letter_signing/letters/live_service.dart';
+import 'package:letter_signing/letters/models.dart';
 
-const kCompanyKey = 'company';
-
-/// A user with one active key, as the directory returns it.
+/// A colleague as the directory returns it.
 class FakeUser {
-  FakeUser(
+  const FakeUser(
     this.id,
     this.email, {
     this.permissions = const ['letter.see', 'letter.sign'],
-  }) : identity = Identity.generate(email),
-       keyId = '00000000-0000-0000-0000-${id.toString().padLeft(12, '0')}';
+  });
   final int id;
   final String email;
   final List<String> permissions;
-  final Identity identity;
-  final String keyId;
-
-  UnlockedKey get unlocked => UnlockedKey(keyId: keyId, identity: identity);
 
   Map<String, dynamic> get directoryJson => {
     'id': id,
     'email': email,
     'full_name': email.split('@').first,
     'permissions': permissions,
-    'keys': [
-      {
-        'id': keyId,
-        'user_id': id,
-        'device_name': 'phone',
-        'sign_pub': identity.publicFile['sign'],
-        'enc_pub': identity.publicFile['enc'],
-        'fingerprint': identity.fp,
-        'status': 'active',
-        'created_at': '2026-01-01T00:00:00Z',
-      },
-    ],
   };
 }
 
-class FakeVault implements KeyVault {
-  FakeVault(this.key);
-  UnlockedKey? key;
+/// Scripted fingerprint/face: [result] is what `authenticate` returns.
+class FakeBiometrics implements Biometrics {
+  FakeBiometrics({this.isAvailable = true, this.result = true});
+  final bool isAvailable;
+  bool result;
   final reasons = <String>[];
   @override
-  Future<bool> hasActiveKey() async => key != null;
+  Future<bool> available() async => isAvailable;
   @override
-  Future<UnlockedKey?> unlock(
-    BuildContext context, {
-    required String reason,
-  }) async {
+  Future<bool> authenticate(String reason) async {
     reasons.add(reason);
-    return key;
+    return result;
   }
 }
 
-/// Wraps are plain AES-GCM under a fixed company key (matches `decryptBytes` in the service).
-class FakeCompanyKeys implements CompanyKeys {
-  FakeCompanyKeys({this.empty = false});
-  final bool empty;
-  final Uint8List key = Uint8List.fromList(List.filled(32, 7));
+/// A [LiveService] whose frames the test pushes by hand.
+class FakeLive extends LiveService {
+  FakeLive(ApiClient api) : super(api: api, cursor: MemoryCursorStore());
+  final frames = StreamController<LiveEvent>.broadcast();
+  final up = StreamController<bool>.broadcast();
   @override
-  Future<Uint8List?> get(int version, UnlockedKey k) async =>
-      version == 1 ? key : null;
+  Stream<LiveEvent> get events => frames.stream;
   @override
-  Future<({int version, Map<String, dynamic> wrap})?> wrapForCompany(
-    Uint8List docKey,
-    UnlockedKey k,
-  ) async => empty ? null : (version: 1, wrap: encryptBytes(docKey, key));
+  Stream<bool> get connection => up.stream;
+  void push(Map<String, dynamic> frame) => frames.add(LiveEvent(frame));
+}
+
+LettersEnv testEnv(
+  ({ApiClient client, LettersApi api, List<http.Request> calls}) f, {
+  int userId = 2,
+  Biometrics? biometrics,
+  LiveService? live,
+  Future<bool> Function(String pin)? enrollBiometric,
+}) => LettersEnv(
+  api: f.api,
+  live: live ?? FakeLive(f.client),
+  userId: userId,
+  biometrics: biometrics ?? FakeBiometrics(),
+  deviceName: 'laptop',
+  enrollBiometric: enrollBiometric,
+  sessionId: () => 'S1',
+);
+
+/// Tall surface so scrollable screens show everything.
+Future<void> useTallSurface(
+  WidgetTester t, [
+  Size size = const Size(800, 2000),
+]) async {
+  t.view.devicePixelRatio = 1;
+  await t.binding.setSurfaceSize(size);
+  addTearDown(() {
+    t.view.resetDevicePixelRatio();
+    t.binding.setSurfaceSize(null);
+  });
 }
 
 typedef Handler = http.Response Function(http.Request req, Object? body);
@@ -136,24 +144,75 @@ Map<String, dynamic> briefJson(
 
 Map<String, dynamic> detailJson(
   Map<String, dynamic> brief, {
-  required Map<String, dynamic> body,
+  Map<String, dynamic> body = const {'text': 'Hello', 'attachments': []},
   List<Map<String, dynamic>> participants = const [],
-  List<Map<String, dynamic>> myWraps = const [],
-  Map<String, dynamic>? companyWrap,
-  int order = 0,
+  List<Map<String, dynamic>> signatures = const [],
 }) => {
   ...brief,
   'publish_mode': 'after_sign',
   'order': 'parallel',
   'due_at': null,
   'body': body,
-  'company_key_version': companyWrap == null ? null : 1,
-  'company_wrap': companyWrap,
   'participants': participants,
-  'signatures': [],
-  'my_wraps': myWraps,
+  'signatures': signatures,
   'children': [],
   'attachments': [],
+};
+
+Map<String, dynamic> signatureJson(
+  FakeUser u, {
+  String decision = 'approved',
+  String method = 'pin',
+  String device = 'laptop',
+}) => {
+  'signer_id': u.id,
+  'decision': decision,
+  'note': '',
+  'method': method,
+  'device_name': device,
+  'signed_at': '2026-01-02T03:04:05Z',
+  'seal': 'c2VhbA==',
+  'payload': {'contentHash': 'h' * 64, 'method': method},
+};
+
+Map<String, dynamic> sessionJson(
+  String id, {
+  String device = 'phone',
+  bool current = false,
+  bool biometric = false,
+  String platform = 'android',
+}) => {
+  'id': id,
+  'device_name': device,
+  'platform': platform,
+  'ip': '1.2.3.4',
+  'last_active': '2026-01-01T00:00:00Z',
+  'current': current,
+  'biometric': biometric,
+};
+
+Map<String, dynamic> signRequestJson(
+  String id, {
+  String status = 'pending',
+  String decision = 'approved',
+  String letterId = 'L1',
+  String title = 'Budget',
+  String note = 'ok',
+  String approver = 'S2',
+  String? expiresAt,
+}) => {
+  'id': id,
+  'letter_id': letterId,
+  'letter_title': title,
+  'decision': decision,
+  'note': note,
+  'status': status,
+  'requester_session_id': 'S1',
+  'requester_device_name': 'laptop',
+  'approver_session_id': approver,
+  'created_at': '2026-01-01T00:00:00Z',
+  'expires_at': expiresAt ?? '2999-01-01T00:00:00Z',
+  'resolved_at': null,
 };
 
 Map<String, dynamic> participantJson(

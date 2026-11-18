@@ -7,7 +7,6 @@ from ninja import Router, Schema
 from ninja.errors import HttpError
 
 from . import mailer
-from .api_auth import Detail
 from .auth import BearerAuth, require_manager
 from .models import BASE_PERMISSION, CompanySettings, Department, InviteCode, Permission, Session, User, audit
 from .schemas import UserOut

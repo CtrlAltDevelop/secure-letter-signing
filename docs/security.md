@@ -32,3 +32,30 @@
 `letter = {id, no, rev, prevHash?, date, subject, body, head, createdAt}`, encrypted in `.letter` and echoed inside the signed `payload`.
 A revision keeps `id`/`no`, increments `rev`, and sets `prevHash` to the manager's previous signed reply hash (first 64 bits of SHA-256 of canonical payload),
 so versions form a verifiable chain. The letterhead (`head`) is part of the signed content.
+
+
+## Server app (signing v3): trust model
+
+The server app no longer uses client-side end-to-end encryption. See `docs/signing-v3.md` for the contract.
+
+- **At rest:** letter bodies and attachment files are encrypted by the server with Fernet (AES-128-CBC + HMAC-SHA256).
+  The key is derived (HKDF-SHA256) from `DJANGO_DATA_KEY`. The database and the attachments volume alone do not reveal
+  content; the running server (and whoever holds the key) can read it. Back the key up with the database; losing it
+  makes stored letters unreadable.
+- **Signing:** by the 6-digit signing PIN (stored hashed; every attempt is counted atomically before verification: 5 per user and 10 per session per 15 minutes, then 429; a correct PIN gives its attempt back so failures are what stay counted, and changing the PIN clears the count), or by a session
+  that was enrolled as `biometric` with the signing PIN, or by remote approval from another biometric session of the same user.
+- **Seal:** every signature payload is sealed with an Ed25519 key derived from `DJANGO_SEAL_SEED`; the public key is
+  published at `GET /api/letters/seal-key`. The certificate endpoint re-verifies each seal and that the signed
+  `contentHash` still matches the decrypted body. Rows in `letters_signature` are immutable (database trigger) and every
+  signature is recorded in the HMAC-chained audit log (`letter_signed` with its method).
+- **Limitations:** the server cannot verify that a biometric check really happened (no device-bound key); it trusts the
+  `biometric` flag of the session. The flag cannot come from login (ignored); enabling it needs the signing PIN (same
+  rate limit as signing), so a stolen token or phished password alone cannot make a session an approver. Anyone who controls the server and both secrets can forge seals; the audit chain is
+  keyed by `DJANGO_SECRET_KEY`. A 6-digit PIN is weak against an attacker who can bypass the rate limit (it is per
+  user, kept in the cache), so keep Redis available in production.
+
+- **Secrets:** outside `DJANGO_DEBUG=1` the server refuses to start unless `DJANGO_DATA_KEY` and `DJANGO_SEAL_SEED` are
+  each at least 32 characters, differ from each other and are not the dev fallbacks. HKDF uses a fixed, non-secret salt
+  per purpose (`core/cryptoutil.py`). Changing a salt or a key makes data encrypted or sealed with the old one
+  unreadable or unverifiable; never edit them on an existing deployment. Without `REDIS_URL` the PIN and login rate
+  limits are per-process and a loud warning is logged at start.

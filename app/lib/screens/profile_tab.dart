@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
+import 'package:letter_signing/screens/signing_pin.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
@@ -171,6 +172,18 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            SectionHeader(
+              'Signing PIN',
+              subtitle: widget.auth.user?.hasSigningPin ?? false
+                  ? 'Change the 6-digit PIN that confirms your signatures'
+                  : 'Set the 6-digit PIN that confirms your signatures',
+            ),
+            AppCard(
+              child: SigningPinForm(
+                auth: widget.auth,
+                onDone: () => _toast('Signing PIN saved'),
               ),
             ),
             const SectionHeader(

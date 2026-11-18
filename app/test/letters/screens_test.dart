@@ -1,33 +1,15 @@
-import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:letter_signing/crypto/document_crypto.dart';
-import 'package:letter_signing/letters/letter_crypto_service.dart';
-import 'package:letter_signing/letters/letters_env.dart';
+import 'package:letter_signing/letters/letter_detail_screen.dart';
+import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_list_screen.dart';
-import 'package:letter_signing/letters/live_service.dart';
-import 'package:letter_signing/letters/models.dart';
-import 'package:letter_signing/letters/sign_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'fakes.dart';
 
-LettersEnv envFor(
-  ({dynamic client, dynamic api, dynamic calls}) f,
-  FakeUser me, {
-  String? session = 'S1',
-}) => LettersEnv(
-  api: f.api,
-  vault: FakeVault(me.unlocked),
-  companyKeys: FakeCompanyKeys(),
-  live: LiveService(api: f.client, cursor: MemoryCursorStore()),
-  userId: me.id,
-  deviceName: 'phone',
-  sessionId: () => session,
-);
-
 void main() {
-  final me = FakeUser(2, 'me@x.test');
+  const me = FakeUser(2, 'me@x.test');
 
   testWidgets(
     'list nests chained letters under their parent and filters by status',
@@ -50,7 +32,7 @@ void main() {
         return json({});
       });
       await tester.pumpWidget(
-        MaterialApp(home: LettersListScreen(env: envFor(f, me))),
+        MaterialApp(home: LettersListScreen(env: testEnv(f))),
       );
       await tester.pumpAndSettle();
 
@@ -72,136 +54,43 @@ void main() {
   testWidgets('list shows a server error', (tester) async {
     final f = fakeApi((req, _) => json({'detail': 'boom'}, 500));
     await tester.pumpWidget(
-      MaterialApp(home: LettersListScreen(env: envFor(f, me))),
+      MaterialApp(home: LettersListScreen(env: testEnv(f))),
     );
     await tester.pumpAndSettle();
     expect(find.text('boom'), findsOneWidget);
   });
 
-  LetterDetail detail() {
-    final docKey = newDocKey();
-    return LetterDetail.fromJson(
-      detailJson(
-        briefJson('L1', status: 'in_signing', parentId: 'P', title: 'Budget'),
-        body: encryptJson({'text': 'x', 'attachments': []}, docKey),
-        participants: [participantJson(me)],
-      ),
-    );
-  }
-
-  testWidgets(
-    'sign flow unlocks, signs exactly the server payload and submits',
-    (tester) async {
-      tester.view.devicePixelRatio = 1;
-      await tester.binding.setSurfaceSize(const Size(800, 1600));
-      addTearDown(() {
-        tester.view.resetDevicePixelRatio();
-        tester.binding.setSurfaceSize(null);
-      });
-      Map<String, dynamic>? posted;
-      final f = fakeApi((req, body) {
-        if (req.url.path == '/api/letters/L1/sign') {
-          posted = body as Map<String, dynamic>;
-          return json(briefJson('L1', status: 'published'));
-        }
-        return json({});
-      });
-      final env = envFor(f, me);
-      final letter = detail();
-      LetterBrief? result;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async => result = await Navigator.of(context)
-                  .push<LetterBrief>(
-                    MaterialPageRoute(
-                      builder: (_) => SignScreen(env: env, letter: letter),
-                    ),
-                  ),
-              child: const Text('go'),
-            ),
+  testWidgets('detail shows the plain body, method and device', (tester) async {
+    await useTallSurface(tester);
+    final f = fakeApi((req, _) {
+      if (req.url.path == '/api/letters/L1') {
+        return json(
+          detailJson(
+            briefJson('L1', status: 'published', title: 'Budget'),
+            body: {'text': 'Pay the invoice', 'attachments': []},
+            participants: [participantJson(me, decision: 'approved')],
+            signatures: [
+              signatureJson(me, method: 'biometric', device: 'phone'),
+            ],
           ),
-        ),
-      );
-      await tester.tap(find.text('go'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'looks good');
-      await tester.tap(find.text('Unlock key and sign'));
-      await tester.pumpAndSettle();
-
-      expect((env.vault as FakeVault).reasons.single, contains('Budget'));
-      final payload = posted!['payload'] as Map<String, dynamic>;
-      expect(payload['decision'], 'approved');
-      expect(payload['note'], 'looks good');
-      expect(payload['parentId'], 'P');
-      expect(payload['sessionId'], 'S1');
-      expect(payload['contentHash'], hasLength(64));
-      expect(posted!['key_id'], me.keyId);
-      expect(
-        verifyPayload(
-          payload,
-          posted!['signature'] as String,
-          me.identity.publicFile['sign'] as Map<String, dynamic>,
-        ),
-        isTrue,
-      );
-      expect(result?.status, 'published');
-    },
-  );
-
-  testWidgets('sign shows server errors and stays open', (tester) async {
-    tester.view.devicePixelRatio = 1;
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
-    addTearDown(() {
-      tester.view.resetDevicePixelRatio();
-      tester.binding.setSurfaceSize(null);
+        );
+      }
+      return json({});
     });
-    final f = fakeApi(
-      (req, _) => json({'detail': 'It is not your turn yet'}, 409),
-    );
     await tester.pumpWidget(
       MaterialApp(
-        home: SignScreen(env: envFor(f, me), letter: detail()),
+        home: LetterDetailScreen(env: testEnv(f), letterId: 'L1'),
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Reject'));
-    await tester.pump();
-    await tester.tap(find.text('Unlock key and sign'));
-    await tester.pumpAndSettle();
-    expect(find.text('It is not your turn yet'), findsOneWidget);
-    expect(find.byType(SignScreen), findsOneWidget);
-  });
-
-  testWidgets('sign aborts when the unlock is cancelled', (tester) async {
-    tester.view.devicePixelRatio = 1;
-    await tester.binding.setSurfaceSize(const Size(800, 1600));
-    addTearDown(() {
-      tester.view.resetDevicePixelRatio();
-      tester.binding.setSurfaceSize(null);
-    });
-    final f = fakeApi((req, _) => json({}));
-    final env = envFor(f, me);
-    (env.vault as FakeVault).key = null;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SignScreen(env: env, letter: detail()),
-      ),
-    );
-    await tester.tap(find.text('Unlock key and sign'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('not unlocked'), findsOneWidget);
-    expect(f.calls.where((c) => c.url.path.endsWith('/sign')), isEmpty);
+    expect(find.textContaining('Pay the invoice'), findsOneWidget);
+    expect(find.textContaining('phone'), findsOneWidget);
+    expect(find.textContaining('Biometric'), findsWidgets);
   });
 
   test('attachment limits are enforced before any request', () async {
     final f = fakeApi((_, _) => json({}));
-    final svc = LetterCryptoService(
-      api: f.api,
-      companyKeys: FakeCompanyKeys(),
-      userId: 1,
-    );
+    final svc = LetterService(api: f.api, userId: 1);
     final bad = DraftInput(
       title: 't',
       text: '',
@@ -210,11 +99,48 @@ void main() {
         PendingAttachment(
           name: 'a.exe',
           type: 'application/x-msdownload',
-          bytes: utf8.encode('x') as dynamic,
+          bytes: Uint8List.fromList([1]),
         ),
       ],
     );
     await expectLater(svc.saveDraft(bad), throwsA(isA<LetterException>()));
     expect(f.calls, isEmpty);
   });
+
+  test(
+    'a draft goes up as a plain body, attachments as plain uploads',
+    () async {
+      final f = fakeApi((req, body) {
+        if (req.url.path == '/api/letters') return json(briefJson('L1'));
+        return json({
+          'id': 'A1',
+          'content_type': 'application/pdf',
+          'label': '0',
+          'size': 1,
+        }, 201);
+      });
+      final svc = LetterService(api: f.api, userId: 1);
+      await svc.saveDraft(
+        DraftInput(
+          title: ' t ',
+          text: 'hello',
+          signerIds: [2],
+          attachments: [
+            PendingAttachment(
+              name: 'a.pdf',
+              type: 'application/pdf',
+              bytes: Uint8List.fromList([1]),
+            ),
+          ],
+        ),
+      );
+      expect(f.calls.map((c) => '${c.method} ${c.url.path}'), [
+        'POST /api/letters',
+        'POST /api/letters/L1/attachments',
+      ]);
+      expect(f.calls.first.body, contains('"text":"hello"'));
+      expect(f.calls.first.body, isNot(contains('"wraps"')));
+      expect(f.calls.last.body, isNot(contains('iv')));
+    },
+  );
 }

@@ -1,15 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/letters/models.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
+import 'package:letter_signing/screens/biometric_enrol.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/widgets.dart';
-
-IconData platformIcon(String platform) => switch (platform.toLowerCase()) {
-  'android' || 'ios' || 'iphone' => Icons.smartphone,
-  'macos' || 'windows' || 'linux' => Icons.laptop_mac,
-  _ => Icons.devices_other,
-};
 
 class SessionsTab extends StatefulWidget {
   const SessionsTab({super.key, required this.auth});
@@ -20,12 +16,12 @@ class SessionsTab extends StatefulWidget {
 }
 
 class _SessionsTabState extends State<SessionsTab> {
-  late Future<List<Map<String, dynamic>>> _sessions = _load();
+  late Future<List<SessionInfo>> _sessions = _load();
 
-  Future<List<Map<String, dynamic>>> _load() async =>
-      List<Map<String, dynamic>>.from(
-        await widget.auth.api.call('GET', '/me/sessions') as List,
-      );
+  Future<List<SessionInfo>> _load() async => [
+    for (final e in await widget.auth.api.call('GET', '/me/sessions') as List)
+      SessionInfo.fromJson(Map<String, dynamic>.from(e as Map)),
+  ];
 
   void _reload() {
     setState(() {
@@ -33,12 +29,12 @@ class _SessionsTabState extends State<SessionsTab> {
     });
   }
 
-  Future<void> _revoke(Map<String, dynamic> s) async {
+  Future<void> _revoke(SessionInfo s) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out this device?'),
-        content: Text('${_nameOf(s)} will need to sign in again.'),
+        content: Text('${s.displayName} will need to sign in again.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -54,14 +50,17 @@ class _SessionsTabState extends State<SessionsTab> {
     if (confirmed != true || !mounted) return;
     final ok = await runGuarded(
       context,
-      () => widget.auth.api.call('POST', '/me/sessions/${s['id']}/revoke'),
+      () => widget.auth.api.call('POST', '/me/sessions/${s.id}/revoke'),
     );
     if (ok && mounted) _reload();
   }
 
-  String _nameOf(Map<String, dynamic> s) {
-    final name = '${s['device_name'] ?? ''}';
-    return name.isEmpty ? '${s['platform'] ?? 'Unknown device'}' : name;
+  Future<void> _enableBiometric() async {
+    final done = await showBiometricEnrolDialog(
+      context,
+      enroll: widget.auth.enrollBiometric,
+    );
+    if (done && mounted) _reload();
   }
 
   @override
@@ -81,8 +80,9 @@ class _SessionsTabState extends State<SessionsTab> {
           );
         }
         final rows = snap.data;
-        if (rows == null)
+        if (rows == null) {
           return const Center(child: CircularProgressIndicator());
+        }
         if (rows.isEmpty) {
           return const EmptyState(
             icon: Icons.devices_outlined,
@@ -99,12 +99,19 @@ class _SessionsTabState extends State<SessionsTab> {
                   children: [
                     for (final s in rows) ...[
                       _SessionCard(
-                        name: _nameOf(s),
-                        platform: '${s['platform'] ?? ''}',
-                        ip: '${s['ip'] ?? ''}',
-                        lastActive: relativeTime(s['last_active']),
-                        current: s['current'] == true,
+                        name: s.displayName,
+                        platform: s.platform,
+                        ip: s.ip,
+                        lastActive: relativeTime(s.lastActive),
+                        current: s.current,
+                        biometric: s.biometric,
                         onRevoke: () => _revoke(s),
+                        onEnableBiometric:
+                            s.current &&
+                                !s.biometric &&
+                                widget.auth.biometricAvailable
+                            ? _enableBiometric
+                            : null,
                       ),
                       const SizedBox(height: 10),
                     ],
@@ -126,14 +133,18 @@ class _SessionCard extends StatelessWidget {
     required this.ip,
     required this.lastActive,
     required this.current,
+    required this.biometric,
     required this.onRevoke,
+    this.onEnableBiometric,
   });
   final String name;
   final String platform;
   final String ip;
   final String lastActive;
   final bool current;
+  final bool biometric;
   final VoidCallback onRevoke;
+  final VoidCallback? onEnableBiometric;
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +165,8 @@ class _SessionCard extends StatelessWidget {
                   children: [
                     Text(name, style: text.titleSmall),
                     if (current) const StatusPill('This device', tone: Tone.ok),
+                    if (biometric)
+                      const StatusPill('Biometric', tone: Tone.info),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -163,6 +176,12 @@ class _SessionCard extends StatelessWidget {
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
+                if (onEnableBiometric != null)
+                  TextButton.icon(
+                    onPressed: onEnableBiometric,
+                    icon: const Icon(Icons.fingerprint),
+                    label: const Text('Enable fingerprint / face'),
+                  ),
               ],
             ),
           ),

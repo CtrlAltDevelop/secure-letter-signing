@@ -5,7 +5,7 @@ from asgiref.sync import sync_to_async
 
 from accounts.auth import ACCESS_MAX_AGE
 from accounts.models import Session
-from accounts.notify import user_group
+from accounts.notify import session_group, user_group
 
 from .api import replay_events
 
@@ -32,11 +32,13 @@ class LetterConsumer(AsyncJsonWebsocketConsumer):
             return await self.close(code=AUTH_FAILED)
         self.user = session.user
         await self.channel_layer.group_add(user_group(self.user.id), self.channel_name)
+        await self.channel_layer.group_add(session_group(self.session_id), self.channel_name)
         await self.accept()
 
     async def disconnect(self, code):
         if self.user is not None:
             await self.channel_layer.group_discard(user_group(self.user.id), self.channel_name)
+            await self.channel_layer.group_discard(session_group(self.session_id), self.channel_name)
 
     async def receive_json(self, content, **kwargs):
         """Client sends {"after": <last event id it has>} after (re)connecting to catch up."""

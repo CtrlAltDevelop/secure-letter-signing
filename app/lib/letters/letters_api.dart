@@ -75,27 +75,72 @@ class LettersApi {
   Future<void> markOpened(String id) =>
       client.call('POST', '/letters/$id/opened');
 
+  /// Signs with the 6-digit signing PIN.
   Future<LetterBrief> sign(
     String id, {
-    required String keyId,
-    required Map<String, dynamic> payload,
-    required String signature,
+    required String decision,
+    required String note,
+    required String pin,
   }) async => LetterBrief.fromJson(
     await _map(
       'POST',
       '/letters/$id/sign',
-      body: {'key_id': keyId, 'payload': payload, 'signature': signature},
+      body: {'decision': decision, 'note': note, 'pin': pin},
     ),
   );
 
-  Future<void> addWraps(String id, List<WrapEntry> wraps) => client.call(
-    'POST',
-    '/letters/$id/wraps',
-    body: [for (final w in wraps) w.toJson()],
+  /// Signs on a biometric session after the app confirmed fingerprint/face locally.
+  Future<LetterBrief> signBiometric(
+    String id, {
+    required String decision,
+    required String note,
+  }) async => LetterBrief.fromJson(
+    await _map(
+      'POST',
+      '/letters/$id/sign-biometric',
+      body: {'decision': decision, 'note': note},
+    ),
   );
 
-  Future<List<RewrapItem>> rewrapNeeded() =>
-      _list('/letters/rewrap-needed', RewrapItem.fromJson);
+  /// Asks another biometric session of this user to approve the signature.
+  Future<SignRequest> createSignRequest(
+    String id, {
+    required String decision,
+    required String note,
+    required String approverSessionId,
+  }) async => SignRequest.fromJson(
+    await _map(
+      'POST',
+      '/letters/$id/sign-requests',
+      body: {
+        'decision': decision,
+        'note': note,
+        'approver_session_id': approverSessionId,
+      },
+    ),
+  );
+
+  Future<List<SignRequest>> incomingSignRequests() =>
+      _list('/sign-requests/incoming', SignRequest.fromJson);
+
+  Future<SignRequest> signRequest(String id) async =>
+      SignRequest.fromJson(await _map('GET', '/sign-requests/$id'));
+
+  Future<SignRequest> approveSignRequest(String id) async =>
+      SignRequest.fromJson(await _map('POST', '/sign-requests/$id/approve'));
+
+  Future<SignRequest> declineSignRequest(String id) async =>
+      SignRequest.fromJson(await _map('POST', '/sign-requests/$id/decline'));
+
+  Future<SignRequest> cancelSignRequest(String id) async =>
+      SignRequest.fromJson(await _map('POST', '/sign-requests/$id/cancel'));
+
+  /// This user's signed-in devices (with their `biometric` flag).
+  Future<List<SessionInfo>> sessions() =>
+      _list('/me/sessions', SessionInfo.fromJson);
+
+  /// Published Ed25519 company seal key: `{alg, public_key, fingerprint}`.
+  Future<Map<String, dynamic>> sealKey() => _map('GET', '/letters/seal-key');
 
   Future<List<LiveEvent>> eventsAfter(int after) =>
       _list('/letters/events?after=$after', LiveEvent.new);
@@ -103,8 +148,10 @@ class LettersApi {
   Future<Map<String, dynamic>> certificate(String id) =>
       _map('GET', '/letters/$id/certificate');
 
+  /// Active colleagues for picking signers/viewers.
+  /// Assumed server shape: `GET /letters/directory` -> `[{id, email, full_name, permissions[]}]`.
   Future<List<DirectoryUser>> directory() =>
-      _list('/keys/directory', DirectoryUser.fromJson);
+      _list('/letters/directory', DirectoryUser.fromJson);
 
   // Manager
   Future<List<AdminLetter>> adminList({int limit = 200, int offset = 0}) =>
@@ -125,11 +172,10 @@ class LettersApi {
   Future<void> markNotificationsRead() =>
       client.call('POST', '/me/notifications/read');
 
-  // Attachments (ciphertext only)
+  // Attachments (plain bytes; the server encrypts them at rest)
   Future<AttachmentInfo> uploadAttachment(
     String letterId, {
-    required Uint8List cipher,
-    required String iv,
+    required Uint8List bytes,
     required String contentType,
     required String label,
   }) async {
@@ -139,13 +185,9 @@ class LettersApi {
               'POST',
               Uri.parse('${client.baseUrl}/api/letters/$letterId/attachments'),
             )
-            ..fields.addAll({
-              'content_type': contentType,
-              'iv': iv,
-              'label': label,
-            })
+            ..fields.addAll({'content_type': contentType, 'label': label})
             ..files.add(
-              http.MultipartFile.fromBytes('file', cipher, filename: 'blob'),
+              http.MultipartFile.fromBytes('file', bytes, filename: 'file'),
             )
             ..headers['Authorization'] = 'Bearer $token';
       return http.Response.fromStream(await _http.send(req));

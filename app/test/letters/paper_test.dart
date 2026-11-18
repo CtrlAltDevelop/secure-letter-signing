@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:letter_signing/letters/letter_crypto_service.dart';
+import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/paper_editor_screen.dart';
 import 'package:letter_signing/letters/rich/rich_controller.dart';
@@ -81,10 +81,10 @@ void main() {
 
     test('body json keeps formatting inside the encrypted body', () {
       final rich = RichDoc.plain('hi').toggleFlag(0, 2, flagBold).toJson();
-      final body = LetterCryptoService.bodyJson('hi', const [], rich: rich);
+      final body = LetterService.bodyJson('hi', const [], rich: rich);
       expect(body['rich'], rich);
       expect(
-        LetterCryptoService.bodyJson('hi', const []).containsKey('rich'),
+        LetterService.bodyJson('hi', const []).containsKey('rich'),
         isFalse,
       );
     });

@@ -1,5 +1,5 @@
 name: letter_signing
-description: "End-to-end encrypted letter signing."
+description: "Letter signing with PIN and biometric approval."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -37,10 +37,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   flutter_svg: ^2.4.0
-  pointycastle: ^4.0.0
   flutter_secure_storage: ^11.2.0
-  qr_flutter: ^4.1.0
-  mobile_scanner: ^7.5.0
   file_picker: ^13.4.0
   share_plus: ^13.3.1
   local_auth: ^3.0.2

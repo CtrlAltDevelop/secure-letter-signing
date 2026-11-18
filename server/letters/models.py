@@ -8,7 +8,7 @@ User = settings.AUTH_USER_MODEL
 
 
 class Letter(models.Model):
-    """Only `title` and the metadata are readable by the server; the body is E2E ciphertext."""
+    """`body` is stored encrypted at rest: {"v": 3, "ct": <Fernet token of the canonical JSON body>}."""
 
     DRAFT, IN_SIGNING, PUBLISHED, REJECTED, CANCELLED = "draft", "in_signing", "published", "rejected", "cancelled"
     STATUSES = [(s, s) for s in (DRAFT, IN_SIGNING, PUBLISHED, REJECTED, CANCELLED)]
@@ -23,9 +23,7 @@ class Letter(models.Model):
     publish_mode = models.CharField(max_length=10, choices=[("now", "now"), ("after_sign", "after_sign")])
     order = models.CharField(max_length=8, choices=[("parallel", "parallel"), ("serial", "serial")])
     due_at = models.DateTimeField(null=True, blank=True)
-    body = models.JSONField()  # {"iv": b64, "ct": b64}
-    company_key_version = models.PositiveIntegerField(null=True, blank=True)  # public letters only
-    company_wrap = models.JSONField(null=True, blank=True)  # document key wrapped under the company key
+    body = models.JSONField()  # {"v": 3, "ct": "<Fernet token>"}; see core.cryptoutil.encrypt_body
     unlisted = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
     sent_at = models.DateTimeField(null=True, blank=True)
@@ -48,31 +46,38 @@ class Participant(models.Model):
         constraints = [models.UniqueConstraint(fields=["letter", "user"], name="one_role_per_user_per_letter")]
 
 
-class DocKeyWrap(models.Model):
-    """The letter's document key wrapped for one user key (ECDH -> HKDF -> AES-GCM, done in the app)."""
-
-    letter = models.ForeignKey(Letter, on_delete=models.PROTECT, related_name="wraps")
-    key = models.ForeignKey("keys.UserKey", on_delete=models.PROTECT, related_name="doc_wraps")
-    wrap = models.JSONField()
-
-    class Meta:
-        constraints = [models.UniqueConstraint(fields=["letter", "key"], name="one_wrap_per_key_per_letter")]
-
-
 class Signature(models.Model):
-    """Immutable (DB trigger). `payload` is exactly what the device signed."""
+    """Immutable (DB trigger). `payload` is exactly what the server sealed; `seal` is the Ed25519 signature."""
 
     letter = models.ForeignKey(Letter, on_delete=models.PROTECT, related_name="signatures")
     signer = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
-    key = models.ForeignKey("keys.UserKey", on_delete=models.PROTECT, related_name="+")
     decision = models.CharField(max_length=8)
     payload = models.JSONField()
-    signature = models.CharField(max_length=128)
+    seal = models.CharField(max_length=128)
+    method = models.CharField(max_length=10, choices=[("pin", "pin"), ("biometric", "biometric")])
     nonce = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["letter", "signer"], name="one_signature_per_signer")]
+
+
+class SignRequest(models.Model):
+    """A session without biometrics asks another biometric session of the same user to approve a signature."""
+
+    PENDING, APPROVED, DECLINED, CANCELLED, EXPIRED = "pending", "approved", "declined", "cancelled", "expired"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    letter = models.ForeignKey(Letter, on_delete=models.PROTECT, related_name="sign_requests")
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
+    requester_session = models.ForeignKey("accounts.Session", on_delete=models.PROTECT, related_name="+")
+    approver_session = models.ForeignKey("accounts.Session", on_delete=models.PROTECT, related_name="+")
+    decision = models.CharField(max_length=8)
+    note = models.CharField(max_length=2000, blank=True)
+    status = models.CharField(max_length=10, default=PENDING)
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    resolved_at = models.DateTimeField(null=True, blank=True)
 
 
 def attachment_path(instance, filename: str) -> str:
@@ -82,10 +87,9 @@ def attachment_path(instance, filename: str) -> str:
 class Attachment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     letter = models.ForeignKey(Letter, on_delete=models.PROTECT, related_name="attachments")
-    content_type = models.CharField(max_length=40)  # declared by the app; the bytes are ciphertext
-    label = models.CharField(max_length=100, blank=True)  # opaque (the real name is inside the encrypted body)
-    iv = models.CharField(max_length=32)
-    size = models.PositiveIntegerField()
+    content_type = models.CharField(max_length=40)
+    label = models.CharField(max_length=100, blank=True)
+    size = models.PositiveIntegerField()  # plaintext size; the file on disk is Fernet-encrypted
     file = models.FileField(upload_to=attachment_path)
     created_at = models.DateTimeField(default=timezone.now)
 

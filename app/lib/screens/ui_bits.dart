@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Small helpers shared by the screens in this folder.
@@ -16,6 +17,14 @@ String? validateEmail(String? v) {
 String? validateNewPassword(String? v) => (v ?? '').length >= minPasswordLength
     ? null
     : 'Use at least $minPasswordLength characters';
+
+/// The signing PIN is exactly this many digits.
+const signingPinLength = 6;
+
+bool isValidPin(String pin) => RegExp(r'^\d{6}$').hasMatch(pin);
+
+String? validatePin(String? v) =>
+    isValidPin(v ?? '') ? null : 'Enter $signingPinLength digits';
 
 String? Function(String?) requiredField(String message) =>
     (v) => (v ?? '').trim().isEmpty ? message : null;
@@ -166,3 +175,53 @@ class BusyButton extends StatelessWidget {
         : FilledButton(onPressed: action, child: child);
   }
 }
+
+/// Obscured numeric field for the 6-digit signing PIN.
+class PinField extends StatelessWidget {
+  const PinField({
+    super.key,
+    required this.controller,
+    this.label = 'Signing PIN',
+    this.errorText,
+    this.validator,
+    this.onSubmitted,
+    this.enabled = true,
+    this.textInputAction,
+  });
+  final TextEditingController controller;
+  final String label;
+  final String? errorText;
+  final String? Function(String?)? validator;
+  final VoidCallback? onSubmitted;
+  final bool enabled;
+  final TextInputAction? textInputAction;
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+    controller: controller,
+    enabled: enabled,
+    obscureText: true,
+    enableSuggestions: false,
+    autocorrect: false,
+    keyboardType: TextInputType.number,
+    textInputAction: textInputAction,
+    inputFormatters: [
+      FilteringTextInputFormatter.digitsOnly,
+      LengthLimitingTextInputFormatter(signingPinLength),
+    ],
+    validator: validator,
+    autovalidateMode: AutovalidateMode.onUserInteraction,
+    onFieldSubmitted: (_) => onSubmitted?.call(),
+    decoration: InputDecoration(
+      labelText: label,
+      errorText: errorText,
+      prefixIcon: const Icon(Icons.pin_outlined),
+    ),
+  );
+}
+
+IconData platformIcon(String platform) => switch (platform.toLowerCase()) {
+  'android' || 'ios' || 'iphone' => Icons.smartphone,
+  'macos' || 'windows' || 'linux' => Icons.laptop_mac,
+  _ => Icons.devices_other,
+};

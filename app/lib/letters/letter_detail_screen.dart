@@ -4,7 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:letter_signing/letters/create_letter_screen.dart';
-import 'package:letter_signing/letters/letter_crypto_service.dart';
+import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/models.dart';
@@ -18,7 +18,7 @@ import 'package:letter_signing/letters/sign_screen.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
-/// Decrypts on open (after unlock), shows participants, signatures, thread, attachments; live-updating.
+/// Shows the letter (decrypted by the server), participants, signatures, thread, attachments; live-updating.
 class LetterDetailScreen extends StatefulWidget {
   const LetterDetailScreen({
     super.key,
@@ -34,9 +34,7 @@ class LetterDetailScreen extends StatefulWidget {
 
 class _LetterDetailScreenState extends State<LetterDetailScreen> {
   LetterDetail? _letter;
-  DecryptedLetter? _plain;
   Object? _error;
-  String? _decryptError;
   final Set<int> _openedBy = {};
   StreamSubscription<dynamic>? _sub;
 
@@ -77,30 +75,10 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
     if (letter.signers.any((p) => p.userId == env.userId)) {
       unawaited(env.api.markOpened(letter.id).catchError((Object _) {}));
     }
-    await _decrypt();
   }
 
-  Future<void> _decrypt() async {
-    final letter = _letter;
-    if (letter == null) return;
-    try {
-      final key = await env.vault.unlock(
-        context,
-        reason: 'Open letter: ${letter.title}',
-      );
-      if (key == null) throw const LetterException('Key not unlocked');
-      final plain = await env.crypto.open(letter, key);
-      if (mounted) {
-        setState(() {
-          _plain = plain;
-          _decryptError = null;
-        });
-      }
-      unawaited(env.rewrap.run(key).then((_) {}, onError: (Object _) {}));
-    } on Object catch (e) {
-      if (mounted) setState(() => _decryptError = '$e');
-    }
-  }
+  LetterContent get _content =>
+      LetterContent.fromBody(_letter?.body ?? const {});
 
   bool get _isCreator => _letter?.brief.creatorId == env.userId;
 
@@ -124,19 +102,11 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
     }
   }
 
-  Future<void> _send() => _act(() async {
-    final needsKey = _plain == null
-        ? await env.vault.unlock(context, reason: 'Send letter')
-        : null;
-    return env.crypto.send(
-      widget.letterId,
-      docKey: _plain?.docKey,
-      key: needsKey,
-    );
-  });
+  Future<void> _send() => _act(() => env.api.send(widget.letterId));
 
   Future<void> _sign() async {
-    final l = _letter!;
+    final l = _letter;
+    if (l == null) return;
     final brief = await Navigator.of(context).push<LetterBrief>(
       MaterialPageRoute(
         builder: (_) => SignScreen(env: env, letter: l),
@@ -201,18 +171,9 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
   }
 
   Future<void> _attachment(AttachmentInfo info) async {
-    final plain = _plain;
-    if (plain == null) return;
     try {
-      final bytes = await env.crypto.downloadAttachment(
-        widget.letterId,
-        info,
-        plain.docKey,
-      );
-      final i = int.tryParse(info.label) ?? -1;
-      final name = i >= 0 && i < plain.attachments.length
-          ? plain.attachments[i].name
-          : 'attachment';
+      final bytes = await env.letters.downloadAttachment(widget.letterId, info);
+      final name = _attachmentName(info);
       if (!mounted) return;
       if (info.contentType.startsWith('image/') &&
           info.contentType != 'image/heic') {
@@ -263,12 +224,11 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
       appBar: AppBar(
         title: Text('Letter #${l.brief.no}'),
         actions: [
-          if (_plain != null)
-            IconButton(
-              tooltip: 'Paper / print',
-              icon: const Icon(Icons.description_outlined),
-              onPressed: _openPaper,
-            ),
+          IconButton(
+            tooltip: 'Paper / print',
+            icon: const Icon(Icons.description_outlined),
+            onPressed: _openPaper,
+          ),
           IconButton(
             tooltip: 'Certificate',
             icon: const Icon(Icons.verified_outlined),
@@ -354,7 +314,7 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
 
   String _attachSubtitle(LetterDetail l) {
     final n = l.attachments.length;
-    return '$n file${n == 1 ? '' : 's'}, end-to-end encrypted';
+    return '$n file${n == 1 ? '' : 's'}';
   }
 
   Widget _header(LetterDetail l) {
@@ -435,8 +395,8 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
 
   Future<void> _openPaper() async {
     final l = _letter;
-    final plain = _plain;
-    if (l == null || plain == null) return;
+    if (l == null) return;
+    final content = _content;
     var head = const Letterhead();
     try {
       head = await env.api.letterhead();
@@ -449,7 +409,7 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
       title: l.title,
       number: '#${l.brief.no}',
       date: fmtDateTime(l.brief.sentAt ?? l.brief.createdAt),
-      text: RichDoc.fromJson(plain.text, plain.rich),
+      text: RichDoc.fromJson(content.text, content.rich),
       signatures: [
         for (final s in l.signatures)
           PaperSignature(
@@ -461,9 +421,9 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
                     .map((p) => p.displayName)
                     .firstOrNull ??
                 '',
-            date: fmtDateTime(s.createdAt),
-            fingerprint: s.fingerprint,
-            documentId: '${s.payload['contentHash'] ?? ''}',
+            date: s.signedAt == null ? '' : fmtDateTime(s.signedAt!),
+            seal: s.seal,
+            documentId: s.contentHash,
           ),
       ],
     );
@@ -472,66 +432,19 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
   }
 
   Widget _paper() {
-    final scheme = Theme.of(context).colorScheme;
-    final plain = _plain;
-    final Widget content;
-    if (plain != null) {
-      final doc = RichDoc.fromJson(plain.text, plain.rich);
-      content = plain.text.isEmpty
+    final content = _content;
+    final doc = RichDoc.fromJson(content.text, content.rich);
+    return AppCard(
+      padding: const EdgeInsets.all(20),
+      child: content.text.isEmpty
           ? const Text('(No text)')
           : SelectableText.rich(
               editorSpan(doc, 16, Theme.of(context).textTheme.bodyLarge),
-            );
-    } else if (_decryptError != null) {
-      content = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ErrorBanner(_decryptError!),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _decrypt,
-            icon: const Icon(Icons.lock_open),
-            label: const Text('Unlock and retry'),
-          ),
-        ],
-      );
-    } else {
-      content = const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    return AppCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(
-                plain != null ? Icons.lock_open_outlined : Icons.lock_outline,
-                size: 16,
-                color: plain != null ? Tokens.ok : scheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                plain != null ? 'Decrypted on this device' : 'Encrypted',
-                style: TextStyle(
-                  color: scheme.onSurfaceVariant,
-                  fontSize: 12.5,
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 24),
-          content,
-        ],
-      ),
+            ),
     );
   }
 
   Widget _attachments(LetterDetail l) {
-    final plain = _plain;
     final scheme = Theme.of(context).colorScheme;
     return AppCard(
       padding: EdgeInsets.zero,
@@ -545,15 +458,13 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
                 color: scheme.primary,
               ),
               title: Text(
-                plain == null ? 'Encrypted file' : _attachmentName(plain, info),
+                _attachmentName(info),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               subtitle: Text(fmtSize(info.size)),
-              trailing: Icon(
-                plain == null ? Icons.lock_outline : Icons.download_outlined,
-              ),
-              onTap: plain == null ? null : () => _attachment(info),
+              trailing: const Icon(Icons.download_outlined),
+              onTap: () => _attachment(info),
             ),
           ],
         ],
@@ -661,13 +572,18 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
     );
   }
 
-  static String _attachmentName(DecryptedLetter plain, AttachmentInfo info) {
+  String _attachmentName(AttachmentInfo info) {
+    final files = _content.attachments;
     final i = int.tryParse(info.label) ?? -1;
-    return i >= 0 && i < plain.attachments.length
-        ? plain.attachments[i].name
-        : 'attachment';
+    return i >= 0 && i < files.length ? files[i].name : 'attachment';
   }
 }
+
+String _methodLabel(String m) => switch (m) {
+  'pin' => 'PIN',
+  'biometric' => 'Biometric',
+  _ => m,
+};
 
 String _decisionLabel(String d) => switch (d) {
   'approved' => 'Approved',
@@ -695,17 +611,12 @@ class _TimelineStep extends StatelessWidget {
     final muted = TextStyle(color: scheme.onSurfaceVariant, fontSize: 12.5);
     final p = participant;
     final sig = signature;
-    final when = p.decidedAt ?? sig?.createdAt;
+    final when = p.decidedAt ?? sig?.signedAt;
     final tone = switch (p.decision) {
       'approved' => Tone.ok,
       'rejected' => Tone.error,
       _ => opened ? Tone.info : Tone.neutral,
     };
-    final fp = sig == null
-        ? null
-        : (sig.fingerprint.length > 12
-              ? sig.fingerprint.substring(0, 12)
-              : sig.fingerprint);
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -757,7 +668,7 @@ class _TimelineStep extends StatelessWidget {
                     Text(
                       [
                         if (sig.deviceName.isNotEmpty) sig.deviceName,
-                        if (fp != null) 'key $fp',
+                        if (sig.method.isNotEmpty) _methodLabel(sig.method),
                       ].join('  -  '),
                       style: muted,
                       maxLines: 1,

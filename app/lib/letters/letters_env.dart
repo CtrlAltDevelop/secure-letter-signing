@@ -1,51 +1,55 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'package:letter_signing/keys/key_vault.dart';
-import 'package:letter_signing/letters/letter_crypto_service.dart';
+import 'package:letter_signing/auth/biometrics.dart';
+import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_api.dart';
 import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/letters/notifications_screen.dart';
-import 'package:letter_signing/letters/rewrap_service.dart';
-import 'package:letter_signing/letters/sign_payload.dart';
+import 'package:letter_signing/letters/sign_approvals.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
 /// Everything the letter screens need, built once by the integrator after login.
 class LettersEnv {
   LettersEnv({
     required this.api,
-    required this.vault,
-    required this.companyKeys,
     required this.live,
     required this.userId,
+    this.biometrics = const LocalAuthBiometrics(),
     this.canCreate = true,
     this.isManager = false,
     this.deviceName = '',
+    this.enrollBiometric,
     this._sessionId,
-  }) : crypto = LetterCryptoService(
-         api: api,
-         companyKeys: companyKeys,
-         userId: userId,
-       ),
-       notifications = NotificationsController(api: api, live: live) {
-    rewrap = RewrapService(api: api, crypto: crypto);
-  }
+  }) : letters = LetterService(api: api, userId: userId),
+       notifications = NotificationsController(api: api, live: live),
+       approvals = SignApprovals(api: api, live: live, biometrics: biometrics);
 
   final LettersApi api;
-  final KeyVault vault;
-  final CompanyKeys companyKeys;
   final LiveService live;
   final int userId;
+  final Biometrics biometrics;
+
+  /// Enrols this session's fingerprint/face with the PIN; null when unsupported.
+  final Future<bool> Function(String pin)? enrollBiometric;
   final bool canCreate;
   final bool isManager;
   final String deviceName;
-  final LetterCryptoService crypto;
+  final LetterService letters;
   final NotificationsController notifications;
-  late final RewrapService rewrap;
+
+  /// Incoming "approve this signature" requests for this device.
+  final SignApprovals approvals;
   final String? Function()? _sessionId;
 
-  /// Login `session_id` if the integrator supplied it, else read from the access token.
-  String? get sessionId =>
-      _sessionId?.call() ?? sessionIdFromAccessToken(api.client.accessToken);
+  /// Login `session_id` when the integrator supplied it.
+  String? get sessionId => _sessionId?.call();
+
+  /// Stops the live stream and the controllers fed by it.
+  Future<void> dispose() async {
+    notifications.dispose();
+    approvals.dispose();
+    await live.dispose();
+  }
 }
 
 /// Shows a failure as a SnackBar (server messages are user-readable).

@@ -142,14 +142,14 @@ class PaperSignature {
     required this.note,
     required this.name,
     required this.date,
-    required this.fingerprint,
+    required this.seal,
     required this.documentId,
   });
   final String decision; // approved | rejected
   final String note;
   final String name;
   final String date;
-  final String fingerprint;
+  final String seal;
   final String documentId;
 }
 
@@ -194,9 +194,10 @@ class SignatureBlock extends StatelessWidget {
           ),
           Text('Document ID: ${sig.documentId}', style: small, maxLines: 1),
           Text(
-            'Signer fingerprint: ${sig.fingerprint}',
+            'Server seal: ${sig.seal}',
             style: small,
             maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

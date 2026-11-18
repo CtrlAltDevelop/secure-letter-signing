@@ -3,18 +3,37 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/api_client.dart';
+import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
-import 'package:letter_signing/letters/models.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
-import 'package:letter_signing/letters/sign_payload.dart';
+import 'package:letter_signing/letters/models.dart';
+import 'package:letter_signing/letters/sign_widgets.dart';
+import 'package:letter_signing/screens/biometric_enrol.dart';
+import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
-/// Approve/reject with a note, then a fresh key unlock, sign and submit. Pops the updated [LetterBrief].
+const _approvalTimeout = Duration(minutes: 5);
+const _pollEvery = Duration(seconds: 3);
+
+/// Decision and note, then a way to prove it is you: signing PIN, fingerprint/face on this device,
+/// or approval on another of your devices. Pops the updated [LetterBrief].
 class SignScreen extends StatefulWidget {
-  const SignScreen({super.key, required this.env, required this.letter});
+  const SignScreen({
+    super.key,
+    required this.env,
+    required this.letter,
+    this.approvalTimeout = _approvalTimeout,
+    this.pollEvery = _pollEvery,
+  });
   final LettersEnv env;
   final LetterDetail letter;
+
+  /// How long to wait for another device before falling back to the PIN.
+  final Duration approvalTimeout;
+
+  /// Fallback polling of the request when no live frame arrives.
+  final Duration pollEvery;
 
   @override
   State<SignScreen> createState() => _SignScreenState();
@@ -23,197 +42,238 @@ class SignScreen extends StatefulWidget {
 class _SignScreenState extends State<SignScreen> {
   String _decision = 'approved';
   final _note = TextEditingController();
+  final _pin = TextEditingController();
+  List<SessionInfo> _sessions = const [];
+  bool _biometricsHere = false;
   bool _busy = false;
   String? _error;
+  String? _pinError;
+  SignRequest? _request;
+  String _askedDevice = '';
+  StreamSubscription<LiveEvent>? _live;
+  Timer? _poll;
+  Timer? _deadline;
+
+  LettersEnv get env => widget.env;
+  LetterDetail get letter => widget.letter;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadSessions());
+  }
 
   @override
   void dispose() {
+    final waiting = _request;
+    _stopTimers();
+    if (waiting != null) {
+      unawaited(
+        env.api
+            .cancelSignRequest(waiting.id)
+            .then((_) {}, onError: (Object _) {}),
+      );
+    }
     _note.dispose();
+    _pin.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _loadSessions() async {
+    try {
+      final all = await env.api.sessions();
+      final here = await env.biometrics.available();
+      if (mounted) {
+        setState(() {
+          _sessions = all;
+          _biometricsHere = here;
+        });
+      }
+    } on Exception {
+      // The PIN always works; device choices just stay hidden.
+    }
+  }
+
+  bool get _thisDeviceBiometric =>
+      _sessions.any((s) => s.current && s.biometric);
+
+  List<SessionInfo> get _otherDevices =>
+      _sessions.where((s) => !s.current && s.biometric).toList();
+
+  String get _noteText => _note.text.trim();
+
+  String get _reason =>
+      '${_decision == 'approved' ? 'Approve' : 'Reject'}: ${letter.title}';
+
+  /// Runs one signing attempt, showing failures inline.
+  Future<void> _guard(Future<void> Function() action) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final env = widget.env;
-      final letter = widget.letter;
-      final key = await env.vault.unlock(
-        context,
-        reason:
-            '${_decision == 'approved' ? 'Approve' : 'Reject'}: ${letter.title}',
-      );
-      if (key == null) {
-        throw const ApiException(0, 'Signing cancelled: key not unlocked');
-      }
-      final sessionId = env.sessionId;
-      if (sessionId == null) {
-        throw const ApiException(0, 'No session id; sign in again');
-      }
-      final payload = buildSignPayload(
-        letterId: letter.id,
-        title: letter.title,
-        parentId: letter.brief.parentId,
-        body: letter.body,
-        decision: _decision,
-        note: _note.text.trim(),
-        userId: env.userId,
-        keyId: key.keyId,
-        fingerprint: key.identity.fp,
-        sessionId: sessionId,
-        deviceName: env.deviceName,
-      );
-      final brief = await env.api.sign(
-        letter.id,
-        keyId: key.keyId,
-        payload: payload,
-        signature: signDecision(payload, key),
-      );
-      if (mounted) Navigator.of(context).pop(brief);
+      await action();
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
-    } on Object catch (e) {
+    } on LetterException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } on Exception catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  Future<void> _signWithPin() async {
+    final problem = validatePin(_pin.text);
+    setState(() => _pinError = problem);
+    if (problem != null) return;
+    await _guard(() async {
+      final brief = await env.api.sign(
+        letter.id,
+        decision: _decision,
+        note: _noteText,
+        pin: _pin.text,
+      );
+      if (mounted) Navigator.of(context).pop(brief);
+    });
+  }
+
+  Future<void> _signWithBiometrics() => _guard(() async {
+    if (!await env.biometrics.authenticate(_reason)) {
+      throw const LetterException('Fingerprint / face check failed');
+    }
+    final brief = await env.api.signBiometric(
+      letter.id,
+      decision: _decision,
+      note: _noteText,
+    );
+    if (mounted) Navigator.of(context).pop(brief);
+  });
+
+  Future<void> _askDevice(SessionInfo device) => _guard(() async {
+    final request = await env.api.createSignRequest(
+      letter.id,
+      decision: _decision,
+      note: _noteText,
+      approverSessionId: device.id,
+    );
+    if (!mounted) return;
+    _startWaiting(request, device.displayName);
+  });
+
+  void _startWaiting(SignRequest request, String device) {
+    _live = env.live.events.listen((e) {
+      final update = e.request;
+      if (e.isSignRequestUpdate && update != null) _onUpdate(update);
+    });
+    _poll = Timer.periodic(widget.pollEvery, (_) => unawaited(_pollOnce()));
+    _deadline = Timer(widget.approvalTimeout, () => unawaited(_onTimeout()));
+    setState(() {
+      _request = request;
+      _askedDevice = device;
+    });
+  }
+
+  void _stopTimers() {
+    _poll?.cancel();
+    _deadline?.cancel();
+    unawaited(_live?.cancel());
+    _poll = _deadline = null;
+    _live = null;
+  }
+
+  Future<void> _pollOnce() async {
+    final id = _request?.id;
+    if (id == null) return;
+    try {
+      _onUpdate(await env.api.signRequest(id));
+    } on Exception {
+      // Keep waiting; the next tick or a live frame will tell.
+    }
+  }
+
+  void _onUpdate(SignRequest update) {
+    if (!mounted || update.id != _request?.id || update.isPending) return;
+    _stopTimers();
+    if (update.isApproved) {
+      setState(() => _request = null);
+      unawaited(_finish());
+      return;
+    }
+    setState(() {
+      _request = null;
+      _error = switch (update.status) {
+        SignRequest.declined => '$_askedDevice declined. Use your PIN instead.',
+        SignRequest.expired => 'The request expired. Use your PIN instead.',
+        _ => 'The request was cancelled.',
+      };
+    });
+  }
+
+  Future<void> _onTimeout() async {
+    final request = _request;
+    if (request == null) return;
+    try {
+      await env.api.cancelSignRequest(request.id);
+    } on Exception {
+      await _pollOnce(); // it may have been approved at the last second
+      if (_request == null) return;
+    }
+    if (!mounted) return;
+    _stopTimers();
+    setState(() {
+      _request = null;
+      _error = 'No answer from $_askedDevice. Use your PIN instead.';
+    });
+  }
+
+  Future<void> _cancelWaiting() async {
+    final request = _request;
+    if (request == null) return;
+    try {
+      await env.api.cancelSignRequest(request.id);
+    } on Exception {
+      await _pollOnce();
+      if (_request == null) return;
+    }
+    if (!mounted) return;
+    _stopTimers();
+    setState(() => _request = null);
+  }
+
+  /// The other device signed; hand the refreshed letter back.
+  Future<void> _finish() async {
+    var brief = letter.brief;
+    try {
+      brief = (await env.api.detail(letter.id)).brief;
+    } on Exception {
+      // The caller reloads the letter anyway.
+    }
+    if (mounted) Navigator.of(context).pop(brief);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l = widget.letter;
+    final l = letter;
     final signed = l.signers.where((p) => p.decision.isNotEmpty).length;
-    final total = l.signers.length;
     return Scaffold(
       appBar: AppBar(title: const Text('Sign letter')),
-      bottomNavigationBar: Material(
-        color: scheme.surfaceContainerLow,
-        child: SafeArea(
-          top: false,
-          child: PageBody(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_error != null) ...[
-                  ErrorBanner(_error!),
-                  const SizedBox(height: 10),
-                ],
-                FilledButton.icon(
-                  onPressed: _busy ? null : _submit,
-                  icon: _busy
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.lock_open_outlined),
-                  label: Text(_busy ? 'Signing...' : 'Unlock key and sign'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
       body: ListView(
         children: [
           PageBody(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            '#${l.brief.no}',
-                            style: TextStyle(color: scheme.onSurfaceVariant),
-                          ),
-                          StatusChip(l.status),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l.title,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '$signed of $total signed',
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-                const SectionHeader('Your decision'),
-                IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: _ChoiceCard(
-                          icon: Icons.check_circle_outline,
-                          label: 'Approve',
-                          hint: 'I agree with this letter',
-                          color: Tokens.ok,
-                          selected: _decision == 'approved',
-                          onTap: () => setState(() => _decision = 'approved'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ChoiceCard(
-                          icon: Icons.cancel_outlined,
-                          label: 'Reject',
-                          hint: 'I do not agree',
-                          color: Tokens.error,
-                          selected: _decision == 'rejected',
-                          onTap: () => setState(() => _decision = 'rejected'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_decision == 'rejected')
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      'A rejection is final. The creator can start a new chained letter.',
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _note,
-                  maxLength: 2000,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (optional)',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                AppCard(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.shield_outlined, color: scheme.primary),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Signing needs a fresh unlock of your key every time. '
-                          'Your signature is created on this device and cannot be changed afterwards.',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _summary(l, signed),
+                ..._decisionSection(),
+                const SectionHeader('How do you want to sign?'),
+                if (_error != null) ...[
+                  ErrorBanner(_error!),
+                  const SizedBox(height: 10),
+                ],
+                if (_request == null) _methods() else _waiting(),
+                const SizedBox(height: Tokens.gap),
               ],
             ),
           ),
@@ -221,61 +281,114 @@ class _SignScreenState extends State<SignScreen> {
       ),
     );
   }
-}
 
-class _ChoiceCard extends StatelessWidget {
-  const _ChoiceCard({
-    required this.icon,
-    required this.label,
-    required this.hint,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String label;
-  final String hint;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _summary(LetterDetail l, int signed) {
     final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Tokens.radius),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: selected ? color.withValues(alpha: 0.14) : null,
-            borderRadius: BorderRadius.circular(Tokens.radius),
-            border: Border.all(
-              color: selected ? color : scheme.outlineVariant,
-              width: selected ? 2 : 1,
-            ),
-          ),
-          child: Column(
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Icon(
-                icon,
-                size: 32,
-                color: selected ? color : scheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 6),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
               Text(
-                hint,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+                '#${l.brief.no}',
+                style: TextStyle(color: scheme.onSurfaceVariant),
               ),
+              StatusChip(l.status),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(l.title, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 6),
+          Text(
+            '$signed of ${l.signers.length} signed',
+            style: TextStyle(color: scheme.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }
+
+  List<Widget> _decisionSection() {
+    final locked = _busy || _request != null;
+    return [
+      const SectionHeader('Your decision'),
+      IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: DecisionChoice(
+                icon: Icons.check_circle_outline,
+                label: 'Approve',
+                hint: 'I agree with this letter',
+                color: Tokens.ok,
+                selected: _decision == 'approved',
+                onTap: locked ? null : () => _pick('approved'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: DecisionChoice(
+                icon: Icons.cancel_outlined,
+                label: 'Reject',
+                hint: 'I do not agree',
+                color: Tokens.error,
+                selected: _decision == 'rejected',
+                onTap: locked ? null : () => _pick('rejected'),
+              ),
+            ),
+          ],
+        ),
+      ),
+      if (_decision == 'rejected')
+        const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            'A rejection is final. The creator can start a new chained letter.',
+          ),
+        ),
+      const SizedBox(height: 16),
+      TextField(
+        controller: _note,
+        enabled: !locked,
+        maxLength: 2000,
+        maxLines: 3,
+        decoration: const InputDecoration(
+          labelText: 'Note (optional)',
+          alignLabelWithHint: true,
+        ),
+      ),
+    ];
+  }
+
+  void _pick(String decision) => setState(() => _decision = decision);
+
+  bool get _canEnableBiometric =>
+      env.enrollBiometric != null &&
+      _biometricsHere &&
+      _sessions.any((s) => s.current && !s.biometric);
+
+  Future<void> _enableBiometric() async {
+    final enroll = env.enrollBiometric;
+    if (enroll == null) return;
+    final done = await showBiometricEnrolDialog(context, enroll: enroll);
+    if (done && mounted) await _loadSessions();
+  }
+
+  Widget _methods() => SignMethods(
+    pin: _pin,
+    pinError: _pinError,
+    busy: _busy,
+    onPin: _signWithPin,
+    onBiometric: _thisDeviceBiometric ? _signWithBiometrics : null,
+    devices: _otherDevices,
+    onAsk: _askDevice,
+    onEnableBiometric: _canEnableBiometric ? _enableBiometric : null,
+  );
+
+  Widget _waiting() =>
+      WaitingForApproval(device: _askedDevice, onCancel: _cancelWaiting);
 }

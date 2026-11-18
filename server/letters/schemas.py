@@ -5,14 +5,9 @@ from ninja import Schema
 from pydantic import Field
 
 
-class WrapIn(Schema):
-    key_id: UUID
-    wrap: dict
-
-
 class LetterIn(Schema):
     title: str = Field(min_length=1, max_length=200)
-    body: dict  # {"iv", "ct"}
+    body: dict  # plain JSON object; the server encrypts it at rest
     visibility: str = Field(pattern="^(public|private)$")
     publish_mode: str = Field(pattern="^(now|after_sign)$")
     order: str = Field(pattern="^(parallel|serial)$")
@@ -20,15 +15,36 @@ class LetterIn(Schema):
     parent_id: UUID | None = None
     signer_ids: list[int] = Field(min_length=1)  # in signing order
     viewer_ids: list[int] = []
-    wraps: list[WrapIn]
-    company_key_version: int | None = None
-    company_wrap: dict | None = None
 
 
-class SignIn(Schema):
-    key_id: UUID
-    payload: dict
-    signature: str
+class SignPinIn(Schema):
+    decision: str = Field(pattern="^(approved|rejected)$")
+    note: str = Field(default="", max_length=2000)
+    pin: str
+
+
+class SignBiometricIn(Schema):
+    decision: str = Field(pattern="^(approved|rejected)$")
+    note: str = Field(default="", max_length=2000)
+
+
+class SignRequestIn(SignBiometricIn):
+    approver_session_id: UUID
+
+
+class SignRequestOut(Schema):
+    id: UUID
+    letter_id: UUID
+    letter_title: str
+    decision: str
+    note: str
+    status: str
+    requester_session_id: UUID
+    requester_device_name: str
+    approver_session_id: UUID
+    created_at: datetime
+    expires_at: datetime
+    resolved_at: datetime | None
 
 
 class ParticipantOut(Schema):
@@ -43,12 +59,13 @@ class ParticipantOut(Schema):
 
 class SignatureOut(Schema):
     signer_id: int
-    key_id: UUID
-    fingerprint: str
     decision: str
+    note: str
+    method: str
+    device_name: str
+    signed_at: str
+    seal: str
     payload: dict
-    signature: str
-    created_at: datetime
 
 
 class LetterBrief(Schema):
@@ -68,7 +85,6 @@ class AttachmentOut(Schema):
     id: UUID
     content_type: str
     label: str
-    iv: str
     size: int
 
 
@@ -76,12 +92,9 @@ class LetterOut(LetterBrief):
     publish_mode: str
     order: str
     due_at: datetime | None
-    body: dict
-    company_key_version: int | None
-    company_wrap: dict | None
+    body: dict  # plaintext
     participants: list[ParticipantOut]
     signatures: list[SignatureOut]
-    my_wraps: list[WrapIn]
     children: list[LetterBrief]
     attachments: list[AttachmentOut]
 

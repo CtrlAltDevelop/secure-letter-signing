@@ -64,7 +64,7 @@ class Letterhead {
   };
 
   Letterhead copyWith({String? logo}) =>
-      Letterhead.fromJson({...toJson(), if (logo != null) 'logo': logo});
+      Letterhead.fromJson({...toJson(), 'logo': ?logo});
 
   bool get isEmpty => toJson().values.every((v) => (v as String).isEmpty);
 

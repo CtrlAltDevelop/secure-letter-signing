@@ -1,17 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:letter_signing/letters/create_letter_screen.dart';
-import 'package:letter_signing/letters/letters_env.dart';
-import 'package:letter_signing/letters/live_service.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'fakes.dart';
 
 void main() {
-  final me = FakeUser(1, 'me@x.test');
-  final signer = FakeUser(2, 's@x.test');
+  const me = FakeUser(1, 'me@x.test');
+  const signer = FakeUser(2, 's@x.test');
 
   testWidgets(
-    'autosaves an encrypted draft once title and signer are set, then stays quiet',
+    'autosaves a draft once title and signer are set, then stays quiet',
     (t) async {
       t.view.devicePixelRatio = 1;
       await t.binding.setSurfaceSize(const Size(800, 2400));
@@ -20,7 +18,7 @@ void main() {
         t.binding.setSurfaceSize(null);
       });
       final f = fakeApi((req, _) {
-        if (req.url.path == '/api/keys/directory') {
+        if (req.url.path == '/api/letters/directory') {
           return json([me.directoryJson, signer.directoryJson]);
         }
         if (req.url.path == '/api/letters' && req.method == 'POST') {
@@ -28,13 +26,7 @@ void main() {
         }
         return json(briefJson('L1', status: 'draft'));
       });
-      final env = LettersEnv(
-        api: f.api,
-        vault: FakeVault(me.unlocked),
-        companyKeys: FakeCompanyKeys(),
-        live: LiveService(api: f.client, cursor: MemoryCursorStore()),
-        userId: me.id,
-      );
+      final env = testEnv(f, userId: me.id);
       List<String> saves() => [
         for (final c in f.calls)
           if (c.url.path.startsWith('/api/letters') && c.method != 'GET')
@@ -62,7 +54,7 @@ void main() {
       await t.pump(const Duration(milliseconds: 500));
       await t.pumpAndSettle();
       expect(saves(), ['POST /api/letters']);
-      expect(find.textContaining('auto-saved'), findsOneWidget);
+      expect(find.textContaining('Draft auto-saved'), findsOneWidget);
 
       await t.pump(
         const Duration(milliseconds: 600),

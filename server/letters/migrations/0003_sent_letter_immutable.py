@@ -1,4 +1,4 @@
-"""A sent letter's title and ciphertext body cannot change at the database level either."""
+"""A sent letter's title and encrypted body cannot change at the database level either."""
 from django.db import migrations
 
 MSG = "a sent letter is immutable"

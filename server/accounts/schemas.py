@@ -17,6 +17,7 @@ class UserOut(Schema):
     is_superuser: bool
     is_active: bool
     permissions: list[str]
+    has_signing_pin: bool
 
     @staticmethod
     def of(user: User) -> "UserOut":
@@ -25,6 +26,7 @@ class UserOut(Schema):
             department=user.department.name if user.department else "", department_id=user.department_id,
             is_manager=user.is_manager, is_superuser=user.is_superuser,
             is_active=user.is_active, permissions=sorted(g.code for g in user.grants.all()),
+            has_signing_pin=bool(user.signing_pin_hash),
         )
 
 
@@ -43,3 +45,4 @@ class SessionOut(Schema):
     created_at: datetime
     last_active: datetime
     current: bool
+    biometric: bool

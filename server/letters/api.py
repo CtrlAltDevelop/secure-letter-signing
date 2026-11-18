@@ -1,12 +1,12 @@
-"""Letters: create/send/sign/publish, visibility, unlist, attachments, history. The server never sees a body."""
-import json
-from datetime import datetime, timedelta
+"""Letters: create/send/sign/publish, visibility, unlist, attachments, history. Bodies and files are encrypted at rest."""
+import logging
 from uuid import UUID
 
 from django.conf import settings
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Max
-from django.http import FileResponse
+from django.core.files.base import ContentFile
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import File, Form, Router, Schema
@@ -16,21 +16,18 @@ from ninja.files import UploadedFile
 from accounts.api_auth import Detail
 from accounts.auth import BearerAuth, require_manager, user_of
 from accounts.models import User, audit
-from accounts.notify import notify
 from core import cryptoutil
-from keys.api import KeyOut
-from keys.models import CompanyKeyVersion, UserKey
 
-from . import events, rules
-from .models import Attachment, DocKeyWrap, Letter, LetterEvent, Participant, Signature
+from . import events, rules, signing
+from .models import Attachment, Letter, LetterEvent, Participant
 from .schemas import (AdminLetterOut, AttachmentOut, LetterBrief, LetterIn, LetterOut, ParticipantOut, SignatureOut,
-                      SignIn, WrapIn)
+                      SignBiometricIn, SignPinIn, SignRequestIn, SignRequestOut)
+from .sign_requests import create_request, request_out
 
+logger = logging.getLogger(__name__)
 router = Router(tags=["letters"], auth=BearerAuth())
-SIGN_SKEW = timedelta(minutes=10)
-MAX_WRAPS, MAX_PEOPLE, MAX_JSON_BYTES, MAX_BODY_CHARS, MAX_ATTACHMENTS = 500, 500, 8192, 2_000_000, 20
+MAX_PEOPLE, MAX_BODY_CHARS, MAX_ATTACHMENTS = 500, 2_000_000, 20
 ATTACHMENT_TYPES = {"application/pdf", "image/png", "image/jpeg", "image/webp", "image/heic"}
-DECISIONS = {"approved", "rejected"}
 
 
 def _brief(letter: Letter) -> LetterBrief:
@@ -50,8 +47,12 @@ def _get_visible(user: User, letter_id: UUID) -> Letter:
     return letter
 
 
-def _get_own_draft_or_sent(user: User, letter_id: UUID) -> Letter:
-    letter = get_object_or_404(Letter, pk=letter_id, creator=user)
+def _lock_own_draft(user: User, letter_id: UUID, sent_message: str) -> Letter:
+    """The caller's letter, row-locked (call inside `transaction.atomic`), with the draft check done AFTER the lock
+    so a concurrent send/cancel cannot slip between check and write."""
+    letter = get_object_or_404(Letter.objects.select_for_update(), pk=letter_id, creator=user)
+    if letter.status != Letter.DRAFT:
+        raise HttpError(409, sent_message)
     return letter
 
 
@@ -65,23 +66,14 @@ def _require(user: User, code: str) -> None:
 
 def _apply(letter: Letter, user: User, data: LetterIn) -> None:
     """Validates and stores everything for a draft (new or replaced)."""
-    if not isinstance(data.body.get("iv"), str) or not isinstance(data.body.get("ct"), str) or set(data.body) != {"iv", "ct"}:
-        raise HttpError(422, "body must be {iv, ct}")
-    if len(data.body["ct"]) > MAX_BODY_CHARS or len(data.body["iv"]) > 64:
+    if len(cryptoutil.canonical_json(data.body)) > MAX_BODY_CHARS:
         raise HttpError(413, "body is too large")
     if len(data.signer_ids) > MAX_PEOPLE or len(data.viewer_ids) > MAX_PEOPLE:
         raise HttpError(422, "Too many participants")
-    _check_size(data.company_wrap, "company_wrap")
     signer_ids = list(dict.fromkeys(data.signer_ids))
     viewer_ids = [v for v in dict.fromkeys(data.viewer_ids) if v not in signer_ids and v != user.id]
     if data.visibility == "public" and data.viewer_ids:
         raise HttpError(422, "Public letters have no viewer list")
-    if data.visibility == "public" and (data.company_key_version is None or data.company_wrap is None):
-        raise HttpError(422, "Public letters need the document key wrapped under the company key")
-    if data.visibility == "private" and data.company_wrap is not None:
-        raise HttpError(422, "Private letters must not carry a company wrap")
-    if data.company_key_version and not CompanyKeyVersion.objects.filter(version=data.company_key_version).exists():
-        raise HttpError(422, "Unknown company key version")
     people = {u.id: u for u in User.objects.filter(pk__in=[*signer_ids, *viewer_ids], is_active=True)}
     if len(people) != len(signer_ids) + len(viewer_ids):
         raise HttpError(422, "Unknown or inactive participant")
@@ -92,9 +84,9 @@ def _apply(letter: Letter, user: User, data: LetterIn) -> None:
         if parent is None or not rules.can_see(user, parent):
             raise HttpError(422, "Parent letter not found")
         letter.parent = parent
-    letter.title, letter.body = data.title.strip(), data.body
+    letter.title, letter.body = data.title.strip(), cryptoutil.encrypt_body(data.body)
     letter.visibility, letter.publish_mode, letter.order = data.visibility, data.publish_mode, data.order
-    letter.due_at, letter.company_key_version, letter.company_wrap = data.due_at, data.company_key_version, data.company_wrap
+    letter.due_at = data.due_at
     letter.save()
     # Nothing is deleted: people dropped from the draft keep a row with role "removed" (ignored everywhere).
     Participant.objects.filter(letter=letter).update(role="removed")
@@ -104,37 +96,12 @@ def _apply(letter: Letter, user: User, data: LetterIn) -> None:
     for uid in viewer_ids:
         Participant.objects.update_or_create(letter=letter, user=people[uid], defaults={
             "role": Participant.VIEWER, "position": 0, "decision": ""})
-    _store_wraps(letter, data.wraps, writer=user)
-
-
-def _store_wraps(letter: Letter, wraps: list[WrapIn], *, writer: User) -> None:
-    """The creator (on a draft) and a key's own owner may replace its wrap (so a poisoned wrap can be repaired);
-    anyone else can only fill a missing one, never overwrite."""
-    allowed = {k.id: k for k in rules.required_keys(letter)}
-    ids = [w.key_id for w in wraps]
-    if len(ids) > MAX_WRAPS or len(set(ids)) != len(ids) or set(ids) - allowed.keys():
-        raise HttpError(422, "Wraps may only target distinct active keys of people who can read this letter")
-    for w in wraps:
-        _check_size(w.wrap, "wrap")
-        may_replace = allowed[w.key_id].user_id == writer.id or (
-            letter.status == Letter.DRAFT and letter.creator_id == writer.id)
-        if may_replace:
-            DocKeyWrap.objects.update_or_create(letter=letter, key_id=w.key_id, defaults={"wrap": w.wrap})
-        else:
-            DocKeyWrap.objects.get_or_create(letter=letter, key_id=w.key_id, defaults={"wrap": w.wrap})
-
-
-def _check_size(value, what: str) -> None:
-    if len(json.dumps(value)) > MAX_JSON_BYTES:
-        raise HttpError(413, f"{what} is too large")
-
-
 @router.post("", response={201: LetterBrief})
 @transaction.atomic
 def create_letter(request, data: LetterIn):
     user = user_of(request)
     _require(user, rules.CREATE)
-    letter = Letter(creator=user, no=(Letter.objects.aggregate(m=Max("no"))["m"] or 0) + 1, body=data.body,
+    letter = Letter(creator=user, no=(Letter.objects.aggregate(m=Max("no"))["m"] or 0) + 1, body={},
                     title=data.title, visibility=data.visibility, publish_mode=data.publish_mode, order=data.order)
     letter.save()
     _apply(letter, user, data)
@@ -146,19 +113,12 @@ def create_letter(request, data: LetterIn):
 @transaction.atomic
 def update_draft(request, letter_id: UUID, data: LetterIn):
     user = user_of(request)
-    letter = _get_own_draft_or_sent(user, letter_id)
-    if letter.status != Letter.DRAFT:
-        raise HttpError(409, "A sent letter is immutable; write a new chained letter")
+    letter = _lock_own_draft(user, letter_id, "A sent letter is immutable; write a new chained letter")
     _apply(letter, user, data)
     return _brief(letter)
 
 
 # --- send ------------------------------------------------------------------------------------------------------
-
-
-def missing_wraps(letter: Letter) -> list[UUID]:
-    have = set(letter.wraps.values_list("key_id", flat=True))
-    return [k.id for k in rules.required_keys(letter) if k.id not in have]
 
 
 @router.post("/{uuid:letter_id}/send", response=LetterBrief)
@@ -169,9 +129,6 @@ def send_letter(request, letter_id: UUID):
     if letter.status != Letter.DRAFT:
         raise HttpError(409, "Already sent")
     _require(user, rules.CREATE)
-    missing = missing_wraps(letter)
-    if missing:  # a key was approved since the draft was made: the app adds wraps and retries
-        raise HttpError(409, "Missing document-key wraps for: " + ", ".join(map(str, missing)))
     now = timezone.now()
     letter.status, letter.sent_at = Letter.IN_SIGNING, now
     if letter.publish_mode == "now":
@@ -179,23 +136,10 @@ def send_letter(request, letter_id: UUID):
     letter.save(update_fields=["status", "sent_at", "shown_at"])
     audit(user, "letter_sent", str(letter.id), no=letter.no, signers=letter.participants.filter(role="signer").count())
     events.emit(letter, "sent", user)
-    _notify_next(letter, "Letter to sign")
+    signing.notify_next(letter, "Letter to sign")
     if letter.shown_at:
-        _notify_viewers(letter, "New letter")
+        signing.notify_viewers(letter, "New letter")
     return _brief(letter)
-
-
-def _notify_next(letter: Letter, prefix: str) -> None:
-    users = User.objects.filter(pk__in=rules.next_signer_ids(letter))
-    notify(users, "sign_request", f"{prefix}: {letter.title}", letter_id=str(letter.id))
-
-
-def _notify_viewers(letter: Letter, prefix: str) -> None:
-    if letter.unlisted:
-        return
-    ids = rules.audience_ids(letter) - {letter.creator_id} - set(
-        letter.participants.filter(role="signer").values_list("user_id", flat=True))
-    notify(User.objects.filter(pk__in=ids), "letter_published", f"{prefix}: {letter.title}", letter_id=str(letter.id))
 
 
 # --- read ------------------------------------------------------------------------------------------------------
@@ -211,6 +155,21 @@ def list_letters(request, limit: int = 100, offset: int = 0, q: str = ""):
     return [_brief(x) for x in qs[offset : offset + limit]]
 
 
+class DirectoryUser(Schema):
+    id: int
+    email: str
+    full_name: str
+    permissions: list[str]
+
+
+@router.get("/directory", response=list[DirectoryUser])
+def directory(request):
+    """Active colleagues, for picking signers and viewers when writing a letter."""
+    users = User.objects.filter(is_active=True).prefetch_related("grants").order_by("email")
+    return [DirectoryUser(id=u.id, email=u.email, full_name=u.full_name,
+                          permissions=sorted(g.code for g in u.grants.all())) for u in users]
+
+
 @router.get("/events", response=list[dict])
 def catch_up(request, after: int = 0):
     return replay_events(user_of(request), after)
@@ -222,20 +181,6 @@ def replay_events(user: User, after: int) -> list[dict]:
     return [events.event_payload(ev, ev.letter) for ev in rows]
 
 
-@router.get("/rewrap-needed", response=list[dict])
-def rewrap_needed(request):
-    """Letters this user can read where some participant key lacks a wrapped document key (new device approved)."""
-    user = user_of(request)
-    mine = set(UserKey.objects.filter(user=user, status=UserKey.ACTIVE).values_list("id", flat=True))
-    letters = Letter.objects.filter(wraps__key_id__in=mine).exclude(status=Letter.DRAFT).distinct()[:200]
-    out = []
-    for letter in letters:
-        have = set(letter.wraps.values_list("key_id", flat=True))
-        out += [{"letter_id": str(letter.id), "key": KeyOut.of(k).dict()} for k in rules.required_keys(letter)
-                if k.id not in have]
-    return out
-
-
 @router.get("/admin", response=list[AdminLetterOut])
 def admin_list(request, limit: int = 100, offset: int = 0):
     """Manager view: title, status and participants only. No body, no wraps, no signatures' notes."""
@@ -245,45 +190,60 @@ def admin_list(request, limit: int = 100, offset: int = 0):
     return [AdminLetterOut(**_brief(x).dict(), creator_email=x.creator.email, participants=_participants(x)) for x in rows]
 
 
+@router.get("/seal-key", response=dict)
+def seal_key(request):
+    """Public half of the Ed25519 seal key; every signature's `seal` verifies against it."""
+    user_of(request)
+    return cryptoutil.seal_public_info()
+
+
+def _signature_out(sig) -> SignatureOut:
+    return SignatureOut(signer_id=sig.signer_id, decision=sig.decision, note=sig.payload.get("note", ""),
+                        method=sig.method, device_name=sig.payload.get("deviceName", ""),
+                        signed_at=str(sig.payload.get("signedAt", "")), seal=sig.seal, payload=sig.payload)
+
+
+def _decrypted_body(letter: Letter) -> dict:
+    try:
+        return cryptoutil.decrypt_body(letter.body)
+    except cryptoutil.DecryptError as exc:
+        logger.error("Letter %s cannot be decrypted: %s", letter.id, exc)
+        raise HttpError(500, "Letter cannot be decrypted; check DJANGO_DATA_KEY") from exc
+
+
 @router.get("/{uuid:letter_id}", response=LetterOut)
 def get_letter(request, letter_id: UUID):
     user = user_of(request)
     letter = _get_visible(user, letter_id)
-    mine = DocKeyWrap.objects.filter(letter=letter, key__user=user, key__status=UserKey.ACTIVE)
     children = rules.visible_letters(user).filter(parent=letter).order_by("no")
-    sigs = letter.signatures.select_related("key").order_by("id")
     return LetterOut(
         **_brief(letter).dict(), publish_mode=letter.publish_mode, order=letter.order, due_at=letter.due_at,
-        body=letter.body, company_key_version=letter.company_key_version, company_wrap=letter.company_wrap,
-        participants=_participants(letter),
-        signatures=[SignatureOut(signer_id=s.signer_id, key_id=s.key_id, fingerprint=s.key.fingerprint,
-                                 decision=s.decision, payload=s.payload, signature=s.signature,
-                                 created_at=s.created_at) for s in sigs],
-        my_wraps=[WrapIn(key_id=w.key_id, wrap=w.wrap) for w in mine],
+        body=_decrypted_body(letter), participants=_participants(letter),
+        signatures=[_signature_out(s) for s in letter.signatures.order_by("id")],
         children=[_brief(c) for c in children],
-        attachments=[AttachmentOut(id=a.id, content_type=a.content_type, label=a.label, iv=a.iv, size=a.size)
+        attachments=[AttachmentOut(id=a.id, content_type=a.content_type, label=a.label, size=a.size)
                      for a in letter.attachments.order_by("created_at")],
     )
 
 
 @router.get("/{uuid:letter_id}/certificate", response=dict)
 def certificate(request, letter_id: UUID):
-    """Signature certificate: who signed which content with which key from which device, re-verified now.
-    The signed payloads are included so anyone can re-check them offline against the public keys."""
+    """Signature certificate: who signed which content, how and from which device, re-verified now (seal and
+    content hash). The signed payloads are included so they can be re-checked against the published seal key."""
     letter = _get_visible(user_of(request), letter_id)
+    current_hash = cryptoutil.content_hash(_decrypted_body(letter))
     sigs = []
-    for s in letter.signatures.select_related("key", "signer").order_by("id"):
+    for s in letter.signatures.select_related("signer").order_by("id"):
         sigs.append({
-            "signer": s.signer.email, "fingerprint": s.key.fingerprint, "device": s.payload.get("deviceName", ""),
-            "decision": s.decision, "signed_at": s.payload.get("signedAt"), "payload": s.payload,
-            "signature": s.signature, "sign_pub": s.key.sign_pub,
-            "verified": cryptoutil.verify_ecdsa(s.payload, s.signature, s.key.sign_pub)
-            and s.payload.get("contentHash") == cryptoutil.content_hash(letter.body),
+            "signer": s.signer.email, "method": s.method, "device": s.payload.get("deviceName", ""),
+            "decision": s.decision, "signed_at": s.payload.get("signedAt"), "payload": s.payload, "seal": s.seal,
+            "verified": cryptoutil.verify_seal(s.payload, s.seal) and s.payload.get("contentHash") == current_hash,
         })
     return {"letter": {"id": str(letter.id), "no": letter.no, "title": letter.title, "status": letter.status,
                        "creator": letter.creator.email, "sent_at": letter.sent_at, "closed_at": letter.closed_at,
-                       "content_hash": cryptoutil.content_hash(letter.body)},
-            "signatures": sigs, "all_verified": all(x["verified"] for x in sigs)}
+                       "content_hash": current_hash},
+            "seal_key": cryptoutil.seal_public_info(),
+            "signatures": sigs, "all_verified": bool(sigs) and all(x["verified"] for x in sigs)}
 
 
 @router.post("/{uuid:letter_id}/opened", response=Detail)
@@ -298,111 +258,40 @@ def mark_opened(request, letter_id: UUID):
     return {"detail": "ok"}
 
 
-@router.post("/{uuid:letter_id}/wraps", response=Detail)
-@transaction.atomic
-def add_wraps(request, letter_id: UUID, wraps: list[WrapIn]):
-    """Re-wrap the document key for newly approved keys. Only someone who can already read it may do this,
-    and existing wraps are never overwritten."""
-    user = user_of(request)
-    letter = _get_visible(user, letter_id)
-    if not DocKeyWrap.objects.filter(letter=letter, key__user=user, key__status=UserKey.ACTIVE).exists() \
-            and letter.status != Letter.DRAFT:
-        raise HttpError(403, "You do not hold this letter's document key")
-    _store_wraps(letter, wraps, writer=user)
-    audit(user, "letter_rewrapped", str(letter.id), count=len(wraps))
-    return {"detail": "Stored"}
-
-
 # --- sign ------------------------------------------------------------------------------------------------------
 
 
-def _check_payload(payload: dict, letter: Letter, user: User, key: UserKey, session) -> None:
-    signer = payload.get("signer") or {}
-    expected = {
-        "letterId": str(letter.id), "title": letter.title, "decision": payload.get("decision"),
-        "contentHash": cryptoutil.content_hash(letter.body),
-        "parentId": str(letter.parent_id) if letter.parent_id else None,
-    }
-    if any(payload.get(k) != v for k, v in expected.items()) or payload.get("decision") not in DECISIONS:
-        raise HttpError(422, "Payload does not match this letter")
-    if signer != {"userId": user.id, "keyId": str(key.id), "fp": key.fingerprint}:
-        raise HttpError(422, "Payload signer does not match your key")
-    if payload.get("sessionId") != str(session.id):
-        raise HttpError(422, "Payload was signed for another session")
-    nonce = payload.get("nonce")
-    if not isinstance(nonce, str) or not 16 <= len(nonce) <= 64:
-        raise HttpError(422, "Bad nonce")
-    note = payload.get("note", "")
-    if not isinstance(note, str) or len(note) > 2000:
-        raise HttpError(422, "Bad note")
-    try:
-        signed_at = datetime.fromisoformat(str(payload.get("signedAt")).replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise HttpError(422, "Bad signedAt") from exc
-    if signed_at.tzinfo is None or abs(timezone.now() - signed_at) > SIGN_SKEW:
-        raise HttpError(422, "signedAt is too far from server time")
+@transaction.atomic
+def _sign_locked(letter_id: UUID, user: User, session, data: SignBiometricIn, method: str) -> Letter:
+    _get_visible(user, letter_id)  # missing and invisible letters are both 404
+    letter = get_object_or_404(Letter.objects.select_for_update(), pk=letter_id)
+    signing.record_signature(letter, user, session, decision=data.decision, note=data.note, method=method)
+    return letter
 
 
 @router.post("/{uuid:letter_id}/sign", response=LetterBrief)
-@transaction.atomic
-def sign_letter(request, letter_id: UUID, data: SignIn):
+def sign_letter(request, letter_id: UUID, data: SignPinIn):
+    """Sign with the signing PIN. Not atomic as a whole: a wrong PIN must keep its failure count and audit row."""
     user = user_of(request)
-    letter = get_object_or_404(Letter.objects.select_for_update(), pk=letter_id)
-    me = letter.participants.filter(user=user, role=Participant.SIGNER).first()
-    if me is None:
-        raise HttpError(403, "You are not a signer of this letter")
-    if letter.status != Letter.IN_SIGNING:
-        raise HttpError(409, f"Letter is {letter.status}")
-    if me.decision:
-        raise HttpError(409, "You already decided")
-    if user.id not in rules.next_signer_ids(letter):
-        raise HttpError(409, "It is not your turn yet")
-    key = UserKey.objects.filter(pk=data.key_id, user=user, status=UserKey.ACTIVE).first()
-    if key is None:
-        raise HttpError(403, "Key is not active")
-    if not DocKeyWrap.objects.filter(letter=letter, key=key).exists():
-        raise HttpError(403, "This key cannot read the letter yet")  # pending/new keys cannot sign
-    _check_size(data.payload, "payload")
-    _check_payload(data.payload, letter, user, key, request.auth)
-    if not cryptoutil.verify_ecdsa(data.payload, data.signature, key.sign_pub):
-        raise HttpError(422, "Signature does not verify")
-    decision, now = data.payload["decision"], timezone.now()
-    try:
-        with transaction.atomic():
-            Signature.objects.create(letter=letter, signer=user, key=key, decision=decision, payload=data.payload,
-                                     signature=data.signature, nonce=data.payload["nonce"])
-    except IntegrityError as exc:
-        raise HttpError(409, "Replayed signature") from exc
-    me.decision, me.decided_at = decision, now
-    me.save(update_fields=["decision", "decided_at"])
-    audit(user, "letter_signed", str(letter.id), decision=decision, key=str(key.id), fingerprint=key.fingerprint,
-          session=str(request.auth.id), device=request.auth.device_name)
-    events.emit(letter, "signed" if decision == "approved" else "rejected", user, decision=decision)
-    _advance(letter, user, decision, now)
-    return _brief(letter)
+    signing.require_turn(_get_visible(user, letter_id), user)  # non-signers cannot burn PIN attempts
+    signing.check_pin(user, data.pin, request.auth)
+    return _brief(_sign_locked(letter_id, user, request.auth, data, "pin"))
 
 
-def _advance(letter: Letter, actor: User, decision: str, now) -> None:
-    if decision == "rejected":  # final: the creator may start a new chained letter
-        letter.status, letter.closed_at = Letter.REJECTED, now
-        letter.save(update_fields=["status", "closed_at"])
-        people = User.objects.filter(pk__in={letter.creator_id, *letter.participants.filter(role="signer").values_list("user_id", flat=True)})
-        notify(people, "letter_rejected", f"Rejected: {letter.title}", letter_id=str(letter.id))
-        return
-    if letter.participants.filter(role=Participant.SIGNER, decision="").exists():
-        if letter.order == "serial":
-            _notify_next(letter, "Your turn to sign")
-        return
-    letter.status, letter.closed_at = Letter.PUBLISHED, now
-    update = ["status", "closed_at"]
-    if letter.shown_at is None:
-        letter.shown_at = now
-        update.append("shown_at")
-    letter.save(update_fields=update)
-    audit(actor, "letter_published", str(letter.id))
-    events.emit(letter, "published", actor)
-    notify([letter.creator], "letter_published", f"Fully signed: {letter.title}", letter_id=str(letter.id))
-    _notify_viewers(letter, "Published")
+@router.post("/{uuid:letter_id}/sign-biometric", response=LetterBrief)
+def sign_biometric(request, letter_id: UUID, data: SignBiometricIn):
+    """Sign after the app confirmed fingerprint/face locally. Only sessions created as biometric may."""
+    user = user_of(request)
+    if not request.auth.biometric:
+        raise HttpError(403, "This session has no biometrics")
+    return _brief(_sign_locked(letter_id, user, request.auth, data, "biometric"))
+
+
+@router.post("/{uuid:letter_id}/sign-requests", response={201: SignRequestOut})
+@transaction.atomic
+def new_sign_request(request, letter_id: UUID, data: SignRequestIn):
+    sr = create_request(letter_id, user_of(request), request.auth, data)
+    return 201, request_out(sr)
 
 
 # --- cancel / unlist -----------------------------------------------------------------------------------------
@@ -448,26 +337,31 @@ def unlist(request, letter_id: UUID, data: UnlistIn):
 
 @router.post("/{uuid:letter_id}/attachments", response={201: AttachmentOut})
 @transaction.atomic
-def add_attachment(request, letter_id: UUID, content_type: Form[str], iv: Form[str], label: Form[str] = "",
+def add_attachment(request, letter_id: UUID, content_type: Form[str], label: Form[str] = "",
                    file: File[UploadedFile] = ...):
     user = user_of(request)
-    letter = _get_own_draft_or_sent(user, letter_id)
-    if letter.status != Letter.DRAFT:
-        raise HttpError(409, "A sent letter is immutable")
+    letter = _lock_own_draft(user, letter_id, "A sent letter is immutable")
     if letter.attachments.count() >= MAX_ATTACHMENTS:
         raise HttpError(422, "Too many attachments on this letter")
     if content_type not in ATTACHMENT_TYPES:
         raise HttpError(422, "Only PDF and images are allowed")
     if file.size > settings.MAX_ATTACHMENT_BYTES:
         raise HttpError(413, "Attachment is larger than 25 MB")
-    att = Attachment(letter=letter, content_type=content_type, label=label[:100], iv=iv[:32], size=file.size)
-    att.file.save("blob", file, save=False)
+    att = Attachment(letter=letter, content_type=content_type, label=label[:100], size=file.size)
+    att.file.save("blob", ContentFile(cryptoutil.encrypt_bytes(file.read())), save=False)
     att.save()
-    return 201, AttachmentOut(id=att.id, content_type=att.content_type, label=att.label, iv=att.iv, size=att.size)
+    return 201, AttachmentOut(id=att.id, content_type=att.content_type, label=att.label, size=att.size)
 
 
 @router.get("/{uuid:letter_id}/attachments/{uuid:attachment_id}", response=None)
 def download_attachment(request, letter_id: UUID, attachment_id: UUID):
     letter = _get_visible(user_of(request), letter_id)
     att = get_object_or_404(Attachment, pk=attachment_id, letter=letter)
-    return FileResponse(att.file.open("rb"), content_type="application/octet-stream")
+    with att.file.open("rb") as handle:
+        stored = handle.read()
+    try:
+        plain = cryptoutil.decrypt_bytes(stored)
+    except cryptoutil.DecryptError as exc:
+        logger.error("Attachment %s cannot be decrypted: %s", att.id, exc)
+        raise HttpError(500, "Attachment cannot be decrypted; check DJANGO_DATA_KEY") from exc
+    return HttpResponse(plain, content_type=att.content_type)

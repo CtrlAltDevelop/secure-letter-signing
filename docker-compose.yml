@@ -26,6 +26,8 @@ services:
       BRAND: ${BRAND:?}
       BRANDS_DIR: /brands
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY in brands/<brand>/.env}
+      DJANGO_DATA_KEY: ${DJANGO_DATA_KEY:?set DJANGO_DATA_KEY in brands/<brand>/.env}
+      DJANGO_SEAL_SEED: ${DJANGO_SEAL_SEED:?set DJANGO_SEAL_SEED in brands/<brand>/.env}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
       POSTGRES_HOST: db
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

@@ -5,18 +5,15 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
 import 'package:letter_signing/screens/admin_screen.dart';
-import 'package:letter_signing/keys/company_key_service.dart';
-import 'package:letter_signing/keys/device_key_vault.dart';
-import 'package:letter_signing/keys/key_approvals_screen.dart';
-import 'package:letter_signing/keys/key_setup_screen.dart';
-import 'package:letter_signing/keys/key_store.dart';
-import 'package:letter_signing/keys/my_keys_screen.dart';
+import 'package:letter_signing/screens/biometric_enrol.dart';
 import 'package:letter_signing/letters/letters_admin_screen.dart';
 import 'package:letter_signing/letters/letters_api.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letters_list_screen.dart';
 import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/letters/notifications_screen.dart';
+import 'package:letter_signing/letters/sign_approval_host.dart';
+import 'package:letter_signing/screens/signing_pin.dart';
 import 'package:letter_signing/screens/profile_tab.dart';
 import 'package:letter_signing/screens/sessions_tab.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
@@ -41,37 +38,20 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final _keyStore = KeyStore(userId: widget.auth.user!.id);
-  late final _companyKeys = CompanyKeyService(widget.auth.api, _keyStore);
   late final LettersEnv _env = _buildEnv();
-  late Future<StoredKey?> _localKey = _loadKey();
   int _index = 0;
   final _visited = <int>{0};
   final _pages = <int, Widget>{};
-
-  /// This account's key on this device; adopts a key saved by an older build if the server says it is ours.
-  Future<StoredKey?> _loadKey() async {
-    final local = await _keyStore.load();
-    if (local != null) return local;
-    try {
-      final mine = await widget.auth.api.call('GET', '/keys/mine') as List;
-      final ids = {for (final k in mine) (k as Map)['id'] as String};
-      if (await _keyStore.adoptDeviceKey(ids)) return await _keyStore.load();
-    } on Exception {
-      // Offline: the user can still create a key; an old key is adopted on a later launch.
-    }
-    return null;
-  }
 
   LettersEnv _buildEnv() {
     final user = widget.auth.user!;
     final api = widget.auth.api;
     return LettersEnv(
       api: LettersApi(api),
-      vault: DeviceKeyVault(api, _keyStore),
-      companyKeys: _companyKeys,
       live: LiveService(api: api, cursor: SecureCursorStore(user.id)),
       userId: user.id,
+      biometrics: widget.auth.biometrics,
+      enrollBiometric: widget.auth.enrollBiometric,
       canCreate: user.permissions.contains('letter.create'),
       isManager: user.isManager,
       deviceName: defaultTargetPlatform
@@ -88,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    unawaited(_env.live.dispose());
+    unawaited(_env.dispose());
     super.dispose();
   }
 
@@ -96,33 +76,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final user = widget.auth.user;
     if (user == null) return const SizedBox.shrink();
-    // A signing key is part of signing up: nobody enters the app on a device that has none.
-    return FutureBuilder<StoredKey?>(
-      future: _localKey,
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        if (snap.data == null) return _keyGate();
-        return _shell(user);
-      },
+    // The signing PIN is part of signing up: nobody enters the app without one.
+    if (!user.hasSigningPin) return SigningPinGate(auth: widget.auth);
+    return BiometricEnrolPrompt(
+      auth: widget.auth,
+      child: SignApprovalHost(env: _env, child: _shell(user)),
     );
   }
-
-  Widget _keyGate() => KeySetupScreen(
-    api: widget.auth.api,
-    store: _keyStore,
-    deviceName: defaultTargetPlatform.name,
-    onSignOut: widget.auth.logout,
-    onChanged: () {
-      // Block body on purpose: an arrow would make setState's callback return the Future.
-      setState(() {
-        _localKey = _keyStore.load();
-      });
-    },
-  );
 
   /// Primary destinations first (they fill the phone bottom bar), manager items after.
   List<_Dest> _destinations(UserInfo user) {
@@ -133,12 +93,6 @@ class _HomeScreenState extends State<HomeScreen> {
         Icons.mail_outline,
         Icons.mail,
         () => LettersListScreen(env: _env, embedded: true),
-      ),
-      _Dest(
-        'Keys',
-        Icons.vpn_key_outlined,
-        Icons.vpn_key,
-        () => MyKeysScreen(api: auth.api, store: _keyStore, embedded: true),
       ),
       _Dest(
         'Profile',
@@ -154,12 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       if (user.isManager) ...[
         _Dest(
-          'Approvals',
-          Icons.how_to_reg_outlined,
-          Icons.how_to_reg,
-          () => KeyApprovalsScreen(api: auth.api, embedded: true),
-        ),
-        _Dest(
           'All letters',
           Icons.inventory_2_outlined,
           Icons.inventory_2,
@@ -169,11 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
           'Admin',
           Icons.admin_panel_settings_outlined,
           Icons.admin_panel_settings,
-          () => AdminTab(
-            auth: auth,
-            vault: _env.vault,
-            companyKeys: _companyKeys,
-          ),
+          () => AdminTab(auth: auth),
         ),
       ],
     ];
@@ -232,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  static const _primaryCount = 4;
+  static const _primaryCount = 3;
 
   Widget _bottomBar(List<_Dest> dests, UserInfo user) {
     final primary = dests.take(_primaryCount).toList();

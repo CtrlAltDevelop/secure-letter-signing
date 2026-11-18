@@ -2,6 +2,8 @@
 import os
 from pathlib import Path
 
+from core import secretcheck
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
@@ -10,6 +12,23 @@ if not SECRET_KEY:
     if not DEBUG:
         raise RuntimeError("DJANGO_SECRET_KEY is required when DJANGO_DEBUG != 1")
     SECRET_KEY = "dev-only-insecure-key"  # nosec: only reachable with DJANGO_DEBUG=1
+
+
+def _required_secret(name: str, dev_fallback: str) -> str:
+    value = os.environ.get(name, "")
+    if value:
+        return value
+    if not DEBUG:
+        raise RuntimeError(f"{name} is required when DJANGO_DEBUG != 1")
+    return dev_fallback  # nosec: only reachable with DJANGO_DEBUG=1
+
+
+# At-rest encryption (letters, attachments) and the Ed25519 seal on signatures. Changing DATA_KEY makes stored
+# letters unreadable; changing SEAL_SEED makes old seals fail verification. Back both up with the database.
+DATA_KEY = _required_secret("DJANGO_DATA_KEY", "dev-only-insecure-data-key")
+SEAL_SEED = _required_secret("DJANGO_SEAL_SEED", "dev-only-insecure-seal-seed")
+if not DEBUG:
+    secretcheck.validate_secrets(DATA_KEY, SEAL_SEED, ("dev-only-insecure-data-key", "dev-only-insecure-seal-seed"))
 ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
 
 BRAND = os.environ.get("BRAND", "demo")
@@ -26,7 +45,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "core",
     "accounts",
-    "keys",
     "letters",
 ]
 
@@ -75,6 +93,7 @@ else:  # local dev and tests only
 
 # Redis in Docker; without REDIS_URL (make dev) use in-memory equivalents, no Redis needed.
 REDIS_URL = os.environ.get("REDIS_URL", "")
+secretcheck.warn_if_limits_are_per_process(debug=DEBUG, redis_url=REDIS_URL)
 if REDIS_URL:
     CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [REDIS_URL]}}}
     CELERY_BROKER_URL = REDIS_URL

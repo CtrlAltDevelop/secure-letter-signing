@@ -97,8 +97,9 @@ class ApiClient {
   ) {
     final request = http.Request(method, Uri.parse('$baseUrl/api$path'))
       ..headers['Content-Type'] = 'application/json';
-    if (auth && _access != null)
+    if (auth && _access != null) {
       request.headers['Authorization'] = 'Bearer $_access';
+    }
     if (body != null) request.body = jsonEncode(body);
     return _http
         .send(request)
@@ -134,8 +135,9 @@ class ApiClient {
       (await store.readRefresh()) != null && await _refreshOnce();
 
   static String? _detail(Object? body) {
-    if (body is Map && body['detail'] is String)
+    if (body is Map && body['detail'] is String) {
       return body['detail'] as String;
+    }
     if (body is Map && body['detail'] is List) {
       return (body['detail'] as List)
           .map((e) => e is Map ? e['msg'] : e)

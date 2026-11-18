@@ -40,7 +40,7 @@ test:
 	cd server && uv run pytest -q
 	$(MAKE) app-assets
 	cd app && flutter test
-	REQUIRE_DART_SIGNED=1 npm test
+	npm test
 
 app: app-assets
 	cd app && flutter pub get && flutter run --dart-define=BRAND=$(BRAND)

@@ -89,33 +89,39 @@ class Participant {
 class SignatureInfo {
   const SignatureInfo({
     required this.signerId,
-    required this.keyId,
-    required this.fingerprint,
     required this.decision,
+    required this.note,
+    required this.method,
+    required this.deviceName,
+    required this.signedAt,
+    required this.seal,
     required this.payload,
-    required this.signature,
-    required this.createdAt,
   });
 
   final int signerId;
-  final String keyId;
-  final String fingerprint;
   final String decision;
-  final Map<String, dynamic> payload;
-  final String signature;
-  final DateTime createdAt;
+  final String note;
 
-  String get deviceName => (payload['deviceName'] as String?) ?? '';
-  String get note => (payload['note'] as String?) ?? '';
+  /// `pin` or `biometric`.
+  final String method;
+  final String deviceName;
+  final DateTime? signedAt;
+
+  /// Base64 Ed25519 seal the server put on the payload.
+  final String seal;
+  final Map<String, dynamic> payload;
+
+  String get contentHash => (payload['contentHash'] as String?) ?? '';
 
   factory SignatureInfo.fromJson(Map<String, dynamic> j) => SignatureInfo(
     signerId: j['signer_id'] as int,
-    keyId: j['key_id'] as String,
-    fingerprint: j['fingerprint'] as String,
     decision: j['decision'] as String,
-    payload: Map<String, dynamic>.from(j['payload'] as Map),
-    signature: j['signature'] as String,
-    createdAt: DateTime.parse(j['created_at'] as String),
+    note: (j['note'] as String?) ?? '',
+    method: (j['method'] as String?) ?? '',
+    deviceName: (j['device_name'] as String?) ?? '',
+    signedAt: _date(j['signed_at']),
+    seal: (j['seal'] as String?) ?? '',
+    payload: Map<String, dynamic>.from((j['payload'] as Map?) ?? const {}),
   );
 }
 
@@ -125,38 +131,22 @@ class AttachmentInfo {
     required this.id,
     required this.contentType,
     required this.label,
-    required this.iv,
     required this.size,
   });
 
   final String id;
   final String contentType;
 
-  /// Position of the attachment in the encrypted body's `attachments` list (the server never sees real names).
+  /// Position of the attachment in the body's `attachments` list.
   final String label;
-  final String iv;
   final int size;
 
   factory AttachmentInfo.fromJson(Map<String, dynamic> j) => AttachmentInfo(
     id: j['id'] as String,
     contentType: j['content_type'] as String,
     label: j['label'] as String,
-    iv: j['iv'] as String,
     size: j['size'] as int,
   );
-}
-
-@immutable
-class WrapEntry {
-  const WrapEntry({required this.keyId, required this.wrap});
-  final String keyId;
-  final Map<String, dynamic> wrap;
-
-  factory WrapEntry.fromJson(Map<String, dynamic> j) => WrapEntry(
-    keyId: j['key_id'] as String,
-    wrap: Map<String, dynamic>.from(j['wrap'] as Map),
-  );
-  Map<String, dynamic> toJson() => {'key_id': keyId, 'wrap': wrap};
 }
 
 @immutable
@@ -167,11 +157,8 @@ class LetterDetail {
     required this.order,
     required this.dueAt,
     required this.body,
-    required this.companyKeyVersion,
-    required this.companyWrap,
     required this.participants,
     required this.signatures,
-    required this.myWraps,
     required this.children,
     required this.attachments,
   });
@@ -180,12 +167,9 @@ class LetterDetail {
   final String publishMode;
   final String order;
   final DateTime? dueAt;
-  final Map<String, dynamic> body; // {iv, ct}
-  final int? companyKeyVersion;
-  final Map<String, dynamic>? companyWrap;
+  final Map<String, dynamic> body; // plaintext {text, rich?, attachments?}
   final List<Participant> participants;
   final List<SignatureInfo> signatures;
-  final List<WrapEntry> myWraps;
   final List<LetterBrief> children;
   final List<AttachmentInfo> attachments;
 
@@ -208,13 +192,8 @@ class LetterDetail {
       order: j['order'] as String,
       dueAt: _date(j['due_at']),
       body: Map<String, dynamic>.from(j['body'] as Map),
-      companyKeyVersion: j['company_key_version'] as int?,
-      companyWrap: j['company_wrap'] == null
-          ? null
-          : Map<String, dynamic>.from(j['company_wrap'] as Map),
       participants: list('participants', Participant.fromJson),
       signatures: list('signatures', SignatureInfo.fromJson),
-      myWraps: list('my_wraps', WrapEntry.fromJson),
       children: list('children', LetterBrief.fromJson),
       attachments: list('attachments', AttachmentInfo.fromJson),
     );
@@ -243,43 +222,17 @@ class AdminLetter {
 }
 
 @immutable
-class KeyInfo {
-  const KeyInfo({
-    required this.id,
-    required this.userId,
-    required this.deviceName,
-    required this.encPub,
-    required this.fingerprint,
-  });
-  final String id;
-  final int userId;
-  final String deviceName;
-  final Map<String, dynamic> encPub;
-  final String fingerprint;
-
-  factory KeyInfo.fromJson(Map<String, dynamic> j) => KeyInfo(
-    id: j['id'] as String,
-    userId: j['user_id'] as int,
-    deviceName: (j['device_name'] as String?) ?? '',
-    encPub: Map<String, dynamic>.from(j['enc_pub'] as Map),
-    fingerprint: j['fingerprint'] as String,
-  );
-}
-
-@immutable
 class DirectoryUser {
   const DirectoryUser({
     required this.id,
     required this.email,
     required this.fullName,
     required this.permissions,
-    required this.keys,
   });
   final int id;
   final String email;
   final String fullName;
   final List<String> permissions;
-  final List<KeyInfo> keys;
 
   String get displayName => fullName.isEmpty ? email : fullName;
   bool get canSign => permissions.contains('letter.sign');
@@ -289,23 +242,6 @@ class DirectoryUser {
     email: j['email'] as String,
     fullName: j['full_name'] as String,
     permissions: List<String>.from(j['permissions'] as List),
-    keys: [
-      for (final k in j['keys'] as List)
-        KeyInfo.fromJson(Map<String, dynamic>.from(k as Map)),
-    ],
-  );
-}
-
-/// A key some participant owns that lacks a wrapped document key (new device approved later).
-@immutable
-class RewrapItem {
-  const RewrapItem({required this.letterId, required this.key});
-  final String letterId;
-  final KeyInfo key;
-
-  factory RewrapItem.fromJson(Map<String, dynamic> j) => RewrapItem(
-    letterId: j['letter_id'] as String,
-    key: KeyInfo.fromJson(Map<String, dynamic>.from(j['key'] as Map)),
   );
 }
 
@@ -358,24 +294,18 @@ class DraftPayload {
     required this.order,
     required this.signerIds,
     required this.viewerIds,
-    required this.wraps,
     this.dueAt,
     this.parentId,
-    this.companyKeyVersion,
-    this.companyWrap,
   });
   final String title;
-  final Map<String, String> body;
+  final Map<String, dynamic> body;
   final String visibility;
   final String publishMode;
   final String order;
   final List<int> signerIds;
   final List<int> viewerIds;
-  final List<WrapEntry> wraps;
   final DateTime? dueAt;
   final String? parentId;
-  final int? companyKeyVersion;
-  final Map<String, dynamic>? companyWrap;
 
   Map<String, dynamic> toJson() => {
     'title': title,
@@ -387,13 +317,103 @@ class DraftPayload {
     'parent_id': parentId,
     'signer_ids': signerIds,
     'viewer_ids': viewerIds,
-    'wraps': [for (final w in wraps) w.toJson()],
-    'company_key_version': companyKeyVersion,
-    'company_wrap': companyWrap,
   };
 }
 
-/// A pushed event: type 'letter' (carries `eventId`) or 'notification'.
+/// A request to approve a signature on another device (`SignRequestOut`).
+@immutable
+class SignRequest {
+  const SignRequest({
+    required this.id,
+    required this.letterId,
+    required this.letterTitle,
+    required this.decision,
+    required this.note,
+    required this.status,
+    required this.requesterSessionId,
+    required this.requesterDeviceName,
+    required this.approverSessionId,
+    required this.createdAt,
+    required this.expiresAt,
+    this.resolvedAt,
+  });
+
+  static const pending = 'pending';
+  static const approved = 'approved';
+  static const declined = 'declined';
+  static const cancelled = 'cancelled';
+  static const expired = 'expired';
+
+  final String id;
+  final String letterId;
+  final String letterTitle;
+  final String decision;
+  final String note;
+  final String status;
+  final String requesterSessionId;
+  final String requesterDeviceName;
+  final String approverSessionId;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+  final DateTime? resolvedAt;
+
+  bool get isPending => status == pending;
+  bool get isApproved => status == approved;
+
+  factory SignRequest.fromJson(Map<String, dynamic> j) => SignRequest(
+    id: '${j['id']}',
+    letterId: '${j['letter_id']}',
+    letterTitle: (j['letter_title'] as String?) ?? '',
+    decision: j['decision'] as String,
+    note: (j['note'] as String?) ?? '',
+    status: j['status'] as String,
+    requesterSessionId: '${j['requester_session_id'] ?? ''}',
+    requesterDeviceName: (j['requester_device_name'] as String?) ?? '',
+    approverSessionId: '${j['approver_session_id'] ?? ''}',
+    createdAt: DateTime.parse(j['created_at'] as String),
+    expiresAt: DateTime.parse(j['expires_at'] as String),
+    resolvedAt: _date(j['resolved_at']),
+  );
+}
+
+/// One signed-in device of the user (`SessionOut`).
+@immutable
+class SessionInfo {
+  const SessionInfo({
+    required this.id,
+    required this.deviceName,
+    required this.platform,
+    required this.ip,
+    required this.lastActive,
+    required this.current,
+    required this.biometric,
+  });
+
+  final String id;
+  final String deviceName;
+  final String platform;
+  final String ip;
+  final String lastActive;
+  final bool current;
+  final bool biometric;
+
+  String get displayName {
+    if (deviceName.isNotEmpty) return deviceName;
+    return platform.isEmpty ? 'Unknown device' : platform;
+  }
+
+  factory SessionInfo.fromJson(Map<String, dynamic> j) => SessionInfo(
+    id: '${j['id']}',
+    deviceName: '${j['device_name'] ?? ''}',
+    platform: '${j['platform'] ?? ''}',
+    ip: '${j['ip'] ?? ''}',
+    lastActive: '${j['last_active'] ?? ''}',
+    current: j['current'] == true,
+    biometric: j['biometric'] == true,
+  );
+}
+
+/// A pushed event: 'letter' / 'notification' (carry `eventId`) or a session-targeted 'sign_request' frame.
 @immutable
 class LiveEvent {
   const LiveEvent(this.raw);
@@ -402,6 +422,16 @@ class LiveEvent {
   String get type => (raw['type'] as String?) ?? '';
   bool get isLetter => type == 'letter';
   bool get isNotification => type == 'notification';
+  bool get isSignRequest => type == 'sign_request';
+  bool get isSignRequestUpdate => type == 'sign_request_update';
+
+  /// The request carried by a `sign_request` / `sign_request_update` frame.
+  SignRequest? get request {
+    final r = raw['request'];
+    if (!(isSignRequest || isSignRequestUpdate) || r is! Map) return null;
+    return SignRequest.fromJson(Map<String, dynamic>.from(r));
+  }
+
   int? get eventId => raw['event_id'] as int?;
   String? get letterId => raw['letter_id'] as String?;
   String get kind => (raw['kind'] as String?) ?? '';

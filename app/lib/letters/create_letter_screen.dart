@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:letter_signing/letters/letter_crypto_service.dart';
+import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/letterhead.dart';
@@ -141,9 +141,8 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
                     child: Text(
                       signers
                           ? 'Nobody to choose yet. A signer must be another user who has the '
-                                'letter.sign permission (set by the manager) and an approved key '
-                                '(created in their Keys tab).'
-                          : 'Nobody to choose yet. Viewers must be other users with an approved key.',
+                                'letter.sign permission (set by the manager).'
+                          : 'Nobody to choose yet. Viewers must be other colleagues.',
                     ),
                   ),
                 for (final u in candidates)
@@ -213,12 +212,11 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
     _order,
   ].join('\u0000');
 
-  /// Saves the encrypted draft on the server every minute while there is something new. Skipped for public
-  /// letters (they need a key unlock) and until there is a title and a signer. Never writes plaintext to disk.
+  /// Saves the draft on the server every minute while there is something new, once there is a title and a
+  /// signer. Never writes the text to disk.
   Future<void> _autosaveDraft() async {
     if (!mounted ||
         _busy ||
-        _visibility == 'public' ||
         _title.text.trim().isEmpty ||
         _signers.isEmpty ||
         _state == _lastSavedState) {
@@ -250,16 +248,11 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
     if (_signers.isEmpty) {
       throw const LetterException('Add at least one signer');
     }
-    final key = _visibility == 'public'
-        ? await env.vault.unlock(context, reason: 'Wrap letter for the company')
-        : null;
     final prev = _saved;
-    final saved = await env.crypto.saveDraft(
+    final saved = await env.letters.saveDraft(
       _input(),
       letterId: prev?.brief.id,
-      docKey: prev?.docKey,
       uploaded: prev?.uploaded ?? 0,
-      key: key,
     );
     _saved = saved;
     return saved;
@@ -274,9 +267,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
     try {
       final saved = await _save();
       _lastSavedState = _state;
-      final brief = send
-          ? await env.crypto.send(saved.brief.id, docKey: saved.docKey)
-          : saved.brief;
+      final brief = send ? await env.api.send(saved.brief.id) : saved.brief;
       if (mounted) {
         if (send) {
           Navigator.of(context).pop(brief);
@@ -350,7 +341,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
 
   Widget _contentCard() => _card(
     'Content',
-    'The title is visible in lists. The body is encrypted.',
+    'The title is visible in lists. The body is stored encrypted on the server.',
     [
       TextField(
         controller: _title,
@@ -374,7 +365,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
-            'Draft auto-saved at $_autosavedAt (encrypted)',
+            'Draft auto-saved at $_autosavedAt',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
@@ -382,9 +373,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
         InkWell(
           onTap: _writeOnPaper,
           child: InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Body (formatted, encrypted)',
-            ),
+            decoration: const InputDecoration(labelText: 'Body (formatted)'),
             child: Text.rich(
               editorSpan(_rich!, 14, Theme.of(context).textTheme.bodyMedium),
               maxLines: 8,
@@ -398,7 +387,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
           minLines: 6,
           maxLines: 16,
           decoration: const InputDecoration(
-            labelText: 'Body (encrypted)',
+            labelText: 'Body',
             alignLabelWithHint: true,
           ),
         ),
@@ -407,7 +396,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
 
   Widget _attachmentsCard() => _card(
     'Attachments',
-    'PDF or image, up to 25 MB each. Files are encrypted before upload.',
+    'PDF or image, up to 25 MB each. Files are stored encrypted on the server.',
     [
       for (final (i, f) in _files.indexed)
         ListTile(
@@ -559,9 +548,6 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
             icon: const Icon(Icons.visibility_outlined),
             label: const Text('Choose viewers'),
           ),
-        ),
-        _helper(
-          'Removing a viewer later cannot revoke what they already decrypted.',
         ),
       ],
     ],

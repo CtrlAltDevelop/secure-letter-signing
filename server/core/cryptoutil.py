@@ -1,18 +1,25 @@
-"""Server-side verification helpers; byte-compatible with src/crypto.js (canonical JSON, fingerprint, ECDSA raw r||s)."""
+"""Server-side crypto: Fernet encryption at rest and the Ed25519 seal that stamps every signature.
+
+Both keys are derived (HKDF-SHA256) from secrets in settings (`DATA_KEY`, `SEAL_SEED`), never stored in the database.
+"""
 import base64
 import binascii
 import hashlib
 import json
+from functools import lru_cache
 
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from django.conf import settings
 
-PUB_FIELDS = ("kty", "crv", "x", "y")
+BODY_VERSION = 3
+DATA_SALT, SEAL_SALT = b"letter-signing/salt/data-key/v1", b"letter-signing/salt/seal-seed/v1"  # not secret
 
 
-class BadKey(ValueError):
+class DecryptError(ValueError):
     pass
 
 
@@ -31,49 +38,74 @@ def _reject_floats(v):
     return v
 
 
-def clean_jwk(jwk: dict) -> dict:
-    """Public-only EC P-256 JWK with a real curve point, or BadKey."""
-    if not isinstance(jwk, dict) or jwk.get("kty") != "EC" or jwk.get("crv") != "P-256":
-        raise BadKey("Public key must be an EC P-256 JWK")
-    out = {f: jwk.get(f) for f in PUB_FIELDS}
-    if not all(isinstance(out[f], str) for f in PUB_FIELDS):
-        raise BadKey("Incomplete public key")
-    _load(out)
-    return out
+def content_hash(body: dict) -> str:
+    """What a signature binds to: SHA-256 hex of the canonical JSON of the PLAINTEXT body."""
+    return hashlib.sha256(canonical_json(body).encode()).hexdigest()
 
 
-def _b64url(s: str) -> int:
+def _derive(secret: str, info: bytes, salt: bytes) -> bytes:
+    """Fixed, non-secret salt per purpose. Changing a salt (or a key) makes data derived from it unreadable."""
+    return HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=info).derive(secret.encode())
+
+
+# --- encryption at rest ---------------------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=4)
+def _fernet(secret: str) -> Fernet:
+    return Fernet(base64.urlsafe_b64encode(_derive(secret, b"letter-signing/data-key/v1", DATA_SALT)))
+
+
+def encrypt_bytes(data: bytes) -> bytes:
+    return _fernet(settings.DATA_KEY).encrypt(data)
+
+
+def decrypt_bytes(token: bytes) -> bytes:
     try:
-        return int.from_bytes(base64.urlsafe_b64decode(s + "=" * (-len(s) % 4)), "big")
-    except (binascii.Error, ValueError) as exc:
-        raise BadKey("Malformed public key") from exc
+        return _fernet(settings.DATA_KEY).decrypt(token)
+    except InvalidToken as exc:
+        raise DecryptError("stored data cannot be decrypted with the configured DJANGO_DATA_KEY") from exc
 
 
-def _load(jwk: dict) -> ec.EllipticCurvePublicKey:
+def encrypt_body(body: dict) -> dict:
+    token = encrypt_bytes(canonical_json(body).encode())
+    return {"v": BODY_VERSION, "ct": token.decode()}
+
+
+def decrypt_body(stored: dict) -> dict:
+    if not isinstance(stored, dict) or stored.get("v") != BODY_VERSION or not isinstance(stored.get("ct"), str):
+        raise DecryptError("unsupported stored body format")
+    return json.loads(decrypt_bytes(stored["ct"].encode()))
+
+
+# --- the seal ------------------------------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=4)
+def _seal_key(secret: str) -> Ed25519PrivateKey:
+    return Ed25519PrivateKey.from_private_bytes(_derive(secret, b"letter-signing/seal-seed/v1", SEAL_SALT))
+
+
+def _public_raw(key: Ed25519PrivateKey | Ed25519PublicKey) -> bytes:
+    pub = key.public_key() if isinstance(key, Ed25519PrivateKey) else key
+    return pub.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+
+
+def seal_payload(payload: dict) -> str:
+    return base64.b64encode(_seal_key(settings.SEAL_SEED).sign(canonical_json(payload).encode())).decode()
+
+
+def verify_seal(payload: dict, seal_b64: str) -> bool:
     try:
-        return ec.EllipticCurvePublicNumbers(_b64url(jwk["x"]), _b64url(jwk["y"]), ec.SECP256R1()).public_key()
-    except ValueError as exc:
-        raise BadKey("Not a point on P-256") from exc
-
-
-def fingerprint(sign_pub: dict, enc_pub: dict) -> str:
-    text = canonical_json({"sign": clean_jwk(sign_pub), "enc": clean_jwk(enc_pub)})
-    digest = hashlib.sha256(text.encode()).hexdigest()[:32]
-    return "-".join(digest[i : i + 4] for i in range(0, 32, 4))
-
-
-def verify_ecdsa(payload: dict, signature_b64: str, sign_pub: dict) -> bool:
-    try:
-        raw = base64.b64decode(signature_b64, validate=True)
-        if len(raw) != 64:
-            return False
-        der = encode_dss_signature(int.from_bytes(raw[:32], "big"), int.from_bytes(raw[32:], "big"))
-        _load(sign_pub).verify(der, canonical_json(payload).encode(), ec.ECDSA(hashes.SHA256()))
+        public = _seal_key(settings.SEAL_SEED).public_key()
+        public.verify(base64.b64decode(seal_b64, validate=True), canonical_json(payload).encode())
         return True
-    except (InvalidSignature, binascii.Error, ValueError, BadKey):
+    except (InvalidSignature, binascii.Error, ValueError):
         return False
 
 
-def content_hash(body: dict) -> str:
-    """What a signature binds to: SHA-256 hex of the canonical JSON of the ciphertext body {iv, ct}."""
-    return hashlib.sha256(canonical_json(body).encode()).hexdigest()
+def seal_public_info() -> dict:
+    raw = _public_raw(_seal_key(settings.SEAL_SEED))
+    digest = hashlib.sha256(raw).hexdigest()[:32]
+    return {"alg": "Ed25519", "public_key": base64.b64encode(raw).decode(),
+            "fingerprint": "-".join(digest[i : i + 4] for i in range(0, 32, 4))}

@@ -2,7 +2,7 @@ import pytest
 from django.db import connection, transaction
 
 from letters.models import Letter
-from letters.tests.test_letters import world  # noqa: F401
+from letters.tests.conftest import BODY, PIN
 
 
 def test_signers_cannot_see_or_touch_a_draft(world):
@@ -14,55 +14,52 @@ def test_signers_cannot_see_or_touch_a_draft(world):
     assert world.boss.call("get", "/letters/admin").data == []  # the manager does not see drafts either
 
 
-def test_a_planted_wrap_cannot_block_the_key_owner(world):
-    lid = world.create()["id"]
-    victim = world.dev(world.signers[1])
-    attacker = world.dev(world.signers[0])
-    # existing wraps cannot be overwritten by someone else...
-    forged = attacker.call("post", f"/letters/{lid}/wraps", [{"key_id": victim.key_id, "wrap": {"ct": "junk"}}])
-    assert forged.status_code == 200
-    mine = victim.call("get", f"/letters/{lid}").data["my_wraps"]
-    assert mine[0]["wrap"] == {"ct": "w"}
-    # ...but the owner may replace their own wrap
-    victim.call("post", f"/letters/{lid}/wraps", [{"key_id": victim.key_id, "wrap": {"ct": "fixed"}}])
-    assert victim.call("get", f"/letters/{lid}").data["my_wraps"][0]["wrap"] == {"ct": "fixed"}
+def test_a_draft_cannot_be_signed(world):
+    lid = world.create(send=False)["id"]
+    assert world.sign(world.signers[0], lid).status_code == 404  # drafts are invisible to signers
 
 
-def test_parent_is_bound_into_the_signature(world):
+def test_parent_is_bound_into_the_seal(world):
     parent = world.create()["id"]
     child = world.create(parent=parent)["id"]
-    d = world.dev(world.signers[0])
-    letter = d.call("get", f"/letters/{child}").data
-    payload = d.decision_payload(letter) | {"parentId": None}
-    resp = d.call("post", f"/letters/{child}/sign", {"key_id": d.key_id, "payload": payload, "signature": d.sign(payload)})
-    assert resp.status_code == 422
+    assert world.sign(world.signers[0], child).status_code == 200
+    payload = world.alice_d.call("get", f"/letters/{child}").data["signatures"][0]["payload"]
+    assert payload["parentId"] == parent
 
 
 def test_limits_and_bad_input_do_not_crash(world):
     assert world.alice_d.call("get", "/letters?limit=-5&offset=-1").status_code == 200
     data = world.body()
-    data["body"] = {"iv": "aXY=", "ct": "x" * 2_000_001}
+    data["body"] = {"text": "x" * 2_000_001}
     assert world.alice_d.call("post", "/letters", data).status_code == 413
     lid = world.create()["id"]
     d = world.dev(world.signers[0])
-    assert d.call("post", f"/letters/{lid}/sign", {"key_id": d.key_id, "payload": {}, "signature": "x"}).status_code == 422
+    assert d.call("post", f"/letters/{lid}/sign", {"decision": "maybe", "pin": PIN}).status_code == 422
+    assert d.call("post", f"/letters/{lid}/sign", {"decision": "approved", "note": "n" * 2001, "pin": PIN}).status_code == 422
+    assert d.call("post", f"/letters/{lid}/sign", {"decision": "approved"}).status_code == 422
 
 
-def test_company_rotation_must_cover_every_active_key_and_never_overwrites(world):
-    boss = world.boss
-    everyone = [{"key_id": d.key_id, "wrap": {"ct": "a"}} for d in world.d.values()]
-    assert boss.call("post", "/keys/company", {"version": 2, "wraps": everyone[:2]}).status_code == 422
-    assert boss.call("post", "/keys/company", {"version": 2, "wraps": everyone}).status_code == 200
-    again = [{"key_id": everyone[0]["key_id"], "wrap": {"ct": "evil"}}]
-    boss.call("post", "/keys/company", {"version": 2, "wraps": again})
-    from keys.models import CompanyKeyWrap
-
-    assert CompanyKeyWrap.objects.get(version_id=2, key_id=everyone[0]["key_id"]).wrap == {"ct": "a"}
+def test_removed_key_endpoints_are_gone(world):
+    d = world.alice_d
+    auth = {"HTTP_AUTHORIZATION": f"Bearer {d.token}"}
+    lid = world.create()["id"]
+    assert d.api.client.get("/api/keys", **auth).status_code == 404
+    assert d.api.client.get("/api/letters/rewrap-needed", **auth).status_code == 404
+    assert d.api.client.post(f"/api/letters/{lid}/wraps", [], content_type="application/json", **auth).status_code == 404
 
 
 def test_sent_letter_body_is_immutable_in_the_database(world):
     lid = world.create()["id"]
     with pytest.raises(Exception, match="immutable"), transaction.atomic():
         Letter.objects.filter(pk=lid).update(title="changed")
+    with pytest.raises(Exception, match="immutable"), transaction.atomic():
+        Letter.objects.filter(pk=lid).update(body={"v": 3, "ct": "swapped"})
     with connection.cursor() as cur:
         cur.execute("UPDATE letters_letter SET unlisted = 0")  # other fields can still change
+
+
+def test_a_draft_body_can_still_be_edited(world):
+    lid = world.create(send=False)["id"]
+    edited = world.body() | {"body": BODY | {"text": "second version"}}
+    assert world.alice_d.call("put", f"/letters/{lid}", edited).status_code == 200
+    assert world.alice_d.call("get", f"/letters/{lid}").data["body"]["text"] == "second version"

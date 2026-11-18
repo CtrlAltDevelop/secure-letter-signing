@@ -16,6 +16,21 @@ def user_group(user_id: int) -> str:
     return f"user_{user_id}"
 
 
+def session_group(session_id) -> str:
+    return f"session_{session_id}"
+
+
+def push_session(session_id, event: dict) -> None:
+    """Live event to the connection(s) of one session only (not replayed; the app re-fetches on connect)."""
+    layer = get_channel_layer()
+    if layer is None:
+        return
+    try:
+        async_to_sync(layer.group_send)(session_group(session_id), {"type": "event", "event": event})
+    except Exception:  # noqa: BLE001  same reasoning as push()
+        logger.exception("Live push to session %s failed", session_id)
+
+
 def push(user_id: int, event: dict) -> None:
     """Live event to every open connection of this user. No-op failure must never break the request."""
     layer = get_channel_layer()

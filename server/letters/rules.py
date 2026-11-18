@@ -2,7 +2,6 @@
 from django.db.models import Q, QuerySet
 
 from accounts.models import User
-from keys.models import UserKey
 
 from .models import Letter, Participant
 
@@ -41,19 +40,6 @@ def audience_ids(letter: Letter) -> set[int]:
         else:
             ids |= set(letter.participants.filter(role=Participant.VIEWER).values_list("user_id", flat=True))
     return ids
-
-
-def readers_ids(letter: Letter) -> set[int]:
-    """Users whose active keys must hold a wrapped document key (everyone who may decrypt)."""
-    ids = {letter.creator_id}
-    ids |= set(letter.participants.filter(role=Participant.SIGNER).values_list("user_id", flat=True))
-    if letter.visibility == "private":
-        ids |= set(letter.participants.filter(role=Participant.VIEWER).values_list("user_id", flat=True))
-    return ids
-
-
-def required_keys(letter: Letter) -> QuerySet[UserKey]:
-    return UserKey.objects.filter(user_id__in=readers_ids(letter), status=UserKey.ACTIVE, user__is_active=True)
 
 
 def next_signer_ids(letter: Letter) -> list[int]:

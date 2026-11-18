@@ -36,6 +36,7 @@ class LoginIn(Schema):
     password: str
     device_name: str = ""
     platform: str = ""
+    biometric: bool = False  # accepted for old clients, ignored: enrol via PATCH /me/sessions/current
 
 
 class RefreshIn(Schema):

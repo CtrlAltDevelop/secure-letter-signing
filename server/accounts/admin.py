@@ -18,7 +18,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
-from django.urls import path, reverse
+from django.urls import reverse
 from unfold.admin import ModelAdmin
 from unfold.decorators import action, display
 from unfold.widgets import (
@@ -325,8 +325,8 @@ def export_audit_csv(modeladmin, request, queryset):
 
 
 AUDIT_LABELS = {  # badge colour by action family (unfold label colours)
-    "danger": ("revoked", "rejected", "deactivated", "locked", "reuse", "failed", "cancel"),
-    "warning": ("reset", "changed", "rotated", "approved", "unlist", "imported"),
+    "danger": ("revoked", "rejected", "deactivated", "locked", "reuse", "failed", "cancel", "declined"),
+    "warning": ("reset", "changed", "rotated", "approved", "unlist", "imported", "pin_set", "requested", "biometric_enabled"),
     "success": ("created", "signed", "published", "login", "signup", "sent"),
 }
 
