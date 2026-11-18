@@ -1,0 +1,87 @@
+{
+  "v": 1,
+  "pub": {
+    "v": 1,
+    "name": "Vector User",
+    "sign": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "b-9PB0SiaAPy62c4X4-dlDdad8YHOzMWo9j7zX7P7Uk",
+      "y": "t4rtGIq8oiRmJlYgDHozvuLhtgUbhZDlsjE9KcMKpgc"
+    },
+    "enc": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "TzkaTJBDco4kqYvePMJShbDMZk2j9z8WgyfJG2HTYYI",
+      "y": "Ed_qZjTK5Uo5lrINa29fY9Gpx4eKwHaecMYLlYlAUao"
+    }
+  },
+  "priv": {
+    "sign": {
+      "key_ops": [
+        "sign"
+      ],
+      "ext": true,
+      "kty": "EC",
+      "x": "b-9PB0SiaAPy62c4X4-dlDdad8YHOzMWo9j7zX7P7Uk",
+      "y": "t4rtGIq8oiRmJlYgDHozvuLhtgUbhZDlsjE9KcMKpgc",
+      "crv": "P-256",
+      "d": "hm_jUtyWjzohf7baC8R0FVOHSawU26EkpiD5obVGrf0"
+    },
+    "enc": {
+      "key_ops": [
+        "deriveBits"
+      ],
+      "ext": true,
+      "kty": "EC",
+      "x": "TzkaTJBDco4kqYvePMJShbDMZk2j9z8WgyfJG2HTYYI",
+      "y": "Ed_qZjTK5Uo5lrINa29fY9Gpx4eKwHaecMYLlYlAUao",
+      "crv": "P-256",
+      "d": "iOoZ_5BkvnEAPdw2tMZ3XJSUYwserxAfpcoEBlc6LBc"
+    }
+  },
+  "fp": "4bcd-2fb4-c048-4d5b-2225-5f37-f875-7891",
+  "letter": {
+    "id": "vec-1",
+    "no": "0001",
+    "subject": "Subject é中",
+    "body": "Body text",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  "signed": {
+    "v": 1,
+    "type": "signed",
+    "payload": {
+      "v": 1,
+      "letter": {
+        "id": "vec-1",
+        "no": "0001",
+        "subject": "Subject é中",
+        "body": "Body text",
+        "createdAt": "2026-01-01T00:00:00.000Z"
+      },
+      "decision": "approved",
+      "note": "ok",
+      "sigImage": "",
+      "signedAt": "2026-11-18T11:01:08.221Z",
+      "signer": {
+        "name": "Vector User",
+        "fp": "4bcd-2fb4-c048-4d5b-2225-5f37-f875-7891"
+      }
+    },
+    "sig": "zZCFVFEWxpHF+CKrQi6qO17N+OtlcDISkcZdRbIqk5ImC2XmUNTY9XlZdkezF/lo28La8iVMzDYVGAWPR5SmbQ=="
+  },
+  "letterFile": {
+    "v": 1,
+    "type": "letter",
+    "to": "4bcd-2fb4-c048-4d5b-2225-5f37-f875-7891",
+    "epk": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "M7m-lJTTCGARBC931OOHYi09me-og6OoqyZzRyfQF0c",
+      "y": "sn6Bn-L3t2GAm3xlokqukphgjh_yYYHFf2ID4INQnIg"
+    },
+    "iv": "xKacrpGwSyRFxfJK",
+    "ct": "LY77q4uErVtDqKaFr5/vhafhLVwQsizdKQT9qUDsN237bVEG8PWfANqwmB9Pj32VPveuNDbLz2r1U1AiVcdf2ZxIbdEBhesAyxz9o6bmTHJFvvF1KnaCLR/C/9HnF8qQdYyyRQwt+W3Asf9k3hOpEhc4iowLMm/Jh9yQ6/uj"
+  }
+}

@@ -1,0 +1,40 @@
+# One company per deployment. Usage: ./build.sh <brand> up
+# Brand files are mounted read-only; secrets come from brands/<brand>/.env (git-ignored).
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: letters
+      POSTGRES_USER: letters
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in brands/<brand>/.env}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U letters"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+
+  server:
+    build: ./server
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    environment:
+      BRAND: ${BRAND:?}
+      BRANDS_DIR: /brands
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY in brands/<brand>/.env}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      POSTGRES_HOST: db
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./brands:/brands:ro
+      - attachments:/app/attachments
+    ports:
+      - "${SERVER_PORT:-8000}:8000"
+
+volumes:
+  dbdata:
+  attachments:

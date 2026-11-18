@@ -1,0 +1,9 @@
+{
+  "id": "demo",
+  "name": "Demo Company",
+  "logo": "logo.svg",
+  "colors": { "primary": "#165EF6", "accent": "#BFA46F", "dark": "#081528" },
+  "domain": "localhost",
+  "apiUrl": "http://localhost:8000",
+  "features": { "signupDomain": false, "signupInvite": false }
+}
