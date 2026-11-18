@@ -29,6 +29,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final _keyStore = KeyStore(userId: widget.auth.user!.id);
+  late final _companyKeys = CompanyKeyService(widget.auth.api, _keyStore);
   late final LettersEnv _env = _buildEnv();
   late Future<StoredKey?> _localKey = _loadKey();
 
@@ -52,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return LettersEnv(
       api: LettersApi(api),
       vault: DeviceKeyVault(api, _keyStore),
-      companyKeys: CompanyKeyService(api, _keyStore),
+      companyKeys: _companyKeys,
       live: LiveService(api: api, cursor: SecureCursorStore(user.id)),
       userId: user.id,
       canCreate: user.permissions.contains('letter.create'),
@@ -127,7 +128,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (user.isManager) ('All letters', LettersAdminScreen(env: _env)),
       ('Profile', ProfileTab(auth: auth)),
       ('Devices', SessionsTab(auth: auth)),
-      if (user.isManager) ('Admin', AdminTab(auth: auth)),
+      if (user.isManager)
+        (
+          'Admin',
+          AdminTab(auth: auth, vault: _env.vault, companyKeys: _companyKeys),
+        ),
     ];
     return DefaultTabController(
       length: tabs.length,
