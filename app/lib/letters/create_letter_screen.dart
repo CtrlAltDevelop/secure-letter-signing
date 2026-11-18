@@ -108,6 +108,17 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
             child: ListView(
               shrinkWrap: true,
               children: [
+                if (candidates.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      signers
+                          ? 'Nobody to choose yet. A signer must be another user who has the '
+                                'letter.sign permission (set by the manager) and an approved key '
+                                '(created in their Keys tab).'
+                          : 'Nobody to choose yet. Viewers must be other users with an approved key.',
+                    ),
+                  ),
                 for (final u in candidates)
                   CheckboxListTile(
                     value: selected.contains(u.id),
