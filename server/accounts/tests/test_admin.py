@@ -145,3 +145,14 @@ def test_existing_invite_code_can_only_be_disabled(root, manager):
     dev.post(url, {"max_uses": 99, "active": ""})
     code.refresh_from_db()
     assert code.max_uses == 2 and code.active is False
+
+
+def test_company_settings_shows_logo_preview(root):
+    from accounts.models import CompanySettings
+    cs = CompanySettings.load()
+    cs.letterhead = {"logo": "data:image/png;base64,AAAA"}
+    cs.save()
+    dev = Client()
+    dev.force_login(root)
+    html = dev.get("/admin/accounts/companysettings/1/change/").content.decode()
+    assert 'id="logo-preview"' in html and 'src="data:image/png;base64,AAAA"' in html

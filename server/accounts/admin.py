@@ -8,6 +8,7 @@ from django import forms
 from django.contrib import messages
 from django.http import HttpResponse
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
@@ -182,6 +183,26 @@ class DepartmentAdmin(ReadOnly, ModelAdmin):
 LOGO_MAGIC = (b"\x89PNG", b"\xff\xd8\xff")
 
 
+class LogoPreviewWidget(UnfoldAdminFileFieldWidget):
+    """File input with a preview of the saved logo that switches to the newly chosen file."""
+
+    current = ""
+
+    def render(self, name, value, attrs=None, renderer=None):
+        file_input = super().render(name, value, attrs, renderer)
+        shown = format_html('src="{}"', self.current) if self.current else mark_safe("")
+        hidden = "" if self.current else "display:none;"
+        return file_input + format_html(
+            '<div style="margin-top:12px"><img id="logo-preview" {} alt="Logo preview" '
+            'style="{}max-height:96px;max-width:240px;border:1px solid #ddd;border-radius:6px;padding:6px;'
+            'background:#fff"></div>'
+            "<script>(function(){{var i=document.querySelector('input[name={}]'),p=document.getElementById('logo-preview');"
+            "if(!i||!p)return;i.addEventListener('change',function(){{var f=i.files[0];if(!f)return;"
+            "p.src=URL.createObjectURL(f);p.style.display='';}});}})();</script>",
+            shown, hidden, name,
+        )
+
+
 class CompanySettingsForm(forms.ModelForm):
     """Flattens the letterhead JSON into plain fields; the logo is an uploaded PNG/JPEG."""
 
@@ -194,7 +215,7 @@ class CompanySettingsForm(forms.ModelForm):
     lh_website = forms.CharField(label="Website", required=False, max_length=300, widget=UnfoldAdminTextInputWidget)
     lh_footer = forms.CharField(label="Footer text", required=False, max_length=300, widget=UnfoldAdminTextareaWidget(attrs={"rows": 3}))
     lh_logo = forms.FileField(
-        label="Logo (PNG or JPEG, max 200 KB)", required=False, widget=UnfoldAdminFileFieldWidget)
+        label="Logo (PNG or JPEG, max 200 KB)", required=False, widget=LogoPreviewWidget)
     lh_remove_logo = forms.BooleanField(label="Remove current logo", required=False, widget=UnfoldBooleanWidget)
 
     class Meta:
@@ -204,6 +225,7 @@ class CompanySettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         head = self.instance.letterhead or {}
+        self.fields["lh_logo"].widget.current = head.get("logo", "")
         for key in LETTERHEAD_TEXT_FIELDS:
             self.fields[f"lh_{key}"].initial = head.get(key, "")
 
