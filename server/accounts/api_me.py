@@ -10,7 +10,7 @@ from ninja.errors import HttpError
 from . import ratelimit
 from .api_auth import Detail, check_password
 from .auth import BearerAuth, user_of
-from .models import Notification, Session, audit
+from .models import CompanySettings, Notification, Session, audit
 from .schemas import SessionOut, UserOut
 
 router = Router(tags=["me"], auth=BearerAuth())
@@ -25,6 +25,13 @@ class ProfileIn(Schema):
 class PasswordIn(Schema):
     current_password: str
     new_password: str
+
+
+@router.get("/letterhead")
+def letterhead(request):
+    """Printed header/footer the manager configured; any signed-in user may read it."""
+    user_of(request)
+    return CompanySettings.load().letterhead
 
 
 @router.get("", response=UserOut)

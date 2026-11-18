@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import 'package:letter_signing/api/api_client.dart';
+import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/models.dart';
 
 /// Typed access to the letters endpoints, built on [ApiClient] (auth + refresh).
@@ -30,6 +31,10 @@ class LettersApi {
   }) async => Map<String, dynamic>.from(
     await client.call(method, path, body: body) as Map,
   );
+
+  /// Company letterhead (manager-configured, readable by every user).
+  Future<Letterhead> letterhead() async =>
+      Letterhead.fromJson(await _map('GET', '/me/letterhead'));
 
   String _query(Map<String, Object?> params) {
     final q = {

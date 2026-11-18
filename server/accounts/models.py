@@ -120,6 +120,9 @@ class CompanySettings(models.Model):
     smtp_use_tls = models.BooleanField(default=True)
     from_email = models.EmailField(blank=True)
 
+    # Printed letter header/footer, filled by the manager. Public to every signed-in user (not secret).
+    letterhead = models.JSONField(default=dict, blank=True)
+
     class Meta:
         verbose_name_plural = "company settings"
 

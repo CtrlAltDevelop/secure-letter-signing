@@ -144,3 +144,27 @@ def test_manager_who_is_also_superuser_can_grant_themselves_letter_permissions(a
     token = api.login(boss.email)["access"]
     resp = api.call("put", f"/manage/users/{boss.id}/permissions", {"codes": ["letter.create", "letter.sign"]}, token=token)
     assert resp.status_code == 200 and "letter.create" in resp.data["permissions"]
+
+
+# --- letterhead -------------------------------------------------------------------------------
+
+def test_letterhead_set_by_manager_and_readable_by_everyone(api, make_user):
+    make_user("boss@corp.test", manager=True)
+    make_user("a@corp.test")
+    boss = token_for(api, "boss@corp.test")
+    head = {"name": " Acme ", "phone": "123", "evil": "x", "logo": "data:image/png;base64,AAAA"}
+    resp = api.call("patch", "/manage/company", {"letterhead": head}, boss)
+    assert resp.status_code == 200
+    assert resp.data["letterhead"] == {"name": "Acme", "phone": "123", "logo": "data:image/png;base64,AAAA"}
+    got = api.call("get", "/me/letterhead", token=token_for(api, "a@corp.test"))
+    assert got.data["name"] == "Acme"
+    assert "logo" not in str(AuditEvent.objects.latest("id").data)
+
+
+def test_letterhead_rejects_non_image_logo_and_non_manager(api, make_user):
+    make_user("boss@corp.test", manager=True)
+    make_user("a@corp.test")
+    boss = token_for(api, "boss@corp.test")
+    bad = api.call("patch", "/manage/company", {"letterhead": {"logo": "http://evil/x.png"}}, boss)
+    assert bad.status_code == 422
+    assert api.call("patch", "/manage/company", {"letterhead": {}}, token_for(api, "a@corp.test")).status_code == 403

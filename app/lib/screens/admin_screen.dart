@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:letter_signing/api/auth_controller.dart';
 import 'package:letter_signing/keys/company_key_service.dart';
 import 'package:letter_signing/keys/key_vault.dart';
+import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/screens/company_key_card.dart';
+import 'package:letter_signing/screens/letterhead_card.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/app_theme.dart';
@@ -248,6 +250,15 @@ class _AdminTabState extends State<AdminTab> {
                       api: widget.auth.api,
                       vault: widget.vault,
                       service: widget.companyKeys,
+                    ),
+                    LetterheadCard(
+                      key: ValueKey(data.company['letterhead'].hashCode),
+                      api: widget.auth.api,
+                      initial: Letterhead.fromJson(
+                        Map<String, dynamic>.from(
+                          data.company['letterhead'] as Map? ?? const {},
+                        ),
+                      ),
                     ),
                     ..._signupSection(data.company),
                     ..._invitesSection(data.invites),

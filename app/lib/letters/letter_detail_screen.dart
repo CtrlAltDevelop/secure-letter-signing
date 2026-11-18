@@ -6,7 +6,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:letter_signing/letters/create_letter_screen.dart';
 import 'package:letter_signing/letters/letter_crypto_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
+import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/models.dart';
+import 'package:letter_signing/letters/paper_screen.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/sign_screen.dart';
 import 'package:letter_signing/theme/app_theme.dart';
@@ -257,6 +259,12 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
       appBar: AppBar(
         title: Text('Letter #${l.brief.no}'),
         actions: [
+          if (_plain != null)
+            IconButton(
+              tooltip: 'Paper / print',
+              icon: const Icon(Icons.description_outlined),
+              onPressed: _openPaper,
+            ),
           IconButton(
             tooltip: 'Certificate',
             icon: const Icon(Icons.verified_outlined),
@@ -417,6 +425,38 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
           SizedBox(width: 10),
           Expanded(child: Text('Your signature is needed on this letter.')),
         ],
+      ),
+    );
+  }
+
+  Future<void> _openPaper() async {
+    final l = _letter;
+    final plain = _plain;
+    if (l == null || plain == null) return;
+    var head = const Letterhead();
+    try {
+      head = await env.api.letterhead();
+    } on Object catch (_) {
+      // Printing still works without a letterhead.
+    }
+    if (!mounted) return;
+    final signed = [
+      for (final s in l.signatures)
+        if (s.decision == 'approved')
+          '${l.signers.where((p) => p.userId == s.signerId).map((p) => p.displayName).firstOrNull ?? ''}'
+              '  (${fmtDateTime(s.createdAt)})',
+    ];
+    final text = signed.isEmpty
+        ? plain.text
+        : '${plain.text}\n\n${signed.join('\n')}';
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => PaperScreen(
+          head: head,
+          title: l.title,
+          subtitle: '#${l.brief.no}  -  ${fmtDateTime(l.brief.createdAt)}',
+          text: text,
+        ),
       ),
     );
   }

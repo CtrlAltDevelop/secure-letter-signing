@@ -33,7 +33,25 @@ class TokenOut(Schema):
     token: str
 
 
+LETTERHEAD_TEXT_FIELDS = ("name", "tagline", "address", "phone", "email", "website", "footer")
+LETTERHEAD_MAX_TEXT = 300
+LETTERHEAD_MAX_LOGO = 300_000  # characters of base64 (about 220 KB of image)
+LETTERHEAD_LOGO_PREFIXES = ("data:image/png;base64,", "data:image/jpeg;base64,")
+
+
+def clean_letterhead(raw: dict) -> dict:
+    """Whitelist keys, trim text, accept only a small PNG/JPEG data URL as logo. Empty values are dropped."""
+    out = {k: str(raw[k]).strip()[:LETTERHEAD_MAX_TEXT] for k in LETTERHEAD_TEXT_FIELDS if raw.get(k)}
+    logo = raw.get("logo") or ""
+    if logo:
+        if not isinstance(logo, str) or not logo.startswith(LETTERHEAD_LOGO_PREFIXES) or len(logo) > LETTERHEAD_MAX_LOGO:
+            raise HttpError(422, "Logo must be a PNG or JPEG under about 200 KB")
+        out["logo"] = logo
+    return {k: v for k, v in out.items() if v}
+
+
 class CompanyOut(Schema):
+    letterhead: dict
     signup_domain_enabled: bool
     allowed_domain: str
     signup_invite_enabled: bool
@@ -44,6 +62,7 @@ class CompanyIn(Schema):
     signup_domain_enabled: bool | None = None
     allowed_domain: str | None = None
     signup_invite_enabled: bool | None = None
+    letterhead: dict | None = None
 
 
 class InviteIn(Schema):
@@ -116,6 +135,7 @@ def reset_token(request, user_id: int):
 
 def _company_out(cs: CompanySettings) -> CompanyOut:
     return CompanyOut(
+        letterhead=cs.letterhead,
         signup_domain_enabled=cs.signup_domain_enabled, allowed_domain=cs.allowed_domain,
         signup_invite_enabled=cs.signup_invite_enabled, email_configured=mailer.email_configured(cs),
     )
@@ -134,10 +154,13 @@ def update_company(request, data: CompanyIn):
     changes = data.dict(exclude_none=True)
     if "allowed_domain" in changes:
         changes["allowed_domain"] = changes["allowed_domain"].strip().lower().lstrip("@")
+    if "letterhead" in changes:
+        changes["letterhead"] = clean_letterhead(changes["letterhead"])
     for field, value in changes.items():
         setattr(cs, field, value)
     cs.save(update_fields=list(changes))
-    audit(manager, "company_settings_changed", "", **changes)
+    audit_data = {k: ("(updated)" if k == "letterhead" else v) for k, v in changes.items()}
+    audit(manager, "company_settings_changed", "", **audit_data)
     return _company_out(cs)
 
 
