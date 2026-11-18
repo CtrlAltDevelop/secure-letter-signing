@@ -122,3 +122,13 @@ def test_sessions_are_not_in_the_admin(root):
     dev = Client()
     dev.force_login(root)
     assert dev.get("/admin/accounts/session/").status_code == 404
+
+
+def test_users_render_as_searchable_cards(root, make_user):
+    make_user("zed@corp.test")
+    dev = Client()
+    dev.force_login(root)
+    html = dev.get("/admin/accounts/user/").content.decode()
+    assert "zed@corp.test" in html and "+ New user" in html
+    only = dev.get("/admin/accounts/user/?q=nomatch").content.decode()
+    assert "No users found" in only

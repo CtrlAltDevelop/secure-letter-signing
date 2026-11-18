@@ -13,6 +13,8 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -88,6 +90,21 @@ class UserAdmin(NoDelete, BaseUserAdmin, ModelAdmin):
         ("Permissions", {"fields": ("grants",)}),
     )
     add_fieldsets = ((None, {"classes": ("wide",), "fields": ("email", "password1", "password2", "is_manager")}),)
+
+    def changelist_view(self, request, extra_context=None):
+        """Card grid with search, instead of the default table."""
+        q = request.GET.get("q", "").strip()
+        users = User.objects.order_by("email")
+        if q:
+            users = users.filter(Q(email__icontains=q) | Q(full_name__icontains=q) | Q(department__icontains=q))
+        page = Paginator(users, 48).get_page(request.GET.get("p"))
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Users", "opts": self.opts, "q": q, "page": page,
+            "add_url": reverse("admin:accounts_user_add") if self.has_add_permission(request) else None,
+            "import_url": reverse("admin:accounts_user_import_users"),
+        }
+        return TemplateResponse(request, "admin/accounts/user_cards.html", context)
 
     @action(description="Import users from CSV", url_path="import-users", permissions=["add"])
     def import_users(self, request):
