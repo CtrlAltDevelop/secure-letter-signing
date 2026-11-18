@@ -283,7 +283,11 @@ class _SessionsTabState extends State<SessionsTab> {
       context,
       () => widget.auth.api.call('POST', '/me/sessions/$id/revoke'),
     );
-    if (ok && mounted) setState(() => _sessions = _load());
+    if (ok && mounted) {
+      setState(() {
+        _sessions = _load();
+      });
+    }
   }
 
   @override

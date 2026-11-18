@@ -36,7 +36,11 @@ class _AdminTabState extends State<AdminTab> {
     );
   }
 
-  void _reload() => setState(() => _data = _load());
+  void _reload() {
+    setState(() {
+      _data = _load();
+    });
+  }
 
   Future<void> _call(String method, String path, [Object? body]) async {
     final ok = await runGuarded(
