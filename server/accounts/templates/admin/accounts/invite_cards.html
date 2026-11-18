@@ -1,0 +1,19 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+  {% if add_url %}<a href="{{ add_url }}" class="bg-primary-600 text-white font-semibold px-4 py-2 rounded">+ New code</a>{% endif %}
+</div>
+{% if not cards %}<p>No invitation codes yet.</p>{% endif %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+  {% for c in cards %}
+  <a href="{% url 'admin:accounts_invitecode_change' c.pk %}" class="border border-base-200 dark:border-base-700 rounded-lg p-4 block" style="{% if not c.active %}opacity:.55{% endif %}">
+    <div style="font-family:monospace;font-size:18px;font-weight:700;letter-spacing:.5px">{{ c.code }}</div>
+    <div style="margin-top:8px">{{ c.uses }} / {{ c.max_uses|default:"&infin;" }} used</div>
+    <div style="margin-top:4px;font-size:12px">
+      {% if c.active %}Active{% else %}Inactive{% endif %}{% if c.expires_at %} &middot; expires {{ c.expires_at|date:"Y-m-d H:i" }}{% endif %}
+    </div>
+    <div style="margin-top:4px;font-size:12px;opacity:.7">by {{ c.created_by|default:"-" }}</div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

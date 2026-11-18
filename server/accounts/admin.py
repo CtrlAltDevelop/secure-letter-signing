@@ -227,6 +227,18 @@ class InviteCodeAdmin(NoDelete, ModelAdmin):
     fields = ("code", "max_uses", "expires_at", "active", "uses", "created_by")
     readonly_fields = ("code", "uses", "created_by")
 
+    def changelist_view(self, request, extra_context=None):
+        """Card grid instead of the default table."""
+        opts = self.opts
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Invitation codes",
+            "opts": opts,
+            "cards": InviteCode.objects.select_related("created_by").order_by("-id"),
+            "add_url": reverse("admin:accounts_invitecode_add") if self.has_add_permission(request) else None,
+        }
+        return TemplateResponse(request, "admin/accounts/invite_cards.html", context)
+
     def save_model(self, request, obj, form, change):
         if not change:
             obj.created_by = request.user

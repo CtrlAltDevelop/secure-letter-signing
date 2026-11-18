@@ -88,3 +88,12 @@ def test_groups_are_hidden_from_the_admin(root):
     dev.force_login(root)
     assert dev.get("/admin/auth/group/").status_code == 404
     assert 'name="groups"' not in dev.get(f"/admin/accounts/user/{root.pk}/change/").content.decode()
+
+
+def test_invite_codes_render_as_cards(root, manager):
+    from accounts.models import InviteCode
+    code = InviteCode.objects.create(created_by=manager, max_uses=3)
+    dev = Client()
+    dev.force_login(root)
+    html = dev.get("/admin/accounts/invitecode/").content.decode()
+    assert code.code in html and "+ New code" in html and "<table" not in html.split("<main")[-1]
