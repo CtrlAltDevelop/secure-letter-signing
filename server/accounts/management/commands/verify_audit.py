@@ -10,4 +10,7 @@ class Command(BaseCommand):
         broken = verify_audit_chain()
         if broken is not None:
             raise CommandError(f"Audit chain broken at event #{broken}")
+        head = AuditEvent.objects.exclude(hash="").order_by("-id").values_list("id", "hash").first()
         self.stdout.write(self.style.SUCCESS(f"Audit chain intact ({AuditEvent.objects.count()} events)."))
+        if head:  # record this somewhere outside the database: it is the only way to notice deleted tail rows
+            self.stdout.write(f"head: #{head[0]} {head[1]}")

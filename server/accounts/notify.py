@@ -3,8 +3,13 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import transaction
 
+import logging
+
 from . import mailer
 from .models import CompanySettings, Notification, User
+
+
+logger = logging.getLogger(__name__)
 
 
 def user_group(user_id: int) -> str:
@@ -14,8 +19,12 @@ def user_group(user_id: int) -> str:
 def push(user_id: int, event: dict) -> None:
     """Live event to every open connection of this user. No-op failure must never break the request."""
     layer = get_channel_layer()
-    if layer is not None:
+    if layer is None:
+        return
+    try:
         async_to_sync(layer.group_send)(user_group(user_id), {"type": "event", "event": event})
+    except Exception:  # noqa: BLE001  the commit already happened; a dead Redis must not turn it into a 500
+        logger.exception("Live push to user %s failed", user_id)
 
 
 def notify(users, kind: str, title: str, **data) -> None:

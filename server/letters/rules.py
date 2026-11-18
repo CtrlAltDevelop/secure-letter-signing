@@ -16,7 +16,10 @@ def grants_of(user: User) -> set[str]:
 def visible_letters(user: User) -> QuerySet[Letter]:
     """Involved people (creator, signers) always see their letters, including drafts and unlisted ones (history).
     Viewers and the public need `letter.see`, the letter shown to viewers, and it not unlisted."""
-    involved = Q(creator=user) | Q(participants__user=user, participants__role=Participant.SIGNER)
+    # Drafts are the creator's alone; signers see a letter only once it has been sent.
+    involved = Q(creator=user) | (
+        Q(participants__user=user, participants__role=Participant.SIGNER) & ~Q(status=Letter.DRAFT)
+    )
     q = involved
     if SEE in grants_of(user):
         listed = Q(shown_at__isnull=False, unlisted=False)

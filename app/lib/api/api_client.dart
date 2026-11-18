@@ -52,6 +52,9 @@ class ApiClient {
   final TokenStore store;
   final http.Client _http;
   String? _access;
+
+  /// Current access token (memory only). For the WebSocket handshake and binary uploads.
+  String? get accessToken => _access;
   Future<bool>? _refreshing;
 
   /// Called when the session can no longer be refreshed (revoked, expired, user deactivated).

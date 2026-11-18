@@ -1,4 +1,5 @@
 """Letters: create/send/sign/publish, visibility, unlist, attachments, history. The server never sees a body."""
+import json
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -27,6 +28,7 @@ from .schemas import (AdminLetterOut, AttachmentOut, LetterBrief, LetterIn, Lett
 
 router = Router(tags=["letters"], auth=BearerAuth())
 SIGN_SKEW = timedelta(minutes=10)
+MAX_WRAPS, MAX_PEOPLE, MAX_JSON_BYTES, MAX_BODY_CHARS, MAX_ATTACHMENTS = 500, 500, 8192, 2_000_000, 20
 ATTACHMENT_TYPES = {"application/pdf", "image/png", "image/jpeg", "image/webp", "image/heic"}
 DECISIONS = {"approved", "rejected"}
 
@@ -65,6 +67,11 @@ def _apply(letter: Letter, user: User, data: LetterIn) -> None:
     """Validates and stores everything for a draft (new or replaced)."""
     if not isinstance(data.body.get("iv"), str) or not isinstance(data.body.get("ct"), str) or set(data.body) != {"iv", "ct"}:
         raise HttpError(422, "body must be {iv, ct}")
+    if len(data.body["ct"]) > MAX_BODY_CHARS or len(data.body["iv"]) > 64:
+        raise HttpError(413, "body is too large")
+    if len(data.signer_ids) > MAX_PEOPLE or len(data.viewer_ids) > MAX_PEOPLE:
+        raise HttpError(422, "Too many participants")
+    _check_size(data.company_wrap, "company_wrap")
     signer_ids = list(dict.fromkeys(data.signer_ids))
     viewer_ids = [v for v in dict.fromkeys(data.viewer_ids) if v not in signer_ids and v != user.id]
     if data.visibility == "public" and data.viewer_ids:
@@ -97,17 +104,29 @@ def _apply(letter: Letter, user: User, data: LetterIn) -> None:
     for uid in viewer_ids:
         Participant.objects.update_or_create(letter=letter, user=people[uid], defaults={
             "role": Participant.VIEWER, "position": 0, "decision": ""})
-    _store_wraps(letter, data.wraps, replace=True)
+    _store_wraps(letter, data.wraps, writer=user)
 
 
-def _store_wraps(letter: Letter, wraps: list[WrapIn], *, replace: bool) -> None:
-    allowed = {k.id for k in rules.required_keys(letter)}
+def _store_wraps(letter: Letter, wraps: list[WrapIn], *, writer: User) -> None:
+    """The creator (on a draft) and a key's own owner may replace its wrap (so a poisoned wrap can be repaired);
+    anyone else can only fill a missing one, never overwrite."""
+    allowed = {k.id: k for k in rules.required_keys(letter)}
     ids = [w.key_id for w in wraps]
-    if len(set(ids)) != len(ids) or set(ids) - allowed:
+    if len(ids) > MAX_WRAPS or len(set(ids)) != len(ids) or set(ids) - allowed.keys():
         raise HttpError(422, "Wraps may only target distinct active keys of people who can read this letter")
     for w in wraps:
-        DocKeyWrap.objects.update_or_create(letter=letter, key_id=w.key_id, defaults={"wrap": w.wrap}) if replace \
-            else DocKeyWrap.objects.get_or_create(letter=letter, key_id=w.key_id, defaults={"wrap": w.wrap})
+        _check_size(w.wrap, "wrap")
+        may_replace = allowed[w.key_id].user_id == writer.id or (
+            letter.status == Letter.DRAFT and letter.creator_id == writer.id)
+        if may_replace:
+            DocKeyWrap.objects.update_or_create(letter=letter, key_id=w.key_id, defaults={"wrap": w.wrap})
+        else:
+            DocKeyWrap.objects.get_or_create(letter=letter, key_id=w.key_id, defaults={"wrap": w.wrap})
+
+
+def _check_size(value, what: str) -> None:
+    if len(json.dumps(value)) > MAX_JSON_BYTES:
+        raise HttpError(413, f"{what} is too large")
 
 
 @router.post("", response={201: LetterBrief})
@@ -185,10 +204,11 @@ def _notify_viewers(letter: Letter, prefix: str) -> None:
 @router.get("", response=list[LetterBrief])
 def list_letters(request, limit: int = 100, offset: int = 0, q: str = ""):
     """Everything this user may see, newest first: this is also the history, identical on every device."""
+    offset, limit = max(offset, 0), max(min(limit, 200), 0)
     qs = rules.visible_letters(user_of(request)).order_by("-no")
     if q:
         qs = qs.filter(title__icontains=q)  # titles are the only searchable text
-    return [_brief(x) for x in qs[offset : offset + min(limit, 200)]]
+    return [_brief(x) for x in qs[offset : offset + limit]]
 
 
 @router.get("/events", response=list[dict])
@@ -220,7 +240,8 @@ def rewrap_needed(request):
 def admin_list(request, limit: int = 100, offset: int = 0):
     """Manager view: title, status and participants only. No body, no wraps, no signatures' notes."""
     require_manager(request)
-    rows = Letter.objects.select_related("creator").order_by("-no")[offset : offset + min(limit, 200)]
+    offset, limit = max(offset, 0), max(min(limit, 200), 0)
+    rows = Letter.objects.exclude(status=Letter.DRAFT).select_related("creator").order_by("-no")[offset : offset + limit]
     return [AdminLetterOut(**_brief(x).dict(), creator_email=x.creator.email, participants=_participants(x)) for x in rows]
 
 
@@ -287,7 +308,7 @@ def add_wraps(request, letter_id: UUID, wraps: list[WrapIn]):
     if not DocKeyWrap.objects.filter(letter=letter, key__user=user, key__status=UserKey.ACTIVE).exists() \
             and letter.status != Letter.DRAFT:
         raise HttpError(403, "You do not hold this letter's document key")
-    _store_wraps(letter, wraps, replace=letter.status == Letter.DRAFT and letter.creator_id == user.id)
+    _store_wraps(letter, wraps, writer=user)
     audit(user, "letter_rewrapped", str(letter.id), count=len(wraps))
     return {"detail": "Stored"}
 
@@ -300,8 +321,9 @@ def _check_payload(payload: dict, letter: Letter, user: User, key: UserKey, sess
     expected = {
         "letterId": str(letter.id), "title": letter.title, "decision": payload.get("decision"),
         "contentHash": cryptoutil.content_hash(letter.body),
+        "parentId": str(letter.parent_id) if letter.parent_id else None,
     }
-    if any(payload.get(k) != v for k, v in expected.items()) or payload["decision"] not in DECISIONS:
+    if any(payload.get(k) != v for k, v in expected.items()) or payload.get("decision") not in DECISIONS:
         raise HttpError(422, "Payload does not match this letter")
     if signer != {"userId": user.id, "keyId": str(key.id), "fp": key.fingerprint}:
         raise HttpError(422, "Payload signer does not match your key")
@@ -340,6 +362,7 @@ def sign_letter(request, letter_id: UUID, data: SignIn):
         raise HttpError(403, "Key is not active")
     if not DocKeyWrap.objects.filter(letter=letter, key=key).exists():
         raise HttpError(403, "This key cannot read the letter yet")  # pending/new keys cannot sign
+    _check_size(data.payload, "payload")
     _check_payload(data.payload, letter, user, key, request.auth)
     if not cryptoutil.verify_ecdsa(data.payload, data.signature, key.sign_pub):
         raise HttpError(422, "Signature does not verify")
@@ -431,6 +454,8 @@ def add_attachment(request, letter_id: UUID, content_type: Form[str], iv: Form[s
     letter = _get_own_draft_or_sent(user, letter_id)
     if letter.status != Letter.DRAFT:
         raise HttpError(409, "A sent letter is immutable")
+    if letter.attachments.count() >= MAX_ATTACHMENTS:
+        raise HttpError(422, "Too many attachments on this letter")
     if content_type not in ATTACHMENT_TYPES:
         raise HttpError(422, "Only PDF and images are allowed")
     if file.size > settings.MAX_ATTACHMENT_BYTES:

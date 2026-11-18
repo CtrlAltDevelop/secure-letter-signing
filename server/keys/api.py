@@ -82,6 +82,7 @@ def upload_key(request, data: KeyIn):
         raise HttpError(422, str(exc)) from exc
     if data.fingerprint and data.fingerprint != fp:
         raise HttpError(422, "Fingerprint does not match the public keys")
+    User.objects.select_for_update().get(pk=user.pk)  # serialise: two uploads must not both be "first"
     first = not UserKey.objects.filter(user=user).exists()
     now = timezone.now()
     try:
@@ -201,13 +202,15 @@ def set_company_key(request, data: CompanyKeyIn):
     current = latest.version if latest else 0
     if data.version not in (current, current + 1) or data.version == 0:
         raise HttpError(409, f"Next version is {current + 1}")
-    version = CompanyKeyVersion.objects.get_or_create(version=data.version, defaults={"created_by": manager})[0]
     ids = {w.key_id for w in data.wraps}
     keys = {k.id: k for k in active_keys().filter(id__in=ids)}
     if ids - keys.keys():
         raise HttpError(422, "Wraps may only target active keys")
-    for w in data.wraps:
-        CompanyKeyWrap.objects.update_or_create(version=version, key=keys[w.key_id], defaults={"wrap": w.wrap})
+    if data.version == current + 1 and ids != {k.id for k in active_keys()}:
+        raise HttpError(422, "A new company key version must be wrapped for every active key")
+    version = CompanyKeyVersion.objects.get_or_create(version=data.version, defaults={"created_by": manager})[0]
+    for w in data.wraps:  # existing wraps are never overwritten: a manager cannot silently lock a user out
+        CompanyKeyWrap.objects.get_or_create(version=version, key=keys[w.key_id], defaults={"wrap": w.wrap})
     audit(manager, "company_key_set", str(version.version), wraps=len(ids))
     return CompanyStatus(version=version.version, needs_rotation=False)
 

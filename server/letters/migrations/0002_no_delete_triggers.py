@@ -45,5 +45,5 @@ def backwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("letters", "0001_initial")]
+    dependencies = [("letters", "0001_initial"), ("accounts", "0005_notification_auditevent_hash_auditevent_prev_hash_and_more"), ("keys", "0001_initial")]
     operations = [migrations.RunPython(forwards, backwards)]

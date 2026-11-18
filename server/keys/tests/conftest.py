@@ -53,6 +53,7 @@ class Device:
         return {
             "letterId": letter["id"], "title": letter["title"], "decision": decision, "note": note,
             "contentHash": hashlib.sha256(cryptoutil.canonical_json(letter["body"]).encode()).hexdigest(),
+            "parentId": letter.get("parent_id"),
             "signer": {"userId": self.user.id, "keyId": self.key_id, "fp": self.fingerprint},
             "sessionId": self.session_id, "deviceName": self.name,
             "signedAt": datetime.now(timezone.utc).isoformat(), "nonce": uuid.uuid4().hex,

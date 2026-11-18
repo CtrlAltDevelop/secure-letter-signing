@@ -62,11 +62,15 @@ def test_transfer_events_are_audited(api, make_user, device):
 def test_company_key_versions_and_wraps(api, make_user, manager, device):
     user = make_user("a@corp.test")
     du, boss = device(user), device(manager)
-    wraps = [{"key_id": boss.key_id, "wrap": {"ct": "x"}}]
-    assert du.call("post", "/keys/company", {"version": 1, "wraps": wraps}).status_code == 403
-    assert boss.call("post", "/keys/company", {"version": 2, "wraps": wraps}).status_code == 409
-    assert boss.call("post", "/keys/company", {"version": 1, "wraps": wraps}).status_code == 200
-    assert [k["id"] for k in boss.call("get", "/keys/company/missing").data] == [du.key_id]
-    boss.call("post", "/keys/company", {"version": 1, "wraps": [{"key_id": du.key_id, "wrap": {"ct": "y"}}]})
+    both = [{"key_id": boss.key_id, "wrap": {"ct": "x"}}, {"key_id": du.key_id, "wrap": {"ct": "y"}}]
+    assert du.call("post", "/keys/company", {"version": 1, "wraps": both}).status_code == 403
+    assert boss.call("post", "/keys/company", {"version": 2, "wraps": both}).status_code == 409
+    assert boss.call("post", "/keys/company", {"version": 1, "wraps": both[:1]}).status_code == 422  # must cover all
+    assert boss.call("post", "/keys/company", {"version": 1, "wraps": both}).status_code == 200
     assert du.call("get", "/keys/company/mine").data[0]["version"] == 1
     assert du.call("get", "/keys/company/status").data == {"version": 1, "needs_rotation": False}
+    newcomer = device(make_user("n@corp.test"))  # a new member: gets a wrap for the existing version
+    assert [k["id"] for k in boss.call("get", "/keys/company/missing").data] == [newcomer.key_id]
+    add = [{"key_id": newcomer.key_id, "wrap": {"ct": "z"}}]
+    assert boss.call("post", "/keys/company", {"version": 1, "wraps": add}).status_code == 200
+    assert boss.call("get", "/keys/company/missing").data == []

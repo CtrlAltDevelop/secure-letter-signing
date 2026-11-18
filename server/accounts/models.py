@@ -1,8 +1,10 @@
 import hashlib
+import hmac
 import json
 import secrets
 import uuid
 
+from django.conf import settings
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.db import IntegrityError, models, transaction
@@ -153,7 +155,9 @@ def audit_digest(prev_hash: str, actor_id, action: str, target: str, data: dict,
     body = canonical_json(
         {"a": actor_id, "act": action, "t": target, "d": json.loads(json.dumps(data, default=str)), "at": at.isoformat()}
     )
-    return hashlib.sha256((prev_hash + body).encode()).hexdigest()
+    # Keyed: someone who can edit the database but lacks SECRET_KEY cannot recompute a valid chain.
+    key = hashlib.sha256(b"audit-chain:" + settings.SECRET_KEY.encode()).digest()
+    return hmac.new(key, (prev_hash + body).encode(), hashlib.sha256).hexdigest()
 
 
 def audit(actor: User | None, action: str, target: str = "", **data) -> AuditEvent:
