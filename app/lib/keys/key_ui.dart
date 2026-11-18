@@ -10,7 +10,6 @@ Future<bool> runKeyAction(
   BuildContext context,
   Future<void> Function() action,
 ) async {
-  final messenger = ScaffoldMessenger.of(context);
   final String message;
   try {
     await action();
@@ -26,7 +25,13 @@ Future<bool> runKeyAction(
   } on Exception {
     message = 'Cannot reach the server';
   }
-  messenger.showSnackBar(SnackBar(content: Text(message)));
+  // Callers may run from initState; inherited widgets cannot be read until it has finished, so
+  // yield first and look the messenger up afterwards (and only if the screen is still there).
+  await Future<void>.value();
+  if (context.mounted) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
   return false;
 }
 
