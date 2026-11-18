@@ -60,8 +60,12 @@ TextFormField _textField(
   ),
 );
 
-Widget _linkRow(List<Widget> links) =>
-    Wrap(alignment: WrapAlignment.center, spacing: 4, children: links);
+Widget _linkRow(List<Widget> links) => Wrap(
+  alignment: WrapAlignment.center,
+  crossAxisAlignment: WrapCrossAlignment.center,
+  spacing: 4,
+  children: links,
+);
 
 void _push(BuildContext context, Widget screen) =>
     Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen));
