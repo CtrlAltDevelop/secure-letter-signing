@@ -92,6 +92,12 @@ void main() {
   testWidgets(
     'sign flow unlocks, signs exactly the server payload and submits',
     (tester) async {
+      tester.view.devicePixelRatio = 1;
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() {
+        tester.view.resetDevicePixelRatio();
+        tester.binding.setSurfaceSize(null);
+      });
       Map<String, dynamic>? posted;
       final f = fakeApi((req, body) {
         if (req.url.path == '/api/letters/L1/sign') {
@@ -145,6 +151,12 @@ void main() {
   );
 
   testWidgets('sign shows server errors and stays open', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.binding.setSurfaceSize(null);
+    });
     final f = fakeApi(
       (req, _) => json({'detail': 'It is not your turn yet'}, 409),
     );
@@ -152,6 +164,10 @@ void main() {
       MaterialApp(
         home: SignScreen(env: envFor(f, me), letter: detail()),
       ),
+    );
+    await tester.pumpAndSettle();
+    debugPrint(
+      "S=${find.byType(SignScreen).evaluate().length} R=${find.textContaining("Reject").evaluate().length} T=${find.byType(Text).evaluate().length} ${tester.takeException()}",
     );
     await tester.tap(find.text('Reject'));
     await tester.pump();
@@ -162,6 +178,12 @@ void main() {
   });
 
   testWidgets('sign aborts when the unlock is cancelled', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.binding.setSurfaceSize(null);
+    });
     final f = fakeApi((req, _) => json({}));
     final env = envFor(f, me);
     (env.vault as FakeVault).key = null;

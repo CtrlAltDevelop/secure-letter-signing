@@ -26,6 +26,7 @@ class PageBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Align(
     alignment: Alignment.topCenter,
+    heightFactor: 1,
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: Tokens.maxContentWidth),
       child: Padding(padding: padding, child: child),
