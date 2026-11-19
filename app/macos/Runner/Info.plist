@@ -30,6 +30,8 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record voice messages and join online meetings.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan a QR code to move your signing key from another device.</string>
 </dict>

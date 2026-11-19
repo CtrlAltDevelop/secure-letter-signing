@@ -145,7 +145,7 @@ def list_pins(user: User) -> list[dict]:
         if obj is None or not spec.can(user, obj, "see"):
             continue
         out.append({"subject_id": str(subject.id), "module": subject.module, "kind": subject.kind,
-                    "title": spec.title(obj) if spec.title else ""})
+                    "object_id": str(obj.pk), "title": spec.title(obj) if spec.title else ""})
     return out
 
 

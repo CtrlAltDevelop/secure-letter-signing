@@ -3,9 +3,15 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_windows
+  connectivity_plus
   flutter_secure_storage_windows
+  flutter_webrtc
+  livekit_client
   local_auth_windows
+  pasteboard
   printing
+  record_windows
   url_launcher_windows
   share_plus
 )

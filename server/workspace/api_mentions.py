@@ -23,6 +23,7 @@ EXCERPT_CHARS = 140
 class MentionOut(Schema):
     comment_id: int
     subject_id: UUID
+    object_id: str  # the module's own object id (task id, letter id ...)
     module: str
     kind: str  # the subject's kind (task, project, letter ...)
     title: str
@@ -55,7 +56,7 @@ def _mentions_of(user: User) -> Iterator[Mention]:
 
 def _out(comment: Comment, acc: Access) -> MentionOut:
     return MentionOut(
-        comment_id=comment.id, subject_id=comment.subject_id, module=comment.subject.module,
+        comment_id=comment.id, subject_id=comment.subject_id, object_id=str(acc.obj.pk), module=comment.subject.module,
         kind=comment.subject.kind, title=acc.title, excerpt=excerpt_of(open_text(comment.body)),
         author=user_ref(comment.author), report=comment.kind == Comment.REPORT, created_at=comment.created_at)
 

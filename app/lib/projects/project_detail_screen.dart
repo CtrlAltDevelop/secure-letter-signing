@@ -63,6 +63,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     widget.env,
     widget.projectId,
   );
+
   /// Built once; null while the `gantt` module is off, which also drops the tab.
   late final Widget? _gantt = widget.env.ganttTab?.call(widget.projectId);
   late final List<_Tab> _order = [

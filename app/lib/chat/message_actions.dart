@@ -8,14 +8,13 @@ import 'package:letter_signing/chat/chat_sheets.dart';
 import 'package:letter_signing/chat/conversation_controller.dart';
 import 'package:letter_signing/chat/models.dart';
 import 'package:letter_signing/l10n/app_localizations.dart';
-import 'package:letter_signing/tasks/models.dart' show TaskDraft;
-import 'package:letter_signing/tasks/task_form_screen.dart';
+import 'package:letter_signing/tasks/task_detail_screen.dart';
 import 'package:letter_signing/workspace/subject_controller.dart'
     show ActionOutcome;
 
 const _taskTitleChars = 80;
 
-enum _Act { reply, copy, pin, bookmark, toTask, seen, delete }
+enum _Act { reply, copy, edit, pin, bookmark, toTask, seen, delete }
 
 /// The long-press menu of a message: reply, copy, pin, bookmark, turn into a task, who saw it,
 /// delete. Entries follow what the caller may do (the server stays the judge).
@@ -43,6 +42,8 @@ Future<void> showMessageActions(
             _tile(ctx, Icons.reply, l.chatReply, _Act.reply),
           if (message.text.isNotEmpty)
             _tile(ctx, Icons.copy, l.chatCopy, _Act.copy),
+          if (mine && message.kind == 'text' && message.text.isNotEmpty)
+            _tile(ctx, Icons.edit_outlined, l.chatEdit, _Act.edit),
           if (canPin)
             _tile(
               ctx,
@@ -67,6 +68,17 @@ Future<void> showMessageActions(
       controller.setReplyTo(message);
     case _Act.copy:
       await Clipboard.setData(ClipboardData(text: message.text));
+    case _Act.edit:
+      final text = await _askText(
+        context,
+        title: l.chatEdit,
+        initial: message.text,
+        action: l.chatEditSave,
+        maxLines: 5,
+      );
+      if (text != null && text != message.text && context.mounted) {
+        await _report(context, controller.edit(message, text));
+      }
     case _Act.pin:
       await _report(
         context,
@@ -135,25 +147,79 @@ Future<void> _report(
   if (text != null) messenger.showSnackBar(SnackBar(content: Text(text)));
 }
 
-/// Opens the task form prefilled from the message (inside a project chat the task starts in
-/// that project), exactly like "create task" on a letter.
+Future<String?> _askText(
+  BuildContext context, {
+  required String title,
+  required String initial,
+  required String action,
+  int maxLines = 1,
+}) {
+  final l = AppLocalizations.of(context);
+  final field = TextEditingController(text: initial);
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: TextField(
+        key: const ValueKey('chat-text-dialog'),
+        controller: field,
+        autofocus: true,
+        minLines: 1,
+        maxLines: maxLines,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(l.commonCancel),
+        ),
+        FilledButton(
+          key: const ValueKey('chat-text-dialog-ok'),
+          onPressed: () {
+            final t = field.text.trim();
+            Navigator.pop(ctx, t.isEmpty ? null : t);
+          },
+          child: Text(action),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Asks for the task title (prefilled from the message), creates the task through the
+/// server's message-to-task endpoint (which also links it back into the chat) and opens it.
+/// Inside a project chat the task starts in that project.
 Future<void> _toTask(
   BuildContext context,
   ChatEnv env,
   Conversation conv,
   ChatMessage m,
 ) async {
+  final l = AppLocalizations.of(context);
   final flat = m.text.replaceAll(RegExp(r'\s+'), ' ').trim();
   final title = flat.length <= _taskTitleChars
       ? flat
       : '${flat.substring(0, _taskTitleChars - 1)}…';
-  await Navigator.of(context).push<Object?>(
-    MaterialPageRoute(
-      builder: (_) => TaskFormScreen(
-        env: env.tasks,
-        initialProjectId: conv.projectId,
-        initialDraft: TaskDraft(title: title, description: m.text),
-      ),
-    ),
+  final messenger = ScaffoldMessenger.of(context);
+  final navigator = Navigator.of(context);
+  final chosen = await _askText(
+    context,
+    title: l.chatToTaskTitle,
+    initial: title,
+    action: l.chatToTaskCreate,
   );
+  if (chosen == null) return;
+  try {
+    final id = await env.api.toTask(
+      m.id,
+      title: chosen,
+      projectId: conv.projectId,
+    );
+    await navigator.push<void>(
+      MaterialPageRoute(
+        builder: (_) => TaskDetailScreen(env: env.tasks, taskId: id),
+      ),
+    );
+  } on Object {
+    messenger.showSnackBar(SnackBar(content: Text(l.chatActionFailed)));
+  }
 }

@@ -5,11 +5,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:letter_signing/chat/chat_env.dart';
 import 'package:letter_signing/chat/conversation_controller.dart';
 import 'package:letter_signing/chat/conversation_info_sheet.dart';
+import 'package:letter_signing/chat/conversation_search_screen.dart';
 import 'package:letter_signing/chat/conversation_view.dart';
 import 'package:letter_signing/chat/models.dart';
 import 'package:letter_signing/jalali/jalali_picker.dart';
 import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/theme/app_theme.dart' show Tokens;
+import 'package:letter_signing/video/video_api.dart';
+import 'package:letter_signing/video/video_call_button.dart';
 
 /// One conversation as a full screen. [initial] (from the list) shows the title at once.
 class ConversationScreen extends StatefulWidget {
@@ -63,6 +66,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
+  Future<void> _search() async {
+    final hit = await Navigator.of(context).push<ChatMessage>(
+      MaterialPageRoute(
+        builder: (_) => ConversationSearchScreen(
+          env: widget.env,
+          conversationId: widget.conversationId,
+        ),
+      ),
+    );
+    if (hit != null) await _c.jumpToSeq(hit.seq);
+  }
+
   Future<void> _info() async {
     final left = await showConversationInfo(
       context,
@@ -88,9 +103,22 @@ class _ConversationScreenState extends State<ConversationScreen> {
             actions: [
               if (c?.isMember ?? false)
                 IconButton(
+                  key: const ValueKey('chat-search'),
+                  tooltip: l.chatSearchInConversation,
+                  icon: const Icon(Icons.search),
+                  onPressed: () => unawaited(_search()),
+                ),
+              if (c?.isMember ?? false)
+                IconButton(
                   tooltip: l.chatJumpToDate,
                   icon: const Icon(Icons.event),
                   onPressed: () => unawaited(_jump()),
+                ),
+              if ((c?.isMember ?? false) && c!.subjectId.isNotEmpty)
+                VideoCallButton(
+                  api: VideoApi(widget.env.api.workspace),
+                  subjectId: c.subjectId,
+                  title: title,
                 ),
               if (c != null)
                 IconButton(

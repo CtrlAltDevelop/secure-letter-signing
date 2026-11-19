@@ -18,11 +18,19 @@ Future<void> _screen(WidgetTester t, FakeSalesServer s, Size size) async {
   await t.pumpAndSettle();
 }
 
-Future<void> _form(WidgetTester t, FakeSalesServer s, {Lead? lead, pick}) async {
+Future<void> _form(
+  WidgetTester t,
+  FakeSalesServer s, {
+  Lead? lead,
+  pick,
+}) async {
   await useTallSurface(t, const Size(375, 1400));
   await t.pumpWidget(
     faMaterial(
-      home: LeadFormScreen(env: salesEnv(s, pick: pick).env, lead: lead),
+      home: LeadFormScreen(
+        env: salesEnv(s, pick: pick).env,
+        lead: lead,
+      ),
     ),
   );
   await t.pumpAndSettle();
@@ -30,12 +38,26 @@ Future<void> _form(WidgetTester t, FakeSalesServer s, {Lead? lead, pick}) async 
 
 void main() {
   test('LeadDraft patches only changed fields', () {
-    final lead = Lead.fromJson(leadJson('a', title: 'X', value: 5, probability: 40));
+    final lead = Lead.fromJson(
+      leadJson('a', title: 'X', value: 5, probability: 40),
+    );
     const same = LeadDraft(title: 'X', value: 5, probability: 40, ownerId: 2);
     expect(same.toPatchJson(lead), isEmpty);
-    const changed = LeadDraft(title: 'X', value: 6, probability: 90, ownerId: 3);
-    expect(changed.toPatchJson(lead), {'value': 6, 'probability': 90, 'owner_id': 3});
-    expect(const LeadFilter(bucket: '0-24').toQuery()['probability_bucket'], '0-24');
+    const changed = LeadDraft(
+      title: 'X',
+      value: 6,
+      probability: 90,
+      ownerId: 3,
+    );
+    expect(changed.toPatchJson(lead), {
+      'value': 6,
+      'probability': 90,
+      'owner_id': 3,
+    });
+    expect(
+      const LeadFilter(bucket: '0-24').toQuery()['probability_bucket'],
+      '0-24',
+    );
   });
 
   for (final size in _sizes) {
@@ -65,7 +87,9 @@ void main() {
     );
   });
 
-  testWidgets('new lead posts title, value and the slider probability', (t) async {
+  testWidgets('new lead posts title, value and the slider probability', (
+    t,
+  ) async {
     final s = FakeSalesServer();
     await _form(t, s, pick: pickPdf);
     await t.tap(find.text('ذخیره'));
@@ -119,7 +143,9 @@ void main() {
     expect(find.byKey(const ValueKey('lead-win')), findsNothing);
   });
 
-  testWidgets('monitor shows won vs probable chart and opens a bucket', (t) async {
+  testWidgets('monitor shows won vs probable chart and opens a bucket', (
+    t,
+  ) async {
     final s = FakeSalesServer()
       ..leads.addAll([
         leadJson('a', title: 'High', probability: 90),
@@ -134,7 +160,11 @@ void main() {
     await t.tap(find.byKey(const ValueKey('bucket-75-100')));
     await t.pumpAndSettle();
     expect(
-      s.where('GET', '/sales/leads').last.url.queryParameters['probability_bucket'],
+      s
+          .where('GET', '/sales/leads')
+          .last
+          .url
+          .queryParameters['probability_bucket'],
       '75-100',
     );
     expect(find.text('High'), findsOneWidget);

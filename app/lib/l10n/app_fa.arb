@@ -911,7 +911,7 @@
   "moduleChat": "گفتگو",
   "chatTabMine": "گفتگوهای من",
   "chatTabPublic": "عمومی",
-  "chatSearchHint": "جستجوی گفتگو یا همکار",
+  "chatSearchHint": "متن پیام",
   "chatKindGroup": "گروه",
   "chatKindChannel": "کانال",
   "chatKindDm": "پیام مستقیم",
@@ -2186,5 +2186,51 @@
         "type": "String"
       }
     }
-  }
+  },
+  "customerPickTitle": "انتخاب پرونده مشتری",
+  "customerPickSearch": "جستجوی نام مشتری",
+  "customerPickEmpty": "پرونده‌ای پیدا نشد",
+  "tasksFilterCustomer": "پرونده مشتری",
+  "tasksFilterCustomerOf": "مشتری: {name}",
+  "@tasksFilterCustomerOf": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatVoiceDenied": "دسترسی به میکروفون داده نشده است.",
+  "chatVoiceSend": "ارسال",
+  "chatAudioPlayFailed": "پخش صدا ممکن نشد.",
+  "chatEdit": "ویرایش پیام",
+  "chatEditSave": "ذخیره",
+  "chatSearchInConversation": "جستجو در گفتگو",
+  "chatSearchNoResults": "پیامی پیدا نشد",
+  "chatToTaskTitle": "عنوان وظیفه",
+  "chatToTaskCreate": "ساخت وظیفه",
+  "videoJoin": "ورود به جلسه آنلاین",
+  "videoTitle": "جلسه آنلاین",
+  "videoConnecting": "در حال اتصال…",
+  "videoNotConfigured": "جلسه آنلاین روی این سرور فعال نیست.",
+  "videoJoinFailed": "اتصال به جلسه ممکن نشد.",
+  "videoRetry": "تلاش دوباره",
+  "videoMic": "میکروفون",
+  "videoCamera": "دوربین",
+  "videoShare": "اشتراک صفحه",
+  "videoLeave": "خروج",
+  "videoParticipants": "{count} نفر در جلسه",
+  "@videoParticipants": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoYou": "شما",
+  "videoExperimental": "آزمایشی",
+  "crmLetterLink": "اتصال نامه",
+  "crmLetterUnlink": "قطع اتصال نامه",
+  "crmLetterPickTitle": "انتخاب نامه",
+  "crmLetterLinkFailed": "اتصال نامه ممکن نشد. فقط سازنده نامه یا دبیرخانه می‌تواند آن را وصل کند.",
+  "crmLetterPickEmpty": "نامه‌ای برای اتصال نیست"
 }

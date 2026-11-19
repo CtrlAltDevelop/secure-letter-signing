@@ -47,7 +47,7 @@ def push(user_id: int, event: dict) -> None:
 IMPORTANT_KINDS = frozenset({
     "task.assigned", "task.approval_needed", "meeting.invited", "letter_published", "letter_rejected",
     "letter_referral", "referral_response", "sign_request", "mention", "reminder", "work.transferred",
-    "lead.assigned", "task.removal_requested"})
+    "lead.assigned", "task.removal_requested", "gantt.task_ready"})
 
 
 BODY = "{}\n\nOpen the app to see details.\n"

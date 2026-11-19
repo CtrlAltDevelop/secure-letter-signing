@@ -30,7 +30,9 @@ class PrefsController extends ChangeNotifier {
   Object? get error => _error;
 
   void _notify() {
-    if (!_disposed) notifyListeners();
+    if (_disposed) return;
+    appBackground.value = _background;
+    notifyListeners();
   }
 
   /// Loads everything; an older server without prefs keeps the defaults.
@@ -145,6 +147,8 @@ class PrefsController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    // Signing out: drop the image after the tree finished tearing down.
+    scheduleMicrotask(() => appBackground.value = null);
     super.dispose();
   }
 }

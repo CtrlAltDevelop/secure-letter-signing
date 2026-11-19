@@ -46,6 +46,8 @@ class TasksListController extends ChangeNotifier {
   String _status = '';
   String _query = '';
   int? _labelId;
+  String? _customerId;
+  String _customerName = '';
   int _generation = 0;
 
   List<TaskBrief> get items => _items;
@@ -57,8 +59,13 @@ class TasksListController extends ChangeNotifier {
   String get status => _status;
   String get query => _query;
   int? get labelId => _labelId;
+  String? get customerId => _customerId;
+  String get customerName => _customerName;
   bool get filtered =>
-      _status.isNotEmpty || _query.isNotEmpty || _labelId != null;
+      _status.isNotEmpty ||
+      _query.isNotEmpty ||
+      _labelId != null ||
+      _customerId != null;
 
   void _notify() {
     if (!_disposed) notifyListeners();
@@ -117,6 +124,7 @@ class TasksListController extends ChangeNotifier {
         status: _status,
         q: _query,
         label: _labelId,
+        customer: _customerId,
         limit: limit,
         offset: offset,
       );
@@ -137,6 +145,14 @@ class TasksListController extends ChangeNotifier {
   Future<void> setLabel(int? labelId) {
     if (labelId == _labelId) return Future.value();
     _labelId = labelId;
+    return load();
+  }
+
+  /// Filters by a customer file ([id] null clears it); [name] is only for the chip.
+  Future<void> setCustomer(String? id, {String name = ''}) {
+    if (id == _customerId) return Future.value();
+    _customerId = id;
+    _customerName = id == null ? '' : name;
     return load();
   }
 

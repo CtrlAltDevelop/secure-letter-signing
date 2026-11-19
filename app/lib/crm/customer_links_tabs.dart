@@ -217,6 +217,8 @@ class CustomerLettersTab extends StatelessWidget {
       load: () => env.api.letters(customerId),
       emptyIcon: Icons.mail_outline,
       emptyText: l.crmLettersEmpty,
+      onCreate: () => _link(context),
+      createLabel: l.crmLetterLink,
       tile: (context, x, reload) => AppCard(
         onTap: () => _push(
           context,
@@ -234,9 +236,85 @@ class CustomerLettersTab extends StatelessWidget {
               ),
             ),
             StatusPill(letterStatusLabel(l, x.status)),
+            IconButton(
+              key: ValueKey('crm-letter-unlink-${x.id}'),
+              tooltip: l.crmLetterUnlink,
+              icon: const Icon(Icons.link_off),
+              onPressed: () => unawaited(_unlink(context, x, reload)),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// Letters keep their links as a replaced list: read the current refs, change ours, put back.
+  Future<void> _change(
+    BuildContext context,
+    String letterId,
+    List<String> Function(List<String> refs) update,
+  ) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final detail = await env.letters.api.detail(letterId);
+      await env.letters.api.setCustomers(letterId, update(detail.customerRefs));
+    } on Object {
+      messenger.showSnackBar(SnackBar(content: Text(l.crmLetterLinkFailed)));
+    }
+  }
+
+  Future<void> _unlink(
+    BuildContext context,
+    LetterBrief letter,
+    Future<void> Function() reload,
+  ) async {
+    await _change(
+      context,
+      letter.id,
+      (refs) => [
+        for (final r in refs)
+          if (r != customerId) r,
+      ],
+    );
+    await reload();
+  }
+
+  Future<void> _link(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final linked = {for (final x in await env.api.letters(customerId)) x.id};
+    final all = await env.letters.api.list();
+    if (!context.mounted) return;
+    final choices = [
+      for (final x in all)
+        if (!linked.contains(x.id)) x,
+    ];
+    final picked = await showDialog<LetterBrief>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.crmLetterPickTitle),
+        content: SizedBox(
+          width: 360,
+          height: 360,
+          child: choices.isEmpty
+              ? Center(child: Text(l.crmLetterPickEmpty))
+              : ListView(
+                  children: [
+                    for (final x in choices)
+                      ListTile(
+                        key: ValueKey('crm-letter-pick-${x.id}'),
+                        title: Text(x.title),
+                        subtitle: x.numberLabel.isEmpty
+                            ? null
+                            : Text(x.numberLabel),
+                        onTap: () => Navigator.pop(ctx, x),
+                      ),
+                  ],
+                ),
+        ),
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    await _change(context, picked.id, (refs) => [...refs, customerId]);
   }
 }

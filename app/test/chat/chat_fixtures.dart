@@ -141,7 +141,10 @@ class FakeChatServer {
     if (path.startsWith('/chat/conversations/')) {
       return _conversation(path.split('/'), m, q, body);
     }
-    if (path.startsWith('/chat/messages/')) return _message(path.split('/'), m);
+    if (path == '/chat/search') return _search(q);
+    if (path.startsWith('/chat/messages/')) {
+      return _message(path.split('/'), m, body);
+    }
     if (path == '/bookmarks') return json({'id': 1}, 200);
     if (path.startsWith('/subjects/') && path.endsWith('/files')) {
       return json({
@@ -266,8 +269,23 @@ class FakeChatServer {
     return json(msg, 201);
   }
 
-  http.Response _message(List<String> seg, String m) {
+  http.Response _search(Map<String, String> q) {
+    final needle = (q['q'] ?? '').toLowerCase();
+    return json([
+      for (final rows in messages.values)
+        for (final r in rows)
+          if ('${r['text']}'.toLowerCase().contains(needle) &&
+              (q['conversation'] == null ||
+                  r['conversation_id'] == q['conversation']))
+            r,
+    ]);
+  }
+
+  http.Response _message(List<String> seg, String m, Object? body) {
     final id = int.parse(seg[3]);
+    if (seg.length > 4 && seg[4] == 'to-task') {
+      return json({'id': 't1', 'title': (body as Map)['title']}, 201);
+    }
     if (seg.length > 4 && seg[4] == 'seen') {
       return json({
         'tracked': true,
@@ -286,6 +304,9 @@ class FakeChatServer {
             conv: r['conversation_id'] as String,
             deleted: true,
           );
+        }
+        if (m == 'PATCH') {
+          rows[i] = {...r, 'text': (body as Map)['text'], 'edited': true};
         }
         if (seg.length > 4 && seg[4] == 'pin') r['pinned'] = m == 'POST';
         return json(rows[i]);

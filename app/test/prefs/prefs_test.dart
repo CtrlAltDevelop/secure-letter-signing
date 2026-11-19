@@ -190,7 +190,10 @@ void main() {
     expect(await c.chooseBackground(), isTrue);
     expect(w.where('POST', '/me/background'), hasLength(1));
     expect(c.prefs.hasBackground, isTrue);
+    expect(appBackground.value, isNotNull);
     c.dispose();
+    await t.pump();
+    expect(appBackground.value, isNull);
   });
 
   testWidgets('notification history: unread filter, mark all, mentions', (

@@ -53,6 +53,7 @@ class MentionItem {
     required this.commentId,
     required this.subjectId,
     required this.module,
+    this.objectId = '',
     this.kind = '',
     this.title = '',
     this.excerpt = '',
@@ -63,6 +64,9 @@ class MentionItem {
 
   final int commentId;
   final String subjectId;
+
+  /// The module's own object id (task id, letter id ...); empty from older servers.
+  final String objectId;
   final String module;
   final String kind;
   final String title;
@@ -74,6 +78,7 @@ class MentionItem {
   factory MentionItem.fromJson(Map<String, dynamic> j) => MentionItem(
     commentId: asInt(j['comment_id']) ?? 0,
     subjectId: asString(j['subject_id']),
+    objectId: asString(j['object_id']),
     module: asString(j['module']),
     kind: asString(j['kind']),
     title: asString(j['title']),

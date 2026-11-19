@@ -39,6 +39,7 @@ class PinIn(Schema):
 
 class PinOut(Schema):
     subject_id: str
+    object_id: str
     module: str
     kind: str
     title: str

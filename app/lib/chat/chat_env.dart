@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:letter_signing/chat/chat_api.dart';
 import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/tasks/tasks_env.dart';
@@ -11,16 +12,13 @@ import 'package:letter_signing/workspace/models.dart';
 typedef ClipboardImageFn = Future<PickedFile?> Function();
 
 /// A finished voice recording (null when cancelled).
-typedef VoiceRecordFn = Future<PickedFile?> Function();
+typedef VoiceRecordFn = Future<PickedFile?> Function(BuildContext context);
 
 /// What the chat screens need: the API, the shared live stream, the user, the Tasks env (for
 /// "message to task") and the platform hooks tests replace.
 ///
-/// Two hooks have no default because no package for them is in `pubspec.yaml`:
-/// - [readClipboardImage]: plug a clipboard package (e.g. `pasteboard`) here and a paste
-///   button appears in the composer; pasted text already works through the text field.
-/// - [recordVoice]: plug a recorder package (e.g. `record`) here and a microphone button
-///   appears in DMs; the result is sent as a `voice` message.
+/// [readClipboardImage] and [recordVoice] are platform hooks (the workspace plugs in
+/// `pasteboard` and `record`); a null hook hides the feature, tests pass fakes.
 class ChatEnv {
   ChatEnv({
     required this.api,

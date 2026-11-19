@@ -61,17 +61,22 @@ class Pin {
   const Pin({
     required this.subjectId,
     required this.module,
+    this.objectId = '',
     this.kind = '',
     this.title = '',
   });
 
   final String subjectId;
+
+  /// The module's own object id; empty from older servers.
+  final String objectId;
   final String module;
   final String kind;
   final String title;
 
   factory Pin.fromJson(Map<String, dynamic> j) => Pin(
     subjectId: asString(j['subject_id']),
+    objectId: asString(j['object_id']),
     module: asString(j['module']),
     kind: asString(j['kind']),
     title: asString(j['title']),

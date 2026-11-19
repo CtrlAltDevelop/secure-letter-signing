@@ -3403,7 +3403,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatSearchHint.
   ///
   /// In fa, this message translates to:
-  /// **'جستجوی گفتگو یا همکار'**
+  /// **'متن پیام'**
   String get chatSearchHint;
 
   /// No description provided for @chatKindGroup.
@@ -8691,6 +8691,198 @@ abstract class AppLocalizations {
   /// In fa, this message translates to:
   /// **'آماده شروع: {title}'**
   String gnTaskReady(String title);
+
+  /// No description provided for @customerPickTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'انتخاب پرونده مشتری'**
+  String get customerPickTitle;
+
+  /// No description provided for @customerPickSearch.
+  ///
+  /// In fa, this message translates to:
+  /// **'جستجوی نام مشتری'**
+  String get customerPickSearch;
+
+  /// No description provided for @customerPickEmpty.
+  ///
+  /// In fa, this message translates to:
+  /// **'پرونده‌ای پیدا نشد'**
+  String get customerPickEmpty;
+
+  /// No description provided for @tasksFilterCustomer.
+  ///
+  /// In fa, this message translates to:
+  /// **'پرونده مشتری'**
+  String get tasksFilterCustomer;
+
+  /// No description provided for @tasksFilterCustomerOf.
+  ///
+  /// In fa, this message translates to:
+  /// **'مشتری: {name}'**
+  String tasksFilterCustomerOf(String name);
+
+  /// No description provided for @chatVoiceDenied.
+  ///
+  /// In fa, this message translates to:
+  /// **'دسترسی به میکروفون داده نشده است.'**
+  String get chatVoiceDenied;
+
+  /// No description provided for @chatVoiceSend.
+  ///
+  /// In fa, this message translates to:
+  /// **'ارسال'**
+  String get chatVoiceSend;
+
+  /// No description provided for @chatAudioPlayFailed.
+  ///
+  /// In fa, this message translates to:
+  /// **'پخش صدا ممکن نشد.'**
+  String get chatAudioPlayFailed;
+
+  /// No description provided for @chatEdit.
+  ///
+  /// In fa, this message translates to:
+  /// **'ویرایش پیام'**
+  String get chatEdit;
+
+  /// No description provided for @chatEditSave.
+  ///
+  /// In fa, this message translates to:
+  /// **'ذخیره'**
+  String get chatEditSave;
+
+  /// No description provided for @chatSearchInConversation.
+  ///
+  /// In fa, this message translates to:
+  /// **'جستجو در گفتگو'**
+  String get chatSearchInConversation;
+
+  /// No description provided for @chatSearchNoResults.
+  ///
+  /// In fa, this message translates to:
+  /// **'پیامی پیدا نشد'**
+  String get chatSearchNoResults;
+
+  /// No description provided for @chatToTaskTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'عنوان وظیفه'**
+  String get chatToTaskTitle;
+
+  /// No description provided for @chatToTaskCreate.
+  ///
+  /// In fa, this message translates to:
+  /// **'ساخت وظیفه'**
+  String get chatToTaskCreate;
+
+  /// No description provided for @videoJoin.
+  ///
+  /// In fa, this message translates to:
+  /// **'ورود به جلسه آنلاین'**
+  String get videoJoin;
+
+  /// No description provided for @videoTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'جلسه آنلاین'**
+  String get videoTitle;
+
+  /// No description provided for @videoConnecting.
+  ///
+  /// In fa, this message translates to:
+  /// **'در حال اتصال…'**
+  String get videoConnecting;
+
+  /// No description provided for @videoNotConfigured.
+  ///
+  /// In fa, this message translates to:
+  /// **'جلسه آنلاین روی این سرور فعال نیست.'**
+  String get videoNotConfigured;
+
+  /// No description provided for @videoJoinFailed.
+  ///
+  /// In fa, this message translates to:
+  /// **'اتصال به جلسه ممکن نشد.'**
+  String get videoJoinFailed;
+
+  /// No description provided for @videoRetry.
+  ///
+  /// In fa, this message translates to:
+  /// **'تلاش دوباره'**
+  String get videoRetry;
+
+  /// No description provided for @videoMic.
+  ///
+  /// In fa, this message translates to:
+  /// **'میکروفون'**
+  String get videoMic;
+
+  /// No description provided for @videoCamera.
+  ///
+  /// In fa, this message translates to:
+  /// **'دوربین'**
+  String get videoCamera;
+
+  /// No description provided for @videoShare.
+  ///
+  /// In fa, this message translates to:
+  /// **'اشتراک صفحه'**
+  String get videoShare;
+
+  /// No description provided for @videoLeave.
+  ///
+  /// In fa, this message translates to:
+  /// **'خروج'**
+  String get videoLeave;
+
+  /// No description provided for @videoParticipants.
+  ///
+  /// In fa, this message translates to:
+  /// **'{count} نفر در جلسه'**
+  String videoParticipants(int count);
+
+  /// No description provided for @videoYou.
+  ///
+  /// In fa, this message translates to:
+  /// **'شما'**
+  String get videoYou;
+
+  /// No description provided for @videoExperimental.
+  ///
+  /// In fa, this message translates to:
+  /// **'آزمایشی'**
+  String get videoExperimental;
+
+  /// No description provided for @crmLetterLink.
+  ///
+  /// In fa, this message translates to:
+  /// **'اتصال نامه'**
+  String get crmLetterLink;
+
+  /// No description provided for @crmLetterUnlink.
+  ///
+  /// In fa, this message translates to:
+  /// **'قطع اتصال نامه'**
+  String get crmLetterUnlink;
+
+  /// No description provided for @crmLetterPickTitle.
+  ///
+  /// In fa, this message translates to:
+  /// **'انتخاب نامه'**
+  String get crmLetterPickTitle;
+
+  /// No description provided for @crmLetterLinkFailed.
+  ///
+  /// In fa, this message translates to:
+  /// **'اتصال نامه ممکن نشد. فقط سازنده نامه یا دبیرخانه می‌تواند آن را وصل کند.'**
+  String get crmLetterLinkFailed;
+
+  /// No description provided for @crmLetterPickEmpty.
+  ///
+  /// In fa, this message translates to:
+  /// **'نامه‌ای برای اتصال نیست'**
+  String get crmLetterPickEmpty;
 }
 
 class _AppLocalizationsDelegate

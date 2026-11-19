@@ -143,6 +143,22 @@ void main() {
     expect(s.where('POST', '/to-task'), hasLength(1));
   });
 
+  testWidgets('letters tab links and unlinks a letter', (t) async {
+    final s = FakeCrmServer()..customers.add(customerJson('a'));
+    s.letterLinks['L1'] = [];
+    await _pump(t, CustomerDetailScreen(env: crmEnv(s).env, customerId: 'a'));
+    await _tab(t, 'نامه‌ها');
+    await t.tap(find.byKey(const ValueKey('crm-linked-create')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('crm-letter-pick-L1')));
+    await t.pumpAndSettle();
+    expect(s.letterLinks['L1'], ['a']);
+    expect(find.text('Letter L1'), findsOneWidget);
+    await t.tap(find.byKey(const ValueKey('crm-letter-unlink-L1')));
+    await t.pumpAndSettle();
+    expect(s.letterLinks['L1'], isEmpty);
+  });
+
   testWidgets(
     'viewer cannot add notes, calls or edit; panels hidden without host',
     (t) async {
@@ -150,6 +166,7 @@ void main() {
         ..customers.add(customerJson('a', role: 'viewer'));
       await _pump(t, CustomerDetailScreen(env: crmEnv(s).env, customerId: 'a'));
       expect(find.byKey(const ValueKey('crm-edit')), findsNothing);
+      expect(find.byKey(const ValueKey('crm-polls')), findsOneWidget);
       expect(find.text('مالی'), findsNothing);
       await _tab(t, 'خط زمانی');
       expect(find.byKey(const ValueKey('crm-note')), findsNothing);

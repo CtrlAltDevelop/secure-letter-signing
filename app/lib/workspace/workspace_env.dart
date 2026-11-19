@@ -13,8 +13,10 @@ import 'package:letter_signing/chat/chat_api.dart';
 import 'package:letter_signing/chat/chat_env.dart';
 import 'package:letter_signing/chat/chat_opener.dart';
 import 'package:letter_signing/chat/chat_panel.dart';
+import 'package:letter_signing/chat/platform_hooks.dart';
 import 'package:letter_signing/crm/crm_api.dart';
 import 'package:letter_signing/crm/crm_env.dart';
+import 'package:letter_signing/crm/customer_picker.dart';
 import 'package:letter_signing/crm/crm_opener.dart';
 import 'package:letter_signing/finance/finance_api.dart';
 import 'package:letter_signing/finance/finance_env.dart';
@@ -117,6 +119,12 @@ class WorkspaceEnv extends ChangeNotifier {
     userId: user.id,
     userName: user.fullName,
     canCreate: user.permissions.contains('task.create'),
+    pickCustomer: !isEnabled('crm')
+        ? null
+        : (context) async {
+            final c = await pickCustomer(context, crm.api);
+            return c == null ? null : (id: c.id, name: c.name);
+          },
   );
 
   /// Projects module dependencies, built on first use.
@@ -163,6 +171,8 @@ class WorkspaceEnv extends ChangeNotifier {
     tasks: tasks,
     userName: user.fullName,
     canCreateGroup: user.permissions.contains('chat.create_group'),
+    readClipboardImage: readSystemClipboardImage,
+    recordVoice: recordSystemVoice,
   );
 
   /// Notes dependencies, built on first use (opened from search and bookmarks).

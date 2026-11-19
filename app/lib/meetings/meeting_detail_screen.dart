@@ -21,6 +21,8 @@ import 'package:letter_signing/tasks/task_detail_sections.dart'
     show DetailTab, DetailTabChips;
 import 'package:letter_signing/tasks/task_dialogs.dart';
 import 'package:letter_signing/theme/widgets.dart';
+import 'package:letter_signing/video/video_api.dart';
+import 'package:letter_signing/video/video_call_button.dart';
 import 'package:letter_signing/workspace/models.dart';
 import 'package:letter_signing/workspace/subject_controller.dart';
 import 'package:letter_signing/workspace/widgets/comment_thread.dart';
@@ -284,6 +286,7 @@ class _MeetingDetailState extends State<MeetingDetailScreen> {
   }
 
   List<Widget> _appBarActions(MeetingOut m, AppLocalizations l) => [
+    VideoCallButton(api: VideoApi(env.api.workspace), subjectId: m.subjectId),
     BookmarkButton(api: env.api.workspace, module: 'meetings', id: m.id),
     IconButton(
       tooltip: l.meetingPrint,

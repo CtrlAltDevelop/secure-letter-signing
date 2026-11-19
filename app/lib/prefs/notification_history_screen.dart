@@ -198,8 +198,8 @@ class _State extends State<NotificationHistoryScreen> {
             context,
             OpenTarget(
               module: m.module,
-              kind: 'subject',
-              id: m.subjectId,
+              kind: m.objectId.isEmpty ? 'subject' : m.kind,
+              id: m.objectId.isEmpty ? m.subjectId : m.objectId,
               subjectId: m.subjectId,
             ),
           ),

@@ -1,4 +1,6 @@
-"""Reporting periods: whole Asia/Tehran days, `[start, end)` as aware datetimes, default last 30 days, max 366."""
+"""Reporting periods: whole Asia/Tehran days, `[start, end)` as aware datetimes, default last 30 days, max 366.
+
+Presets are Jalali-aligned and end at `to` (default today): the current week (from Saturday), month, season or year."""
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
@@ -8,6 +10,7 @@ from django.utils import timezone
 from ninja.errors import HttpError
 
 from workspace import periods
+from workspace.jalali import to_gregorian, to_jalali
 from workspace.recurrence import TEHRAN
 
 DEFAULT_DAYS = 30
@@ -43,15 +46,29 @@ def today_bounds() -> tuple[datetime, datetime]:
     return day.start, day.end
 
 
-PRESET_DAYS = {"week": 7, "month": 30, "quarter": 90, "year": 365}  # rolling windows ending at `to` (default today)
+PRESETS = ("week", "month", "quarter", "year")
+SEASON_MONTHS = 3
+WEEK_START = 5  # Saturday (date.weekday())
+
+
+def preset_start(preset: str, last: date) -> date:
+    """First day of the Jalali week (Saturday), month, season or year that contains `last`."""
+    if preset == "week":
+        return last - timedelta(days=(last.weekday() - WEEK_START) % 7)
+    jy, jm, _ = to_jalali(last)
+    if preset == "month":
+        return to_gregorian(jy, jm, 1)
+    if preset == "quarter":
+        return to_gregorian(jy, (jm - 1) // SEASON_MONTHS * SEASON_MONTHS + 1, 1)
+    return to_gregorian(jy, 1, 1)
 
 
 def resolve(first: date | None, last: date | None, preset: str = "") -> Period:
-    if preset and preset not in PRESET_DAYS:
+    if preset and preset not in PRESETS:
         raise HttpError(422, "period must be week, month, quarter or year")
     last = last or today()
-    days = PRESET_DAYS.get(preset, DEFAULT_DAYS)
-    first = first or last - timedelta(days=days - 1)
+    default_first = preset_start(preset, last) if preset else last - timedelta(days=DEFAULT_DAYS - 1)
+    first = first or default_first
     if last < first:
         raise HttpError(422, "to must not be before from")
     if (last - first).days + 1 > MAX_DAYS:

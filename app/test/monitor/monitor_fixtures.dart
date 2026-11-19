@@ -37,29 +37,63 @@ class FakeMonitorServer {
     if (path == '/monitor/overview') {
       return json({
         'modules': {
-          'chat': {'series': {'messages': series([1, 4, 2])}},
-          'tasks': {'series': {'created': series([2, 2]), 'completed': series([1]), 'overdue': series([0])}},
+          'chat': {
+            'series': {
+              'messages': series([1, 4, 2]),
+            },
+          },
+          'tasks': {
+            'series': {
+              'created': series([2, 2]),
+              'completed': series([1]),
+              'overdue': series([0]),
+            },
+          },
         },
       });
     }
     if (path == '/monitor/projects') {
       return json({
         'projects': [
-          {'id': 'p1', 'name': 'Alpha', 'group_name': 'G', 'tasks_open': 1, 'tasks_done': 2, 'tasks_overdue': 3},
+          {
+            'id': 'p1',
+            'name': 'Alpha',
+            'group_name': 'G',
+            'tasks_open': 1,
+            'tasks_done': 2,
+            'tasks_overdue': 3,
+          },
         ],
         'groups': [
-          {'group_id': 1, 'group_name': 'Group One', 'projects': 1, 'tasks_open': 1, 'tasks_done': 2, 'tasks_overdue': 3},
+          {
+            'group_id': 1,
+            'group_name': 'Group One',
+            'projects': 1,
+            'tasks_open': 1,
+            'tasks_done': 2,
+            'tasks_overdue': 3,
+          },
         ],
       });
     }
     if (path == '/monitor/tasks') {
       return json({
-        'by_status': {'open': 4, 'awaiting_approval': 1, 'done': 8, 'cancelled': 0},
+        'by_status': {
+          'open': 4,
+          'awaiting_approval': 1,
+          'done': 8,
+          'cancelled': 0,
+        },
         'overdue_total': 1,
         'overdue': [
           {
-            'id': 't1', 'title': 'Late task', 'days_late': 4, 'project_name': 'Alpha',
-            'owners': [{'id': 2, 'full_name': 'Sara', 'email': 's@x'}],
+            'id': 't1',
+            'title': 'Late task',
+            'days_late': 4,
+            'project_name': 'Alpha',
+            'owners': [
+              {'id': 2, 'full_name': 'Sara', 'email': 's@x'},
+            ],
           },
         ],
       });
@@ -69,44 +103,90 @@ class FakeMonitorServer {
         'total': 1,
         'by_status': {'held': 1},
         'meetings': [
-          {'id': 'm1', 'title': 'Board', 'starts_at': '2026-01-02T08:00:00Z', 'project_name': 'Alpha', 'invited': 5, 'present': 4, 'open_resolutions': 1},
+          {
+            'id': 'm1',
+            'title': 'Board',
+            'starts_at': '2026-01-02T08:00:00Z',
+            'project_name': 'Alpha',
+            'invited': 5,
+            'present': 4,
+            'open_resolutions': 1,
+          },
         ],
       });
     }
     if (path == '/monitor/members') {
       return json({
         'members': [
-          {'user': {'id': 2, 'full_name': 'Sara', 'email': 's@x'}, 'tasks': {'on_time': 6, 'late': 1, 'overdue': 2, 'avg_delay_days': 1.5}, 'messages': 10},
+          {
+            'user': {'id': 2, 'full_name': 'Sara', 'email': 's@x'},
+            'tasks': {
+              'on_time': 6,
+              'late': 1,
+              'overdue': 2,
+              'avg_delay_days': 1.5,
+            },
+            'messages': 10,
+          },
         ],
       });
     }
     if (path == '/monitor/online') {
       return json({
         'users': [
-          {'user': {'id': 2, 'full_name': 'Sara', 'email': 's@x'}, 'last_active': '2026-01-02T08:00:00Z', 'online': true},
+          {
+            'user': {'id': 2, 'full_name': 'Sara', 'email': 's@x'},
+            'last_active': '2026-01-02T08:00:00Z',
+            'online': true,
+          },
         ],
         if (req.url.queryParameters['history_of'] != null)
           'history': [
-            {'device_name': 'Pixel', 'platform': 'android', 'created_at': '2026-01-01T08:00:00Z', 'last_active': '2026-01-02T08:00:00Z', 'revoked': false},
+            {
+              'device_name': 'Pixel',
+              'platform': 'android',
+              'created_at': '2026-01-01T08:00:00Z',
+              'last_active': '2026-01-02T08:00:00Z',
+              'revoked': false,
+            },
           ],
       });
     }
     if (path == '/monitor/customers') {
       return json({
-        'total': 3, 'quiet': 2, 'created_in_period': 1, 'by_status': {'active': 3},
+        'total': 3,
+        'quiet': 2,
+        'created_in_period': 1,
+        'by_status': {'active': 3},
         'customers': [
-          {'id': 'c1', 'name': 'Acme', 'last_event_at': null, 'open_tasks': 1, 'overdue_tasks': 0},
+          {
+            'id': 'c1',
+            'name': 'Acme',
+            'last_event_at': null,
+            'open_tasks': 1,
+            'overdue_tasks': 0,
+          },
         ],
       });
     }
     if (path == '/monitor/finance') {
-      return json({'totals': {'net': 100}, 'buckets': [{'period': '1404-10', 'net': 100}]});
+      return json({
+        'totals': {'net': 100},
+        'buckets': [
+          {'period': '1404-10', 'net': 100},
+        ],
+      });
     }
     if (path == '/monitor/sales') {
-      return json({'by_status': {'open': 2, 'won': 1, 'lost': 0}, 'won_by_month': <Object>[]});
+      return json({
+        'by_status': {'open': 2, 'won': 1, 'lost': 0},
+        'won_by_month': <Object>[],
+      });
     }
     if (path.startsWith('/tasks/of/')) {
-      return json([{'id': 't9', 'title': 'Their task', 'due_at': null}]);
+      return json([
+        {'id': 't9', 'title': 'Their task', 'due_at': null},
+      ]);
     }
     if (path.startsWith('/project-groups/') && path.endsWith('/access')) {
       return json({'ok': true});
@@ -116,7 +196,11 @@ class FakeMonitorServer {
   }
 }
 
-MonitorEnv monitorEnv(FakeMonitorServer s, {bool canMonitor = true, bool Function(String)? enabled}) {
+MonitorEnv monitorEnv(
+  FakeMonitorServer s, {
+  bool canMonitor = true,
+  bool Function(String)? enabled,
+}) {
   final f = fakeApi(s.handle);
   return MonitorEnv(
     api: MonitorApi(WorkspaceApi(f.client, httpClient: f.api.httpClient)),

@@ -125,6 +125,7 @@ class _TasksScreenState extends State<TasksScreen>
                     key: PageStorageKey(box),
                     controller: _controllers[box]!,
                     labels: _labels,
+                    onPickCustomer: widget.env.pickCustomer,
                     onOpen: _open,
                     onCreate: widget.env.canCreate ? _create : null,
                   ),
@@ -144,6 +145,7 @@ class TaskBoxView extends StatefulWidget {
     required this.controller,
     required this.labels,
     required this.onOpen,
+    this.onPickCustomer,
     this.onCreate,
   });
 
@@ -151,6 +153,8 @@ class TaskBoxView extends StatefulWidget {
   final List<LabelInfo> labels;
   final ValueChanged<String> onOpen;
   final VoidCallback? onCreate;
+  final Future<({String id, String name})?> Function(BuildContext)?
+  onPickCustomer;
 
   @override
   State<TaskBoxView> createState() => _TaskBoxViewState();
@@ -207,11 +211,38 @@ class _TaskBoxViewState extends State<TaskBoxView>
                   onChanged: (s) => unawaited(c.setLabel(s.firstOrNull)),
                 ),
               ],
+              if (widget.onPickCustomer != null) _customerChip(context),
               const SizedBox(height: 8),
               ..._body(context),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _customerChip(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final c = widget.controller;
+    final active = c.customerId != null;
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: InputChip(
+        key: const ValueKey('tasks-customer-filter'),
+        avatar: const Icon(Icons.business_center_outlined, size: 18),
+        label: Text(
+          active
+              ? l.tasksFilterCustomerOf(c.customerName)
+              : l.tasksFilterCustomer,
+        ),
+        selected: active,
+        onPressed: () async {
+          final picked = await widget.onPickCustomer!(context);
+          if (picked != null) {
+            await c.setCustomer(picked.id, name: picked.name);
+          }
+        },
+        onDeleted: active ? () => unawaited(c.setCustomer(null)) : null,
       ),
     );
   }

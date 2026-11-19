@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:material_ui/material_ui.dart';
@@ -79,6 +80,12 @@ class _LetterAppState extends State<LetterApp> {
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: appLocalizationsDelegates,
       scrollBehavior: const NoScrollbarBehavior(),
+      builder: (context, child) => ValueListenableBuilder<Uint8List?>(
+        valueListenable: appBackground,
+        builder: (context, bytes, _) => bytes == null
+            ? child!
+            : _WithBackground(bytes: bytes, child: child!),
+      ),
       home: _restoring
           ? SplashScreen(brand: widget.brand)
           : ListenableBuilder(
@@ -127,6 +134,37 @@ class SplashScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Paints the user's background image and lets every [Scaffold] show it through a light veil.
+class _WithBackground extends StatelessWidget {
+  const _WithBackground({required this.bytes, required this.child});
+  final Uint8List bytes;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+        ),
+        Theme(
+          data: theme.copyWith(
+            scaffoldBackgroundColor: theme.scaffoldBackgroundColor.withValues(
+              alpha: backgroundScrimOpacity,
+            ),
+          ),
+          child: child,
+        ),
+      ],
     );
   }
 }

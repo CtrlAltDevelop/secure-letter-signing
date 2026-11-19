@@ -19,7 +19,12 @@ const double _headerHeight = ganttHeaderRowHeight * 2;
 /// The project's Gantt tab: WBS tree on one side, the timeline on the other, one vertical
 /// scroll for both. Read-only unless the server says `can_edit`.
 class GanttTab extends StatefulWidget {
-  const GanttTab({super.key, required this.env, required this.projectId, this.controller});
+  const GanttTab({
+    super.key,
+    required this.env,
+    required this.projectId,
+    this.controller,
+  });
   final GanttEnv env;
   final String projectId;
 
@@ -31,7 +36,8 @@ class GanttTab extends StatefulWidget {
 }
 
 class _GanttTabState extends State<GanttTab> {
-  late final GanttController _c = widget.controller ?? GanttController(widget.env.api, widget.projectId);
+  late final GanttController _c =
+      widget.controller ?? GanttController(widget.env.api, widget.projectId);
   final _body = ScrollController();
   final _header = ScrollController();
   final _drag = ValueNotifier<BarDrag?>(null);
@@ -43,7 +49,8 @@ class _GanttTabState extends State<GanttTab> {
   void initState() {
     super.initState();
     _body.addListener(() {
-      if (_header.hasClients && _header.offset != _body.offset) _header.jumpTo(_body.offset);
+      if (_header.hasClients && _header.offset != _body.offset)
+        _header.jumpTo(_body.offset);
     });
     unawaited(_c.load());
   }
@@ -59,7 +66,8 @@ class _GanttTabState extends State<GanttTab> {
 
   void _report(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _do(Future<String?> edit) async {
@@ -89,7 +97,11 @@ class _GanttTabState extends State<GanttTab> {
     final hit = _hit;
     if (hit == null) return;
     _dx += d.delta.dx;
-    _drag.value = BarDrag(hit.taskId, hit.mode, (_dx / _c.scale.dayWidth).round());
+    _drag.value = BarDrag(
+      hit.taskId,
+      hit.mode,
+      (_dx / _c.scale.dayWidth).round(),
+    );
   }
 
   void _dragCancel() {
@@ -123,17 +135,29 @@ class _GanttTabState extends State<GanttTab> {
     final l = AppLocalizations.of(context);
     switch (action) {
       case 'rename':
-        final t = await showTitleDialog(context, title: l.gnRename, initial: p.title);
+        final t = await showTitleDialog(
+          context,
+          title: l.gnRename,
+          initial: p.title,
+        );
         if (t != null) await _do(_c.renamePhase(p.id, t));
       case 'dates':
-        final r = await showDatesDialog(context, title: l.gnSetDates, start: p.startAt, end: p.endAt);
+        final r = await showDatesDialog(
+          context,
+          title: l.gnSetDates,
+          start: p.startAt,
+          end: p.endAt,
+        );
         if (r != null) await _do(_c.setPhaseDates(p.id, r.start, r.end));
       case 'up':
         await _do(_c.movePhase(p.id, -1));
       case 'down':
         await _do(_c.movePhase(p.id, 1));
       case 'remove':
-        final ok = await _confirm(l.gnDeactivatePhase, l.gnDeactivatePhaseBody(p.title));
+        final ok = await _confirm(
+          l.gnDeactivatePhase,
+          l.gnDeactivatePhaseBody(p.title),
+        );
         if (ok) await _do(_c.deactivatePhase(p.id));
     }
   }
@@ -145,7 +169,12 @@ class _GanttTabState extends State<GanttTab> {
         await widget.env.openTask?.call(context, i.taskId);
         if (mounted) unawaited(_c.load());
       case 'dates':
-        final r = await showDatesDialog(context, title: l.gnSetDates, start: i.start, end: i.end);
+        final r = await showDatesDialog(
+          context,
+          title: l.gnSetDates,
+          start: i.start,
+          end: i.end,
+        );
         if (r != null) await _do(_c.setDates(i.taskId, r.start, r.end));
       case 'deps':
         await showDependenciesDialog(context, _c, i, _report);
@@ -161,7 +190,10 @@ class _GanttTabState extends State<GanttTab> {
         final id = await showPhasePicker(context, _c.chart!);
         if (id != null) await _do(_c.moveToPhase(i, id < 0 ? null : id));
       case 'remove':
-        final ok = await _confirm(l.gnRemoveFromPlan, l.gnRemoveFromPlanBody(i.title));
+        final ok = await _confirm(
+          l.gnRemoveFromPlan,
+          l.gnRemoveFromPlanBody(i.title),
+        );
         if (ok) await _do(_c.removeFromPlan(i.taskId));
     }
   }
@@ -174,7 +206,10 @@ class _GanttTabState extends State<GanttTab> {
             title: Text(title),
             content: Text(body),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.commonCancel)),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l.commonCancel),
+              ),
               FilledButton(
                 key: const ValueKey('gantt-confirm'),
                 onPressed: () => Navigator.pop(ctx, true),
@@ -198,7 +233,14 @@ class _GanttTabState extends State<GanttTab> {
           onAdd: (u) async {
             final r = await showAddToPlanDialog(ctx, _c.chart!, u);
             if (r == null) return;
-            await _do(_c.addToPlan(u.taskId, phaseId: r.phaseId, start: r.start, end: r.end));
+            await _do(
+              _c.addToPlan(
+                u.taskId,
+                phaseId: r.phaseId,
+                start: r.start,
+                end: r.end,
+              ),
+            );
           },
         ),
       ),
@@ -207,7 +249,8 @@ class _GanttTabState extends State<GanttTab> {
 
   void _print() => Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => GanttPrintScreen(api: widget.env.api, projectId: widget.projectId),
+      builder: (_) =>
+          GanttPrintScreen(api: widget.env.api, projectId: widget.projectId),
     ),
   );
 
@@ -241,7 +284,11 @@ class _GanttTabState extends State<GanttTab> {
           if (_c.busy) const LinearProgressIndicator(minHeight: 2),
           Expanded(
             child: _c.rows.isEmpty
-                ? EmptyState(icon: Icons.view_timeline_outlined, title: l.gnEmpty, message: chart.canEdit ? l.gnEmptyEdit : null)
+                ? EmptyState(
+                    icon: Icons.view_timeline_outlined,
+                    title: l.gnEmpty,
+                    message: chart.canEdit ? l.gnEmptyEdit : null,
+                  )
                 : _chart(context, chart),
           ),
         ],
@@ -258,9 +305,21 @@ class _GanttTabState extends State<GanttTab> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
-          Icon(Icons.visibility_outlined, size: 16, color: scheme.onSecondaryContainer),
+          Icon(
+            Icons.visibility_outlined,
+            size: 16,
+            color: scheme.onSecondaryContainer,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: TextStyle(color: scheme.onSecondaryContainer, fontSize: 13))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: scheme.onSecondaryContainer,
+                fontSize: 13,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -278,9 +337,18 @@ class _GanttTabState extends State<GanttTab> {
               key: const ValueKey('gantt-zoom'),
               showSelectedIcon: false,
               segments: [
-                ButtonSegment(value: GanttZoom.daily, label: Text(l.gnZoomDaily)),
-                ButtonSegment(value: GanttZoom.monthly, label: Text(l.gnZoomMonthly)),
-                ButtonSegment(value: GanttZoom.quarterly, label: Text(l.gnZoomQuarterly)),
+                ButtonSegment(
+                  value: GanttZoom.daily,
+                  label: Text(l.gnZoomDaily),
+                ),
+                ButtonSegment(
+                  value: GanttZoom.monthly,
+                  label: Text(l.gnZoomMonthly),
+                ),
+                ButtonSegment(
+                  value: GanttZoom.quarterly,
+                  label: Text(l.gnZoomQuarterly),
+                ),
               ],
               selected: {_c.zoom},
               onSelectionChanged: (s) {
@@ -339,8 +407,17 @@ class _GanttTabState extends State<GanttTab> {
                   width: _treeWidth,
                   child: Container(
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
-                    child: Text(chart.name, maxLines: 1, overflow: TextOverflow.ellipsis, textDirection: outer),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: scheme.outlineVariant),
+                      ),
+                    ),
+                    child: Text(
+                      chart.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: outer,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -370,7 +447,8 @@ class _GanttTabState extends State<GanttTab> {
                     width: _treeWidth,
                     child: Column(
                       children: [
-                        for (final row in rows) _treeRow(context, row, chart, outer),
+                        for (final row in rows)
+                          _treeRow(context, row, chart, outer),
                       ],
                     ),
                   ),
@@ -390,21 +468,27 @@ class _GanttTabState extends State<GanttTab> {
     );
   }
 
-  Widget _timeline(GanttScale scale, List<GanttRow> rows, GanttChart chart, ColorScheme scheme) {
+  Widget _timeline(
+    GanttScale scale,
+    List<GanttRow> rows,
+    GanttChart chart,
+    ColorScheme scheme,
+  ) {
     final size = Size(scale.width, rows.length * ganttRowHeight);
     final today = asDay(DateTime.now());
     return RawGestureDetector(
       gestures: {
-        _BarDragRecognizer: GestureRecognizerFactoryWithHandlers<_BarDragRecognizer>(
-          _BarDragRecognizer.new,
-          (r) {
-            r.dragStartBehavior = DragStartBehavior.down;
-            r.allow = _probe;
-            r.onUpdate = _dragUpdate;
-            r.onEnd = (_) => _dragEnd();
-            r.onCancel = () => _dragCancel();
-          },
-        ),
+        _BarDragRecognizer:
+            GestureRecognizerFactoryWithHandlers<_BarDragRecognizer>(
+              _BarDragRecognizer.new,
+              (r) {
+                r.dragStartBehavior = DragStartBehavior.down;
+                r.allow = _probe;
+                r.onUpdate = _dragUpdate;
+                r.onEnd = (_) => _dragEnd();
+                r.onCancel = () => _dragCancel();
+              },
+            ),
       },
       child: ValueListenableBuilder<BarDrag?>(
         valueListenable: _drag,
@@ -426,7 +510,12 @@ class _GanttTabState extends State<GanttTab> {
     );
   }
 
-  Widget _treeRow(BuildContext context, GanttRow row, GanttChart chart, TextDirection outer) {
+  Widget _treeRow(
+    BuildContext context,
+    GanttRow row,
+    GanttChart chart,
+    TextDirection outer,
+  ) {
     final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final muted = scheme.onSurfaceVariant;
@@ -440,7 +529,9 @@ class _GanttTabState extends State<GanttTab> {
         height: ganttRowHeight,
         padding: EdgeInsetsDirectional.only(start: 6.0 + (row.level - 1) * 14),
         decoration: BoxDecoration(
-          color: selected ? scheme.secondaryContainer.withValues(alpha: 0.5) : null,
+          color: selected
+              ? scheme.secondaryContainer.withValues(alpha: 0.5)
+              : null,
           border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
         ),
         child: Row(
@@ -461,10 +552,16 @@ class _GanttTabState extends State<GanttTab> {
                 overflow: TextOverflow.ellipsis,
                 textDirection: outer,
                 textAlign: TextAlign.left,
-                style: TextStyle(fontWeight: row.isPhase ? FontWeight.w700 : FontWeight.w400, fontSize: 13),
+                style: TextStyle(
+                  fontWeight: row.isPhase ? FontWeight.w700 : FontWeight.w400,
+                  fontSize: 13,
+                ),
               ),
             ),
-            Text('${row.progress}%', style: TextStyle(color: muted, fontSize: 11)),
+            Text(
+              '${row.progress}%',
+              style: TextStyle(color: muted, fontSize: 11),
+            ),
             PopupMenuButton<String>(
               key: ValueKey('gantt-menu-${row.key}'),
               padding: EdgeInsets.zero,
@@ -481,8 +578,13 @@ class _GanttTabState extends State<GanttTab> {
     );
   }
 
-  List<PopupMenuEntry<String>> _menu(AppLocalizations l, GanttRow row, GanttChart chart) {
-    PopupMenuItem<String> entry(String v, String text) => PopupMenuItem(value: v, child: Text(text));
+  List<PopupMenuEntry<String>> _menu(
+    AppLocalizations l,
+    GanttRow row,
+    GanttChart chart,
+  ) {
+    PopupMenuItem<String> entry(String v, String text) =>
+        PopupMenuItem(value: v, child: Text(text));
     final edit = chart.canEdit;
     if (row.isPhase) {
       return [
@@ -518,7 +620,8 @@ class _BarDragRecognizer extends HorizontalDragGestureRecognizer {
 
   @override
   bool isPointerAllowed(PointerEvent event) =>
-      (allow?.call(event.localPosition) ?? false) && super.isPointerAllowed(event);
+      (allow?.call(event.localPosition) ?? false) &&
+      super.isPointerAllowed(event);
 }
 
 class _UnplannedSheet extends StatelessWidget {
@@ -532,16 +635,25 @@ class _UnplannedSheet extends StatelessWidget {
     final list = controller.chart?.unplanned ?? const <GanttUnplanned>[];
     return SafeArea(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+        ),
         child: list.isEmpty
-            ? Padding(padding: const EdgeInsets.all(32), child: Center(child: Text(l.gnNoUnplanned)))
+            ? Padding(
+                padding: const EdgeInsets.all(32),
+                child: Center(child: Text(l.gnNoUnplanned)),
+              )
             : ListView(
                 shrinkWrap: true,
                 children: [
                   for (final u in list)
                     ListTile(
                       key: ValueKey('unplanned-${u.taskId}'),
-                      title: Text(u.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      title: Text(
+                        u.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       trailing: TextButton(
                         key: ValueKey('unplanned-add-${u.taskId}'),
                         onPressed: controller.busy ? null : () => onAdd(u),

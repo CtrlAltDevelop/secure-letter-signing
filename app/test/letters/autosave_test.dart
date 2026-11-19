@@ -55,7 +55,10 @@ void main() {
       await t.pump(const Duration(milliseconds: 500));
       await t.pumpAndSettle();
       expect(saves(), ['POST /api/letters']);
-      expect(find.textContaining('پیش‌نویس به‌طور خودکار ذخیره شد'), findsOneWidget);
+      expect(
+        find.textContaining('پیش‌نویس به‌طور خودکار ذخیره شد'),
+        findsOneWidget,
+      );
 
       await t.pump(
         const Duration(milliseconds: 600),

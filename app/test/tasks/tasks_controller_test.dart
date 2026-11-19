@@ -81,6 +81,15 @@ void main() {
     expect(last.url.queryParameters['label'], '7');
     expect(last.url.queryParameters['q'], 'alp');
     expect(last.url.queryParameters['offset'], '0');
+
+    await c.setCustomer('cust-1', name: 'Acme');
+    expect(
+      server.where('GET', '/tasks').last.url.queryParameters['customer'],
+      'cust-1',
+    );
+    expect(c.customerName, 'Acme');
+    await c.setCustomer(null);
+    expect(c.customerId, isNull);
   });
 
   test('a workspace task event refreshes the shown rows', () async {

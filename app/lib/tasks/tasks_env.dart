@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/projects/projects_api.dart';
 import 'package:letter_signing/tasks/tasks_api.dart';
@@ -24,6 +25,7 @@ class TasksEnv {
     this.userName = '',
     FilePickFn? pickFile,
     SaveFile? saveFile,
+    this.pickCustomer,
   }) : pickFile = pickFile ?? pickOneFile,
        saveFile = saveFile ?? saveBytes;
 
@@ -36,6 +38,10 @@ class TasksEnv {
   final String userName;
   final FilePickFn pickFile;
   final SaveFile saveFile;
+
+  /// Customer-file picker (id and name); null hides the customer filter.
+  final Future<({String id, String name})?> Function(BuildContext context)?
+  pickCustomer;
 
   /// Project calls (pickers, move/copy) over the same client.
   late final ProjectsApi projects = ProjectsApi(api.workspace);

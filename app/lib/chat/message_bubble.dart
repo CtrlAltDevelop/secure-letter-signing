@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/chat/chat_env.dart';
@@ -208,7 +209,7 @@ class _Quote extends StatelessWidget {
 }
 
 /// The attachment of a message: an inline image, or a tile that downloads and hands the file
-/// to the platform (audio included: there is no audio player package yet).
+/// to the platform; audio plays inline ([_AudioTile]).
 class ChatFileView extends StatefulWidget {
   const ChatFileView({super.key, required this.env, required this.file});
   final ChatEnv env;
@@ -272,6 +273,12 @@ class _ChatFileViewState extends State<ChatFileView> {
         ),
       );
     }
+    if (f.isAudio) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: _AudioTile(env: widget.env, file: f, onFallback: _open),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: InkWell(
@@ -292,4 +299,84 @@ class _ChatFileViewState extends State<ChatFileView> {
       ),
     );
   }
+}
+
+/// Inline audio: downloads on the first tap, then plays and pauses. If playback is not
+/// available on the platform the file is handed to the save/share hook instead.
+class _AudioTile extends StatefulWidget {
+  const _AudioTile({
+    required this.env,
+    required this.file,
+    required this.onFallback,
+  });
+  final ChatEnv env;
+  final ChatFile file;
+  final Future<void> Function() onFallback;
+
+  @override
+  State<_AudioTile> createState() => _AudioTileState();
+}
+
+class _AudioTileState extends State<_AudioTile> {
+  AudioPlayer? _player;
+  StreamSubscription<PlayerState>? _sub;
+  bool _playing = false;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    unawaited(_sub?.cancel());
+    unawaited(_player?.dispose());
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    final player = _player;
+    if (player != null) {
+      await (_playing ? player.pause() : player.resume());
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final bytes = await widget.env.api.download(widget.file.id);
+      final p = AudioPlayer();
+      _player = p;
+      _sub = p.onPlayerStateChanged.listen((st) {
+        if (mounted) setState(() => _playing = st == PlayerState.playing);
+      });
+      await p.play(BytesSource(bytes, mimeType: widget.file.contentType));
+    } on Object {
+      _player = null;
+      await widget.onFallback();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    key: ValueKey('audio-${widget.file.id}'),
+    onTap: _loading ? null : () => unawaited(_toggle()),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _loading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                _playing
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(widget.file.name, overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    ),
+  );
 }

@@ -1776,7 +1776,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get chatTabPublic => 'عمومی';
 
   @override
-  String get chatSearchHint => 'جستجوی گفتگو یا همکار';
+  String get chatSearchHint => 'متن پیام';
 
   @override
   String get chatKindGroup => 'گروه';
@@ -4574,4 +4574,105 @@ class AppLocalizationsFa extends AppLocalizations {
   String gnTaskReady(String title) {
     return 'آماده شروع: $title';
   }
+
+  @override
+  String get customerPickTitle => 'انتخاب پرونده مشتری';
+
+  @override
+  String get customerPickSearch => 'جستجوی نام مشتری';
+
+  @override
+  String get customerPickEmpty => 'پرونده‌ای پیدا نشد';
+
+  @override
+  String get tasksFilterCustomer => 'پرونده مشتری';
+
+  @override
+  String tasksFilterCustomerOf(String name) {
+    return 'مشتری: $name';
+  }
+
+  @override
+  String get chatVoiceDenied => 'دسترسی به میکروفون داده نشده است.';
+
+  @override
+  String get chatVoiceSend => 'ارسال';
+
+  @override
+  String get chatAudioPlayFailed => 'پخش صدا ممکن نشد.';
+
+  @override
+  String get chatEdit => 'ویرایش پیام';
+
+  @override
+  String get chatEditSave => 'ذخیره';
+
+  @override
+  String get chatSearchInConversation => 'جستجو در گفتگو';
+
+  @override
+  String get chatSearchNoResults => 'پیامی پیدا نشد';
+
+  @override
+  String get chatToTaskTitle => 'عنوان وظیفه';
+
+  @override
+  String get chatToTaskCreate => 'ساخت وظیفه';
+
+  @override
+  String get videoJoin => 'ورود به جلسه آنلاین';
+
+  @override
+  String get videoTitle => 'جلسه آنلاین';
+
+  @override
+  String get videoConnecting => 'در حال اتصال…';
+
+  @override
+  String get videoNotConfigured => 'جلسه آنلاین روی این سرور فعال نیست.';
+
+  @override
+  String get videoJoinFailed => 'اتصال به جلسه ممکن نشد.';
+
+  @override
+  String get videoRetry => 'تلاش دوباره';
+
+  @override
+  String get videoMic => 'میکروفون';
+
+  @override
+  String get videoCamera => 'دوربین';
+
+  @override
+  String get videoShare => 'اشتراک صفحه';
+
+  @override
+  String get videoLeave => 'خروج';
+
+  @override
+  String videoParticipants(int count) {
+    return '$count نفر در جلسه';
+  }
+
+  @override
+  String get videoYou => 'شما';
+
+  @override
+  String get videoExperimental => 'آزمایشی';
+
+  @override
+  String get crmLetterLink => 'اتصال نامه';
+
+  @override
+  String get crmLetterUnlink => 'قطع اتصال نامه';
+
+  @override
+  String get crmLetterPickTitle => 'انتخاب نامه';
+
+  @override
+  String get crmLetterLinkFailed =>
+      'اتصال نامه ممکن نشد. فقط سازنده نامه یا دبیرخانه می‌تواند آن را وصل کند.';
+
+  @override
+  String get crmLetterPickEmpty => 'نامه‌ای برای اتصال نیست';
 }

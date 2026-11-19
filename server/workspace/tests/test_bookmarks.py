@@ -122,10 +122,9 @@ def test_pins_for_projects_files_and_conversations(crew):
     for subject in (project["subject_id"], customer["subject_id"], conv["subject_id"]):
         assert crew.ann_d.call("put", "/pins", {"subject_id": subject}).status_code == 200
     pins = crew.ann_d.call("get", "/pins").data
-    assert pins == [
-        {"subject_id": project["subject_id"], "module": "projects", "kind": pins[0]["kind"], "title": "Site"},
-        {"subject_id": customer["subject_id"], "module": "crm", "kind": pins[1]["kind"], "title": "ACME"},
-        {"subject_id": conv["subject_id"], "module": "chat", "kind": pins[2]["kind"], "title": "Room"}]
+    assert [(p["module"], p["title"]) for p in pins] == [("projects", "Site"), ("crm", "ACME"), ("chat", "Room")]
+    assert [p["subject_id"] for p in pins] == [project["subject_id"], customer["subject_id"], conv["subject_id"]]
+    assert [p["object_id"] for p in pins] == [project["id"], customer["id"], conv["id"]]
     again = crew.ann_d.call("put", "/pins", {"subject_id": project["subject_id"]})
     assert len(again.data) == 3 and Pin.objects.count() == 3  # idempotent
     assert crew.bob_d.call("get", "/pins").data == []

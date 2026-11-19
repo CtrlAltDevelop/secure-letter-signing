@@ -227,6 +227,52 @@ void main() {
     expect((s.lastBody('POST', '/messages') as Map)['file_id'], 'f1');
   });
 
+  testWidgets('edit my message patches the text', (t) async {
+    final s = _server();
+    await _openConv(t, s);
+    await t.longPress(find.text('mine here'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('ویرایش پیام'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const ValueKey('chat-text-dialog')), 'fixed');
+    await t.tap(find.byKey(const ValueKey('chat-text-dialog-ok')));
+    await t.pumpAndSettle();
+    expect((s.lastBody('PATCH', '/chat/messages/') as Map)['text'], 'fixed');
+    expect(find.text('fixed'), findsOneWidget);
+  });
+
+  testWidgets('message to task posts to the server endpoint', (t) async {
+    final s = _server();
+    await _openConv(t, s);
+    await t.longPress(find.text('mine here'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تبدیل به وظیفه'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('chat-text-dialog-ok')));
+    await t.pumpAndSettle();
+    expect(s.where('POST', '/to-task'), hasLength(1));
+    expect((s.lastBody('POST', '/to-task') as Map)['title'], 'mine here');
+  });
+
+  testWidgets('search inside the conversation lists hits', (t) async {
+    final s = _server();
+    await _openConv(t, s);
+    await t.tap(find.byKey(const ValueKey('chat-search')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const ValueKey('chat-search-field')), 'first');
+    await t.testTextInput.receiveAction(TextInputAction.search);
+    await t.pumpAndSettle();
+    expect(s.where('GET', '/chat/search'), hasLength(1));
+    final hit = find.descendant(
+      of: find.byType(ListTile),
+      matching: find.text('first'),
+    );
+    expect(hit, findsOneWidget);
+    await t.tap(hit);
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('chat-search-field')), findsNothing);
+  });
+
   testWidgets('mic only in a DM with a recorder hook', (t) async {
     final s = _server()
       ..conversations.add(
@@ -234,7 +280,7 @@ void main() {
       );
     s.messages['d1'] = [];
     await useTallSurface(t, const Size(375, 812));
-    final e = chatEnv(s, record: pickImage);
+    final e = chatEnv(s, record: (_) => pickImage());
     await t.pumpWidget(
       faMaterial(
         home: ConversationScreen(env: e.env, conversationId: 'd1'),

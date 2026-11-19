@@ -98,8 +98,8 @@ class _PinnedScreenState extends State<PinnedScreen> {
                   context,
                   OpenTarget(
                     module: p.module,
-                    kind: 'subject',
-                    id: p.subjectId,
+                    kind: p.objectId.isEmpty ? 'subject' : p.kind,
+                    id: p.objectId.isEmpty ? p.subjectId : p.objectId,
                     subjectId: p.subjectId,
                   ),
                 ),

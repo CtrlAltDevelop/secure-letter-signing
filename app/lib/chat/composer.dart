@@ -91,7 +91,7 @@ class _ComposerState extends State<Composer> {
   }
 
   Future<void> _record() async {
-    final f = await env.recordVoice?.call();
+    final f = await env.recordVoice?.call(context);
     if (f != null) await _sendPicked(f, kind: 'voice');
   }
 

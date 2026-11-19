@@ -70,6 +70,9 @@ class FakeCrmServer {
   final List<http.Request> requests = [];
   final List<Object?> bodies = [];
   bool limitReached = false;
+
+  /// Letters by id -> the customer ids each one is linked to.
+  final Map<String, List<String>> letterLinks = {};
   Map<String, dynamic> importResult = {
     'created': 2,
     'skipped': 1,
@@ -103,6 +106,30 @@ class FakeCrmServer {
       ]);
     }
     if (path == '/letters/directory') return json([me, sara]);
+    if (path == '/letters' && m == 'GET') {
+      return json([
+        for (final id in letterLinks.keys) briefJson(id, title: 'Letter $id'),
+      ]);
+    }
+    if (path.startsWith('/letters/') && path.endsWith('/customers')) {
+      final id = path.split('/')[2];
+      letterLinks[id] = [for (final r in b['customer_refs'] as List) '$r'];
+      return json({'customer_refs': letterLinks[id]});
+    }
+    if (path.startsWith('/letters/')) {
+      final id = path.split('/')[2];
+      return json({
+        ...detailJson(briefJson(id, title: 'Letter $id')),
+        'customer_refs': letterLinks[id] ?? <String>[],
+      });
+    }
+    if (path.endsWith('/letters') && path.startsWith('/customers/')) {
+      final cid = path.split('/')[2];
+      return json([
+        for (final e in letterLinks.entries)
+          if (e.value.contains(cid)) briefJson(e.key, title: 'Letter ${e.key}'),
+      ]);
+    }
     if (path == '/pins') return json(<Object>[]);
     if (path == '/bookmarks') return json(<Object>[]);
     if (path.startsWith('/subjects/')) return _subject(path, m);
@@ -187,7 +214,9 @@ class FakeCrmServer {
 
   http.Response _subject(String path, String m) {
     if (path.endsWith('/labels')) {
-      return json({'label_ids': <int>[1]});
+      return json({
+        'label_ids': <int>[1],
+      });
     }
     return json(<Object>[]);
   }

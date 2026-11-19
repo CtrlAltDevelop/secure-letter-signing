@@ -58,6 +58,16 @@ class LettersApi {
     LetterBrief.fromJson,
   );
 
+  /// Replaces the customer-file links of a letter (creator or secretariat; others get 403).
+  Future<List<String>> setCustomers(String id, List<String> refs) async {
+    final data = await _map(
+      'PUT',
+      '/letters/$id/customers',
+      body: {'customer_refs': refs},
+    );
+    return [for (final r in (data['customer_refs'] as List? ?? const [])) '$r'];
+  }
+
   Future<LetterDetail> detail(String id) async =>
       LetterDetail.fromJson(await _map('GET', '/letters/$id'));
 

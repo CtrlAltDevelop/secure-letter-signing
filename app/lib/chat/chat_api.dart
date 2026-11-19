@@ -159,6 +159,28 @@ class ChatApi {
     },
   );
 
+  /// Case-insensitive text search over the latest messages of [conversation] (or all mine).
+  Future<List<ChatMessage>> search(String q, {String? conversation}) async {
+    final params = WorkspaceApi.query({'q': q, 'conversation': conversation});
+    final data = await workspace.call('GET', '/chat/search$params');
+    return [for (final j in asMapList(data)) ChatMessage.fromJson(j)];
+  }
+
+  /// Creates a task from the message (server links it back with a system message) and
+  /// returns the new task id.
+  Future<String> toTask(
+    int messageId, {
+    String? title,
+    String? projectId,
+  }) async {
+    final data = await workspace.call(
+      'POST',
+      '/chat/messages/$messageId/to-task',
+      body: {'title': ?title, 'project_id': ?projectId},
+    );
+    return asString(asMap(data)['id']);
+  }
+
   Future<ChatMessage> edit(int messageId, String text) =>
       _msg('PATCH', '/chat/messages/$messageId', body: {'text': text});
 

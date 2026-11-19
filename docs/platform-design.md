@@ -273,3 +273,6 @@ Deviations and gaps: Persian text is matched with plain case-insensitive substri
 
 ## Implemented: guests, account security, gantt
 See AGENTS.md "Security, guests, Gantt, monitor". Gantt: phases -> items (WBS) -> finish-to-start links with cycle rejection; `GET /projects/{id}/gantt/print` feeds the landscape A4 print screen; when a predecessor completes, successors' owners get `gantt.task_ready`. Guests are limited to `GUEST_MODULES` and never appear in directories.
+
+## Implemented: online meetings
+LiveKit SFU (optional compose profile `meetings`). The Django server never relays media: `POST /video/join` checks `see` on the subject and returns `{url, token, room, identity}`; tokens last 2 h, identity is unique per join. Rooms are per subject, so a meeting and a chat conversation each have one.

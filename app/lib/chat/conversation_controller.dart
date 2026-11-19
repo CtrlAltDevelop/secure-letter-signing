@@ -327,6 +327,12 @@ class ConversationController extends ChangeNotifier {
     return send(text: text, fileId: fileId, kind: kind);
   }
 
+  Future<ActionOutcome> edit(ChatMessage m, String text) => _act(() async {
+    final updated = await api.edit(m.id, text);
+    _messages = _merge([updated]);
+    _notify();
+  });
+
   Future<ActionOutcome> delete(ChatMessage m) => _act(() async {
     final t = await api.delete(m.id);
     _messages = _merge([t]);

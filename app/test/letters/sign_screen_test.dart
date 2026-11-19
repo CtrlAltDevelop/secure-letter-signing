@@ -56,7 +56,10 @@ void main() {
     });
     await open(t, testEnv(f));
     await t.tap(find.text('رد'));
-    await t.enterText(find.widgetWithText(TextField, 'یادداشت (اختیاری)'), 'no');
+    await t.enterText(
+      find.widgetWithText(TextField, 'یادداشت (اختیاری)'),
+      'no',
+    );
     await t.enterText(pinField(), '123456');
     await t.tap(find.text('امضا با رمز'));
     await t.pumpAndSettle();
@@ -135,7 +138,10 @@ void main() {
     );
     await t.tap(find.text('فعال‌سازی اثر انگشت / چهره'));
     await t.pumpAndSettle();
-    expect(find.text('استفاده از اثر انگشت / چهره در این دستگاه'), findsOneWidget);
+    expect(
+      find.text('استفاده از اثر انگشت / چهره در این دستگاه'),
+      findsOneWidget,
+    );
     await t.enterText(
       find.widgetWithText(TextFormField, 'رمز امضا').last,
       '123456',
@@ -317,7 +323,10 @@ void layoutTests() {
       );
       await t.pumpAndSettle();
       expect(t.takeException(), isNull);
-      expect(find.text('تأیید با phone من', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('تأیید با phone من', skipOffstage: false),
+        findsOneWidget,
+      );
     });
   }
 }

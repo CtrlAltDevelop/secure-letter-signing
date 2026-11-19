@@ -13,6 +13,8 @@ import 'package:letter_signing/crm/customer_overview_tab.dart';
 import 'package:letter_signing/crm/customer_timeline_tab.dart';
 import 'package:letter_signing/crm/models.dart';
 import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/polls/polls_env.dart';
+import 'package:letter_signing/polls/polls_section.dart';
 import 'package:letter_signing/theme/widgets.dart';
 import 'package:letter_signing/workspace/subject_controller.dart';
 import 'package:letter_signing/workspace/widgets/bookmark_button.dart';
@@ -232,6 +234,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           actions: [
             PinButton(api: env.api.workspace, subjectId: c.subjectId),
             BookmarkButton(api: env.api.workspace, module: 'crm', id: c.id),
+            IconButton(
+              key: const ValueKey('crm-polls'),
+              tooltip: l.pollsTitle,
+              icon: const Icon(Icons.poll_outlined),
+              onPressed: () => unawaited(
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => PollsScreen(
+                      env: PollsEnv.of(env.api.workspace, env.live, env.userId),
+                      targetSubjectId: c.subjectId,
+                    ),
+                  ),
+                ),
+              ),
+            ),
             if (c.can.edit)
               IconButton(
                 key: const ValueKey('crm-edit'),

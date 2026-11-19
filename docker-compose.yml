@@ -17,6 +17,26 @@ services:
   redis:
     image: redis:7-alpine
 
+  # Online meetings (optional): set LIVEKIT_API_KEY/LIVEKIT_API_SECRET and LIVEKIT_PUBLIC_URL (wss://host:7880 or the
+  # TLS proxy URL) in brands/<brand>/.env. Open 7880/tcp, 7881/tcp and 50000-50100/udp on the host firewall.
+  livekit:
+    image: livekit/livekit-server:latest
+    profiles: ["meetings"]
+    command: --bind 0.0.0.0
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-}: ${LIVEKIT_API_SECRET:-}"
+      LIVEKIT_CONFIG: |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 50100
+          use_external_ip: true
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+
   server:
     build: ./server
     depends_on:
@@ -34,6 +54,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       DJANGO_HTTPS: ${DJANGO_HTTPS:-0}  # set 1 (and NUM_PROXIES=1) behind a TLS-terminating proxy
       NUM_PROXIES: ${NUM_PROXIES:-0}
+      LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
     volumes:
       - ./brands:/brands:ro
       - attachments:/app/attachments

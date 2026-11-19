@@ -18,6 +18,7 @@ from .api_calendar import router as calendar_router
 from .api_mentions import router as mentions_router
 from .api_reminders import router as reminders_router
 from .api_transfer import router as transfer_router
+from .api_video import router as video_router
 from .api_subjects import router as subjects_router
 from .models import Label, SubjectLabel
 
@@ -165,3 +166,4 @@ router.add_router("", mentions_router)
 router.add_router("", transfer_router)
 router.add_router("", calendar_router)
 router.add_router("", bookmarks_router)
+router.add_router("", video_router)

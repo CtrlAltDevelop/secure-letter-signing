@@ -34,8 +34,15 @@ Future<void> _tab(WidgetTester t, String label) async {
 
 void main() {
   test('MonitorPeriod builds preset and custom queries', () {
-    expect(const MonitorPeriod().query(), {'period': 'month', 'calendar': 'jalali', 'bucket': 'day'});
-    final c = const MonitorPeriod().copyWith(from: DateTime(2026, 1, 2), to: DateTime(2026, 1, 9));
+    expect(const MonitorPeriod().query(), {
+      'period': 'month',
+      'calendar': 'jalali',
+      'bucket': 'day',
+    });
+    final c = const MonitorPeriod().copyWith(
+      from: DateTime(2026, 1, 2),
+      to: DateTime(2026, 1, 9),
+    );
     expect(c.query()['from'], '2026-01-02');
     expect(c.query().containsKey('period'), isFalse);
     expect(c.copyWith(preset: 'week').custom, isFalse);
@@ -44,7 +51,13 @@ void main() {
   testWidgets('My numbers card shows the server numbers', (t) async {
     final s = FakeMonitorServer();
     await useTallSurface(t);
-    await t.pumpWidget(faMaterial(home: Scaffold(body: MyNumbersCard(env: monitorEnv(s, canMonitor: false)))));
+    await t.pumpWidget(
+      faMaterial(
+        home: Scaffold(
+          body: MyNumbersCard(env: monitorEnv(s, canMonitor: false)),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
     expect(find.text('۵'), findsOneWidget); // open
     expect(find.text('۹'), findsOneWidget); // unread chat
@@ -65,10 +78,16 @@ void main() {
     final s = await _open(t, _sizes.first);
     await t.tap(find.byKey(const ValueKey('period-week')));
     await t.pumpAndSettle();
-    expect(s.where('GET', '/monitor/overview').last.url.queryParameters['period'], 'week');
+    expect(
+      s.where('GET', '/monitor/overview').last.url.queryParameters['period'],
+      'week',
+    );
     await t.tap(find.byKey(const ValueKey('bucket-month')));
     await t.pumpAndSettle();
-    expect(s.where('GET', '/monitor/overview').last.url.queryParameters['bucket'], 'month');
+    expect(
+      s.where('GET', '/monitor/overview').last.url.queryParameters['bucket'],
+      'month',
+    );
   });
 
   testWidgets('projects sort reaches the server', (t) async {
@@ -79,16 +98,24 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('بیشترین عقب‌افتادگی').last);
     await t.pumpAndSettle();
-    expect(s.where('GET', '/monitor/projects').last.url.queryParameters['sort'], 'most_overdue');
+    expect(
+      s.where('GET', '/monitor/projects').last.url.queryParameters['sort'],
+      'most_overdue',
+    );
   });
 
-  testWidgets('tasks tab lists overdue and prints with printable=true', (t) async {
+  testWidgets('tasks tab lists overdue and prints with printable=true', (
+    t,
+  ) async {
     final s = await _open(t, const Size(800, 2000));
     await _tab(t, 'کارها');
     expect(find.text('Late task'), findsOneWidget);
     await t.tap(find.byKey(const ValueKey('tasks-print')));
     await t.pumpAndSettle();
-    expect(s.where('GET', '/monitor/tasks').last.url.queryParameters['printable'], 'true');
+    expect(
+      s.where('GET', '/monitor/tasks').last.url.queryParameters['printable'],
+      'true',
+    );
     expect(find.byKey(const ValueKey('tasks-print-go')), findsOneWidget);
     expect(t.takeException(), isNull);
   });
@@ -107,7 +134,10 @@ void main() {
     await _tab(t, 'آنلاین');
     await t.tap(find.byKey(const ValueKey('history-2')));
     await t.pumpAndSettle();
-    expect(s.where('GET', '/monitor/online').last.url.queryParameters['history_of'], '2');
+    expect(
+      s.where('GET', '/monitor/online').last.url.queryParameters['history_of'],
+      '2',
+    );
     expect(find.textContaining('Pixel'), findsOneWidget);
   });
 
@@ -126,7 +156,11 @@ void main() {
     await t.pumpWidget(
       faMaterial(
         home: Scaffold(
-          body: GroupAccessSheet(api: env.api, groupId: 4, directory: env.directory!),
+          body: GroupAccessSheet(
+            api: env.api,
+            groupId: 4,
+            directory: env.directory!,
+          ),
         ),
       ),
     );
@@ -138,21 +172,34 @@ void main() {
     await t.tap(find.byKey(const ValueKey('access-add')));
     await t.pumpAndSettle();
     expect(s.bodies.last, {
-      'add': [{'user_id': 2, 'role': 'member'}],
+      'add': [
+        {'user_id': 2, 'role': 'member'},
+      ],
       'remove': <Object>[],
     });
     await t.tap(find.byKey(const ValueKey('access-remove')));
     await t.pumpAndSettle();
-    expect(s.bodies.last, {'add': <Object>[], 'remove': [2]});
+    expect(s.bodies.last, {
+      'add': <Object>[],
+      'remove': [2],
+    });
     expect(s.where('PUT', '/project-groups/4/access'), hasLength(2));
   });
 
-  testWidgets('overdue print blocks include heading, header and rows', (t) async {
+  testWidgets('overdue print blocks include heading, header and rows', (
+    t,
+  ) async {
     late AppLocalizations l;
-    await t.pumpWidget(faMaterial(home: Builder(builder: (c) {
-      l = AppLocalizations.of(c);
-      return const SizedBox();
-    })));
+    await t.pumpWidget(
+      faMaterial(
+        home: Builder(
+          builder: (c) {
+            l = AppLocalizations.of(c);
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
     final blocks = overdueBlocks(l, [
       {'title': 'x', 'days_late': 1, 'owners': <Object>[]},
     ]);

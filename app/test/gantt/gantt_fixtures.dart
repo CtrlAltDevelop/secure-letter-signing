@@ -40,7 +40,13 @@ Map<String, dynamic> itemJson(
   ],
 };
 
-Map<String, dynamic> phaseJson(int id, String wbs, String title, {int? start, int? end}) => {
+Map<String, dynamic> phaseJson(
+  int id,
+  String wbs,
+  String title, {
+  int? start,
+  int? end,
+}) => {
   'id': id,
   'wbs': wbs,
   'title': title,
@@ -66,16 +72,44 @@ Map<String, dynamic> chartJson({bool canEdit = true}) => {
   'phases': [phaseJson(1, '1', 'Design', start: 1, end: 12)],
   'items': [
     itemJson('t1', '1.1', 'Draft', start: 1, end: 5, progress: 60),
-    itemJson('t4', '1.1.1', 'Sketch', level: 3, parent: 't1', phase: null, start: 2, end: 3),
+    itemJson(
+      't4',
+      '1.1.1',
+      'Sketch',
+      level: 3,
+      parent: 't1',
+      phase: null,
+      start: 2,
+      end: 3,
+    ),
     itemJson('t2', '1.2', 'Review', start: 8, end: 12),
     itemJson('t3', '2', 'Ship', level: 1, phase: null, start: 15, end: 20),
   ],
   'links': [
-    {'id': 11, 'predecessor_task_id': 't1', 'successor_task_id': 't2', 'kind': 'fs', 'conflict': false},
-    {'id': 12, 'predecessor_task_id': 't3', 'successor_task_id': 't2', 'kind': 'fs', 'conflict': true},
+    {
+      'id': 11,
+      'predecessor_task_id': 't1',
+      'successor_task_id': 't2',
+      'kind': 'fs',
+      'conflict': false,
+    },
+    {
+      'id': 12,
+      'predecessor_task_id': 't3',
+      'successor_task_id': 't2',
+      'kind': 'fs',
+      'conflict': true,
+    },
   ],
   'unplanned': [
-    {'task_id': 'u1', 'title': 'Loose task', 'status': 'open', 'progress': 0, 'start': null, 'end': null},
+    {
+      'task_id': 'u1',
+      'title': 'Loose task',
+      'status': 'open',
+      'progress': 0,
+      'start': null,
+      'end': null,
+    },
   ],
 };
 
@@ -101,7 +135,8 @@ class FakeGanttServer {
     calls.add(req);
     bodies.add(body);
     final path = req.url.path.replaceFirst('/api', '');
-    if (!path.startsWith('/projects/p1/gantt')) return json({'detail': 'nope'}, 404);
+    if (!path.startsWith('/projects/p1/gantt'))
+      return json({'detail': 'nope'}, 404);
     final tail = path.substring('/projects/p1/gantt'.length);
     if (req.method != 'GET' && failDetail != null) {
       final d = failDetail!;
@@ -124,24 +159,54 @@ class FakeGanttServer {
         'progress': 35,
         'rows': [
           for (final p in (chart['phases'] as List))
-            {'kind': 'phase', 'wbs': p['wbs'], 'level': 1, 'title': p['title'], 'status': '', 'progress': p['progress'], 'start': p['start'], 'end': p['end'], 'owners': <String>[]},
+            {
+              'kind': 'phase',
+              'wbs': p['wbs'],
+              'level': 1,
+              'title': p['title'],
+              'status': '',
+              'progress': p['progress'],
+              'start': p['start'],
+              'end': p['end'],
+              'owners': <String>[],
+            },
           for (final i in (chart['items'] as List))
-            {'kind': 'task', 'wbs': i['wbs'], 'level': i['level'], 'title': i['title'], 'status': 'open', 'progress': i['progress'], 'start': i['start'], 'end': i['end'], 'owners': ['Sara']},
+            {
+              'kind': 'task',
+              'wbs': i['wbs'],
+              'level': i['level'],
+              'title': i['title'],
+              'status': 'open',
+              'progress': i['progress'],
+              'start': i['start'],
+              'end': i['end'],
+              'owners': ['Sara'],
+            },
         ],
         'links': [
           {'from_wbs': '1.1', 'to_wbs': '1.2', 'conflict': false},
         ],
       });
     }
-    if (tail.endsWith('/phases') || tail.contains('/phases/')) return json({...phaseJson(2, '2', 'New')}, 201);
+    if (tail.endsWith('/phases') || tail.contains('/phases/'))
+      return json({...phaseJson(2, '2', 'New')}, 201);
     if (tail.contains('/items/')) return json(chart['items'][0]);
-    if (tail.endsWith('/links')) return json({'id': 13, 'predecessor_task_id': 'a', 'successor_task_id': 'b', 'kind': 'fs', 'conflict': false}, 201);
+    if (tail.endsWith('/links'))
+      return json({
+        'id': 13,
+        'predecessor_task_id': 'a',
+        'successor_task_id': 'b',
+        'kind': 'fs',
+        'conflict': false,
+      }, 201);
     if (tail.contains('/deactivate')) return json({'detail': 'ok'});
     return json({'detail': 'unhandled $tail'}, 404);
   }
 }
 
-({FakeGanttServer server, GanttApi api, GanttEnv env}) ganttFixture({bool canEdit = true}) {
+({FakeGanttServer server, GanttApi api, GanttEnv env}) ganttFixture({
+  bool canEdit = true,
+}) {
   final server = FakeGanttServer()..chart = chartJson(canEdit: canEdit);
   final f = fakeApi(server.handle);
   final api = GanttApi(WorkspaceApi(f.client));

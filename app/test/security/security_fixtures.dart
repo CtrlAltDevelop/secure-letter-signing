@@ -57,7 +57,13 @@ class FakeSecurityServer {
   List<Map<String, dynamic>> guests = [];
   Map<String, dynamic> access = {
     'projects': [
-      {'id': 'p1', 'role': 'member', 'active': true, 'name': 'Alpha', 'kind': ''},
+      {
+        'id': 'p1',
+        'role': 'member',
+        'active': true,
+        'name': 'Alpha',
+        'kind': '',
+      },
     ],
     'customers': [],
     'conversations': [],
@@ -96,7 +102,10 @@ class FakeSecurityServer {
     final path = req.url.path.replaceFirst('/api', '');
     final m = req.method;
     if (path == '/auth/refresh') return json({'access': 'a', 'refresh': 'r2'});
-    if (path == '/me') return json(userJson(guest: guestMe, expires: guestExpires, manager: managerMe));
+    if (path == '/me')
+      return json(
+        userJson(guest: guestMe, expires: guestExpires, manager: managerMe),
+      );
     if (path == '/me/modules') return json({'plan': 'pro', 'modules': modules});
     if (path == '/auth/login' && m == 'POST') {
       return json({'two_factor_required': true, 'challenge': 'CH1'});
@@ -116,26 +125,53 @@ class FakeSecurityServer {
     }
     if (path == '/me/2fa' && m == 'GET') return json(twoFactor);
     if (path == '/me/2fa' && m == 'POST') {
-      return json({'secret': 'JBSWY3DPEHPK3PXP', 'otpauth_uri': 'otpauth://totp/Co:me?secret=JBSWY3DPEHPK3PXP'});
+      return json({
+        'secret': 'JBSWY3DPEHPK3PXP',
+        'otpauth_uri': 'otpauth://totp/Co:me?secret=JBSWY3DPEHPK3PXP',
+      });
     }
     if (path == '/me/2fa/confirm') {
       twoFactor = {...twoFactor, 'enabled': true, 'recovery_codes_left': 10};
-      return json({'recovery_codes': [for (var i = 0; i < 10; i++) 'rc-code-$i']});
+      return json({
+        'recovery_codes': [for (var i = 0; i < 10; i++) 'rc-code-$i'],
+      });
     }
     if (path == '/me/2fa/disable') {
       twoFactor = {...twoFactor, 'enabled': false, 'recovery_codes_left': 0};
       return json({'detail': 'off'});
     }
     if (path == '/me/2fa/recovery-codes') {
-      return json({'recovery_codes': [for (var i = 0; i < 10; i++) 'new-code-$i']});
+      return json({
+        'recovery_codes': [for (var i = 0; i < 10; i++) 'new-code-$i'],
+      });
     }
     if (path == '/me/login-history') return json(history);
-    if (path.startsWith('/manage/users/') && path.endsWith('/login-history')) return json(history);
-    if (path == '/me/sessions/revoke-others') return json({'detail': 'ok', 'revoked': 2});
+    if (path.startsWith('/manage/users/') && path.endsWith('/login-history'))
+      return json(history);
+    if (path == '/me/sessions/revoke-others')
+      return json({'detail': 'ok', 'revoked': 2});
     if (path == '/me/sessions') {
       return json([
-        {'id': 'S1', 'device_name': 'this', 'platform': 'macos', 'ip': '', 'created_at': '2026-01-01T00:00:00Z', 'last_active': '2026-01-01T00:00:00Z', 'current': true, 'biometric': false},
-        {'id': 'S2', 'device_name': 'phone', 'platform': 'android', 'ip': '', 'created_at': '2026-01-01T00:00:00Z', 'last_active': '2026-01-01T00:00:00Z', 'current': false, 'biometric': false},
+        {
+          'id': 'S1',
+          'device_name': 'this',
+          'platform': 'macos',
+          'ip': '',
+          'created_at': '2026-01-01T00:00:00Z',
+          'last_active': '2026-01-01T00:00:00Z',
+          'current': true,
+          'biometric': false,
+        },
+        {
+          'id': 'S2',
+          'device_name': 'phone',
+          'platform': 'android',
+          'ip': '',
+          'created_at': '2026-01-01T00:00:00Z',
+          'last_active': '2026-01-01T00:00:00Z',
+          'current': false,
+          'biometric': false,
+        },
       ]);
     }
     if (path == '/manage/guests' && m == 'GET') return json(guests);
@@ -150,31 +186,41 @@ class FakeSecurityServer {
       guests = [...guests, g];
       return json(g);
     }
-    if (path.startsWith('/manage/guests/') && m == 'PATCH') return json(guests.first);
+    if (path.startsWith('/manage/guests/') && m == 'PATCH')
+      return json(guests.first);
     if (path.endsWith('/active')) return json(guests.first);
-    if (path == '/manage/invites') return json({'id': 1, 'code': 'GUEST-CODE-1', 'guest': true});
+    if (path == '/manage/invites')
+      return json({'id': 1, 'code': 'GUEST-CODE-1', 'guest': true});
     if (path.endsWith('/access') && m == 'GET') return json(access);
     if (path.endsWith('/access') && m == 'PUT') {
       final rows = (body as Map)['projects'] as List;
       final next = [
         for (final r in (access['projects'] as List))
           rows.any((x) => (x as Map)['id'] == (r as Map)['id'])
-              ? {...r, ...(rows.firstWhere((x) => (x as Map)['id'] == r['id']) as Map)}
+              ? {
+                  ...r,
+                  ...(rows.firstWhere((x) => (x as Map)['id'] == r['id'])
+                      as Map),
+                }
               : r,
         for (final r in rows)
-          if (!(access['projects'] as List).any((x) => (x as Map)['id'] == (r as Map)['id']))
+          if (!(access['projects'] as List).any(
+            (x) => (x as Map)['id'] == (r as Map)['id'],
+          ))
             {...r as Map, 'name': 'Beta'},
       ];
       access = {...access, 'projects': next};
       return json(access);
     }
     if (path == '/projects') return json(projectList);
-    if (path == '/customers' || path == '/chat/conversations') return json(<Object>[]);
+    if (path == '/customers' || path == '/chat/conversations')
+      return json(<Object>[]);
     return json({'detail': 'unhandled $m $path'}, 404);
   }
 }
 
-({FakeSecurityServer server, AuthController auth, SecurityApi api}) fakeSecurity() {
+({FakeSecurityServer server, AuthController auth, SecurityApi api})
+fakeSecurity() {
   final server = FakeSecurityServer();
   final f = fakeApi(server.handle);
   final auth = AuthController(f.client, biometrics: FakeBiometrics());
