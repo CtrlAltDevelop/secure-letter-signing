@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Prefetch
 from ninja.errors import HttpError
 
+from accounts import guests
 from accounts.models import User
 from accounts.notify import notify
 
@@ -68,10 +69,10 @@ def _report_progress(user: User, acc: Access, data: CommentIn) -> int | None:
     return None if data.progress is None else acc.spec.set_progress(acc.obj, user, data.progress)
 
 
-def _checked_mentions(acc: Access, ids: list[int]) -> list[User]:
+def _checked_mentions(acc: Access, author: User, ids: list[int]) -> list[User]:
     """The mentioned users (duplicates dropped); 422 unless every one is active and can see the subject."""
     wanted = list(dict.fromkeys(ids))
-    users = list(User.objects.filter(pk__in=wanted, is_active=True).select_related("org_title"))
+    users = list(guests.visible_users(author, User.objects.filter(pk__in=wanted, is_active=True)).select_related("org_title"))
     if len(users) != len(wanted):
         raise HttpError(422, "Unknown or inactive user mentioned")
     if not all(acc.spec.can(u, acc.obj, "see") for u in users):
@@ -93,7 +94,7 @@ def _announce_mentions(acc: Access, comment: Comment, author: User, mentioned: l
 def post_comment(user: User, acc: Access, data: CommentIn) -> Comment:
     text = _checked_text(data.body.text)
     parent = _parent_of(acc.subject, data)
-    mentioned = _checked_mentions(acc, data.mentions)
+    mentioned = _checked_mentions(acc, user, data.mentions)
     snapshot = _report_progress(user, acc, data)
     comment = Comment.objects.create(subject=acc.subject, author=user, parent=parent, kind=data.kind,
                                      body=seal_text(text), progress_snapshot=snapshot)

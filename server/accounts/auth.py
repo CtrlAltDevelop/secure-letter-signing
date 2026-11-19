@@ -44,6 +44,8 @@ class BearerAuth(HttpBearer):
         if session is None or guests.is_expired(session.user):
             return None
         registry.set_current_user(session.user)
+        if guests.refuses_path(session.user, request.path):
+            raise HttpError(404, "Not found")
         if timezone.now() - session.last_active > TOUCH_EVERY:
             Session.objects.filter(pk=session.pk).update(last_active=timezone.now())
         return session

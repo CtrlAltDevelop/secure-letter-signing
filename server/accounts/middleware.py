@@ -5,6 +5,9 @@ class NoStoreApiMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        from workspace import registry
+
+        registry.set_current_user(None)  # the viewer is set again by the bearer auth; never leak across requests
         response = self.get_response(request)
         if request.path.startswith("/api/"):
             response["Cache-Control"] = "no-store"

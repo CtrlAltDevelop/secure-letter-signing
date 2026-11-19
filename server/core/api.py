@@ -22,6 +22,8 @@ from polls.api_templates import router as poll_templates_router
 from projects.api import router as projects_router
 from projects.api_groups import router as project_groups_router
 from chat.api import router as chat_router
+from gantt.api import router as gantt_router
+from monitor.api import router as monitor_router
 from tasks.api import router as tasks_router
 from tasks.api_templates import router as task_templates_router
 from workspace.api import router as workspace_router
@@ -50,6 +52,8 @@ api.add_router("/poll-templates", poll_templates_router)
 api.add_router("/projects", projects_router)
 api.add_router("/project-groups", project_groups_router)
 api.add_router("", chat_router)
+api.add_router("", gantt_router)  # /projects/{id}/gantt/*
+api.add_router("/monitor", monitor_router)
 
 
 @api.get("/health", auth=None)

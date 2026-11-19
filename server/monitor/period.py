@@ -7,6 +7,7 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 from ninja.errors import HttpError
 
+from workspace import periods
 from workspace.recurrence import TEHRAN
 
 DEFAULT_DAYS = 30
@@ -42,9 +43,15 @@ def today_bounds() -> tuple[datetime, datetime]:
     return day.start, day.end
 
 
-def resolve(first: date | None, last: date | None) -> Period:
+PRESET_DAYS = {"week": 7, "month": 30, "quarter": 90, "year": 365}  # rolling windows ending at `to` (default today)
+
+
+def resolve(first: date | None, last: date | None, preset: str = "") -> Period:
+    if preset and preset not in PRESET_DAYS:
+        raise HttpError(422, "period must be week, month, quarter or year")
     last = last or today()
-    first = first or last - timedelta(days=DEFAULT_DAYS - 1)
+    days = PRESET_DAYS.get(preset, DEFAULT_DAYS)
+    first = first or last - timedelta(days=days - 1)
     if last < first:
         raise HttpError(422, "to must not be before from")
     if (last - first).days + 1 > MAX_DAYS:
@@ -68,3 +75,24 @@ def daily(rows: QuerySet, field: str, period: Period, agg=None) -> list[dict]:
 
 def total(series: list[dict]) -> int:
     return sum(point["value"] for point in series)
+
+
+BUCKETS = ("day", "week", "month")
+CALENDARS = periods.CALENDARS
+
+
+def bucketize(series: list[dict], bucket: str, calendar: str) -> list[dict]:
+    """Sum a daily `[{date, value}]` series into `day`, 7-day `week` or calendar `month` (Gregorian or Jalali) buckets."""
+    if bucket == "day":
+        return series
+    out: dict = {}
+    for i, point in enumerate(series):
+        day = date.fromisoformat(point["date"])
+        if bucket == "week":
+            key, label = i // 7, point["date"]
+        else:
+            key = periods.key_of(day, calendar, "month")
+            label = periods.label(key)
+        row = out.setdefault(key, {"date": point["date"], "label": label, "value": 0})
+        row["value"] += point["value"]
+    return list(out.values())

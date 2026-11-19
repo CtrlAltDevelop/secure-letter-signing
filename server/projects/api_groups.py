@@ -10,9 +10,9 @@ from accounts.api_auth import Detail
 from accounts.auth import BearerAuth, user_of
 from accounts.models import User
 
-from . import service
+from . import group_access, service
 from .models import ProjectGroup
-from .schemas import GroupIn, GroupOut, GroupPatch
+from .schemas import GroupAccessIn, GroupAccessOut, GroupIn, GroupOut, GroupPatch
 
 router = Router(tags=["projects"], auth=BearerAuth())
 RANK_GAP = service.RANK_GAP
@@ -60,3 +60,13 @@ def patch(request, group_id: int, data: GroupPatch):
             setattr(group, name, value.strip() if name == "name" else value)
     group.save()
     return _out(group)
+
+
+@router.put("/{int:group_id}/access", response={200: GroupAccessOut, 403: Detail, 404: Detail, 422: Detail})
+def set_access(request, group_id: int, data: GroupAccessIn):
+    """Manager only: add / change the role of / deactivate users on every project of an organisation group."""
+    service.gate()
+    user = user_of(request)
+    if not user.is_manager:
+        raise HttpError(403, "Only the manager can manage organisation groups")
+    return group_access.apply(user, group_id, data)

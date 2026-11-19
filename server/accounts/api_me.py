@@ -11,6 +11,7 @@ from pydantic import Field
 
 from . import ratelimit
 from .api_auth import Detail, check_password
+from .api_security import router as security_router
 from .auth import BearerAuth, user_of
 from .models import CompanySettings, Notification, Session, audit
 from .schemas import SessionOut, UserOut
@@ -157,3 +158,6 @@ def notifications(request, after: int = 0, limit: int = 100):
 def mark_notifications_read(request):
     Notification.objects.filter(user=user_of(request), read_at__isnull=True).update(read_at=timezone.now())
     return {"detail": "ok"}
+
+
+router.add_router("", security_router)

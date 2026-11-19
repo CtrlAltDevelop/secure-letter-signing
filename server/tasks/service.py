@@ -4,6 +4,7 @@ from uuid import UUID
 from django.db import transaction
 from ninja.errors import HttpError
 
+from accounts import guests
 from accounts.models import User, audit
 from crm import service as crm_service
 from crm import timeline as crm_timeline
@@ -24,8 +25,8 @@ def unique(ids: list[int]) -> list[int]:
     return list(dict.fromkeys(ids))
 
 
-def check_users(ids: list[int]) -> None:
-    if User.objects.filter(pk__in=ids, is_active=True).count() != len(set(ids)):
+def check_users(ids: list[int], actor: User) -> None:
+    if User.objects.filter(pk__in=ids, is_active=True).count() != len(set(ids)) or guests.referable_ids(actor, ids) != set(ids):
         raise HttpError(422, "Unknown or inactive user")
 
 
@@ -62,7 +63,7 @@ def _checked_labels(user: User, label_ids: list[int]) -> list[int]:
 def create_task(user: User, data: TaskIn) -> Task:
     owners = unique(data.owner_ids) or [user.id]
     approvers, followers = unique(data.approver_ids), unique(data.follower_ids)
-    check_users(unique(owners + approvers + followers))
+    check_users(unique(owners + approvers + followers), user)
     check_dates(data.start_at, data.due_at)
     texts = [t.strip() for t in data.checklist]
     if not all(texts):
@@ -230,7 +231,7 @@ def set_people(user: User, task_id: UUID, data: PeopleIn) -> Task:
     store.require(user, task, "edit")
     wanted = {OWNER: unique(data.owner_ids), APPROVER: unique(data.approver_ids), FOLLOWER: unique(data.follower_ids)}
     everyone = unique([u for ids in wanted.values() for u in ids])
-    check_users(everyone)
+    check_users(everyone, user)
     if task.project_id:
         placement.check_people_in_project(task.project, everyone)
     before = {role: _role_ids(task, role) for role in wanted}

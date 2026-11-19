@@ -34,9 +34,13 @@ def start_setup(user: User, issuer: str) -> dict:
     return {"secret": secret, "otpauth_uri": totp.otpauth_uri(secret, user.email, issuer or ISSUER_FALLBACK)}
 
 
-def code_ok(user: User, code: str) -> bool:
+def code_ok(user: User, code: str, *, burn: bool = True) -> bool:
+    """True for a valid TOTP code. With `burn` (default) each code works once (the cache add is atomic), so a
+    sniffed code cannot be replayed inside its 90 s validity window."""
     secret = secret_of(user)
-    return bool(secret) and totp.verify(secret, code)
+    if not (secret and totp.verify(secret, code)):
+        return False
+    return not burn or cache.add(f"totp-used:{user.id}:{code.strip()}", 1, 90)
 
 
 def _normalize(code: str) -> str:
@@ -61,7 +65,7 @@ def enable(user: User, code: str) -> list[str]:
         raise HttpError(409, "Two-factor login is already enabled")
     if not user.totp_secret:
         raise HttpError(409, "Start the setup first")
-    if not code_ok(user, code):
+    if not code_ok(user, code, burn=False):
         raise HttpError(403, "The code is wrong")
     user.totp_enabled = True
     user.save(update_fields=["totp_enabled"])

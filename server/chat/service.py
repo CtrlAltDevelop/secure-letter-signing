@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja.errors import HttpError
 
+from accounts import guests
 from accounts.models import User, audit
 from accounts.notify import notify
 from workspace.models import Subject
@@ -44,9 +45,9 @@ def require_admin(user: User, conv: Conversation) -> None:
         raise HttpError(403, "Permission denied")
 
 
-def _active_users(ids: list[int]) -> dict[int, User]:
+def _active_users(ids: list[int], actor: User) -> dict[int, User]:
     users = {u.id: u for u in User.objects.filter(pk__in=set(ids), is_active=True)}
-    if len(users) != len(set(ids)):
+    if len(users) != len(set(ids)) or guests.referable_ids(actor, set(ids)) != set(ids):
         raise HttpError(422, "Unknown or inactive user")
     return users
 
@@ -62,7 +63,7 @@ def create_conversation(user: User, data: ConversationIn) -> Conversation:
     if not user.has_grant(GROUP_PERMISSION):
         raise HttpError(403, "Permission denied")
     others = [i for i in dict.fromkeys(data.member_ids) if i != user.id]
-    users = _active_users(others)
+    users = _active_users(others, user)
     policy = data.post_policy or (Conversation.ADMINS if data.kind == Conversation.CHANNEL else Conversation.ALL)
     conv = _new_conversation(user, kind=data.kind, name=data.name.strip(), description=data.description.strip(),
                              is_public=data.is_public, post_policy=policy)
@@ -90,7 +91,7 @@ def open_dm(user: User, other_id: int) -> Conversation:
     gate()
     if other_id == user.id:
         raise HttpError(422, "Cannot message yourself")
-    other = _active_users([other_id])[other_id]
+    other = _active_users([other_id], user)[other_id]
     key = dm_key(user.id, other.id)
     for _ in range(2):
         conv = Conversation.objects.filter(dm_key=key).select_related("subject").first()
@@ -125,7 +126,7 @@ def update_conversation(user: User, conv: Conversation, data: ConversationPatch)
     return conv
 
 
-def _check_roster(conv: Conversation, members: list[MemberIn]) -> dict[int, str]:
+def _check_roster(conv: Conversation, members: list[MemberIn], actor: User) -> dict[int, str]:
     if conv.kind == Conversation.DM or mirror.is_mirrored(conv):
         raise HttpError(422, "The members of this conversation cannot be edited")
     wanted: dict[int, str] = {}
@@ -133,14 +134,14 @@ def _check_roster(conv: Conversation, members: list[MemberIn]) -> dict[int, str]
         wanted[m.user_id] = m.role
     if ADMIN not in wanted.values():
         raise HttpError(422, "At least one admin is required")
-    _active_users(list(wanted))
+    _active_users(list(wanted), actor)
     return wanted
 
 
 @transaction.atomic
 def set_members(user: User, conv: Conversation, members: list[MemberIn]) -> list[int]:
     require_admin(user, conv)
-    wanted = _check_roster(conv, members)
+    wanted = _check_roster(conv, members, user)
     rows = {m.user_id: m for m in ConversationMember.objects.filter(conversation=conv)}
     added: list[int] = []
     for uid, role in wanted.items():

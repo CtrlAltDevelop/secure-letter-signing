@@ -30,14 +30,14 @@ def people(make_user, login, manager):
 
 def test_me_modules_default_is_all_enabled(people):
     data = people.ann_d.call("get", "/me/modules").data
-    assert data == {"plan": "advanced", "modules": [{"code": c, "enabled": True} for c in ("letters", "tasks", "projects", "meetings", "notes", "polls", "crm", "finance", "sales", "chat")]}
+    assert data == {"plan": "advanced", "modules": [{"code": c, "enabled": True} for c in ("letters", "tasks", "projects", "meetings", "notes", "polls", "crm", "finance", "sales", "chat", "gantt")]}
 
 
 def test_me_modules_honours_brand_list_and_registered_modules(people, dummy, brand_dir):
     brand_dir(modules=["letters", "dummy"])
     mods = {m["code"]: m["enabled"] for m in people.ann_d.call("get", "/me/modules").data["modules"]}
     assert mods == {"letters": True, "tasks": False, "projects": False, "meetings": False,
-                    "notes": False, "polls": False, "crm": False, "finance": False, "sales": False, "chat": False, "dummy": True}
+                    "notes": False, "polls": False, "crm": False, "finance": False, "sales": False, "chat": False, "gantt": False, "dummy": True}
 
 
 def test_me_modules_needs_login(api, db):

@@ -4,6 +4,7 @@ Shared endpoints never decide access themselves: they resolve the subject's modu
 Plan gating later = one plan -> modules map inside `enabled_modules()`.
 """
 from collections.abc import Callable, Iterable
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
@@ -15,7 +16,7 @@ from core.brand import brand_modules
 
 from .models import Subject
 
-KNOWN_MODULES = ("letters", "tasks", "projects", "meetings", "notes", "polls", "crm", "finance", "sales", "chat")
+KNOWN_MODULES = ("letters", "tasks", "projects", "meetings", "notes", "polls", "crm", "finance", "sales", "chat", "gantt")
 PLAN = "advanced"
 
 
@@ -75,9 +76,21 @@ def module_codes() -> list[str]:
     return [*KNOWN_MODULES, *(c for c in _REGISTRY if c not in KNOWN_MODULES)]
 
 
+_viewer: ContextVar[User | None] = ContextVar("workspace_viewer", default=None)
+
+
+def set_current_user(user: User | None) -> None:
+    """Called by the API auth for every request: guests only get `GUEST_MODULES` from `enabled_modules()`."""
+    _viewer.set(user)
+
+
 def enabled_modules() -> set[str]:
+    from accounts.guests import GUEST_MODULES
+
     listed = brand_modules()
-    return set(module_codes()) if listed is None else set(listed)
+    mods = set(module_codes()) if listed is None else set(listed)
+    viewer = _viewer.get()
+    return mods & GUEST_MODULES if viewer is not None and viewer.is_guest else mods
 
 
 def require_module(code: str) -> None:

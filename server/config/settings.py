@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "workspace",
     "tasks",
     "projects",
+    "gantt",
     "meetings",
     "notes",
     "polls",
@@ -56,6 +57,7 @@ INSTALLED_APPS = [
     "finance",
     "sales",
     "chat",
+    "monitor",
 ]
 
 MIDDLEWARE = [

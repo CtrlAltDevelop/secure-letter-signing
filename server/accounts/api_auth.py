@@ -83,6 +83,14 @@ def _create_or_409(email: str, data, *, active: bool) -> User:
         raise HttpError(409, "Email already registered") from exc
 
 
+def _create_guest_or_409(email: str, data, expires_at) -> User:
+    try:
+        with transaction.atomic():
+            return guests.create_guest(email, data.password, data.full_name, expires_at)
+    except IntegrityError as exc:
+        raise HttpError(409, "Email already registered") from exc
+
+
 @router.post("/signup", auth=None, throttle=throttle, response={201: Detail, 202: Detail})
 @transaction.atomic
 def signup(request, data: SignupIn):
@@ -105,17 +113,21 @@ def signup(request, data: SignupIn):
         )
         if not usable:
             raise HttpError(403, "Invalid or expired invitation code")
-        user = _create_or_409(email, data, active=True)
+        if invite.guest:
+            user = _create_guest_or_409(email, data, invite.guest_expires_at)
+        else:
+            user = _create_or_409(email, data, active=True)
         # Atomic bump: select_for_update is a no-op on SQLite.
         if not InviteCode.objects.filter(Q(max_uses__isnull=True) | Q(uses__lt=F("max_uses")), pk=invite.pk).update(
             uses=F("uses") + 1
         ):
             raise HttpError(403, "Invalid or expired invitation code")
-        user.grants.add(*invite.grants.all())
+        if not invite.guest:
+            user.grants.add(*invite.grants.all())
         if invite.department_id and invite.department.active:
             user.department = invite.department
             user.save(update_fields=["department"])
-        audit(user, "signup_invite", email, invite=invite.id)
+        audit(user, "signup_invite", email, invite=invite.id, guest=invite.guest)
         return Status(201, {"detail": "Registered"})
 
     domain = email.rsplit("@", 1)[1]

@@ -7,6 +7,8 @@ from ninja import Router, Schema
 from ninja.errors import HttpError
 
 from . import mailer
+from .api_access import router as access_router
+from .api_guests import router as guests_router
 from .api_titles import router as titles_router
 from .auth import BearerAuth, require_manager
 from .models import BASE_PERMISSION, CompanySettings, Department, InviteCode, Permission, Session, User, audit
@@ -70,6 +72,8 @@ class InviteIn(Schema):
     expires_at: datetime | None = None
     codes: list[str] = []  # permission codes granted at signup, besides the base one
     department_id: int | None = None
+    guest: bool = False  # the signup becomes a guest account (no grants; `codes` must be empty)
+    guest_expires_at: datetime | None = None
 
 
 class InviteOut(Schema):
@@ -81,12 +85,15 @@ class InviteOut(Schema):
     active: bool
     codes: list[str]
     department: str
+    guest: bool = False
+    guest_expires_at: datetime | None = None
 
     @staticmethod
     def of(i: InviteCode) -> "InviteOut":
         return InviteOut(
             id=i.id, code=i.code, max_uses=i.max_uses, uses=i.uses, expires_at=i.expires_at, active=i.active,
             codes=sorted(g.code for g in i.grants.all()), department=i.department.name if i.department else "",
+            guest=i.guest, guest_expires_at=i.guest_expires_at,
         )
 
 
@@ -110,6 +117,8 @@ def set_permissions(request, user_id: int, data: GrantsIn):
     if target.is_superuser and target.pk != manager.pk:  # the manager may grant themselves letter permissions
         raise HttpError(403, "This account cannot be changed here")
     codes = set(data.codes) | {BASE_PERMISSION}
+    if target.is_guest and codes != {BASE_PERMISSION}:
+        raise HttpError(422, "A guest cannot hold permissions")
     found = Permission.objects.filter(code__in=codes)
     if found.count() != len(codes):
         raise HttpError(422, "Unknown permission code")
@@ -254,12 +263,17 @@ def create_invite(request, data: InviteIn):
     manager = require_manager(request)
     if data.max_uses is not None and data.max_uses < 1:
         raise HttpError(422, "max_uses must be at least 1, or empty for unlimited")
+    if data.guest and data.codes:
+        raise HttpError(422, "A guest invitation grants no permissions")
+    if data.guest_expires_at and (not data.guest or data.guest_expires_at <= timezone.now()):
+        raise HttpError(422, "The guest expiry must be in the future and needs a guest invitation")
     found = Permission.objects.filter(code__in=set(data.codes) - {BASE_PERMISSION})
     if found.count() != len(set(data.codes) - {BASE_PERMISSION}):
         raise HttpError(422, "Unknown permission code")
     dept = get_object_or_404(Department, pk=data.department_id, active=True) if data.department_id else None
     invite = InviteCode.objects.create(
         created_by=manager, max_uses=data.max_uses, expires_at=data.expires_at, department=dept,
+        guest=data.guest, guest_expires_at=data.guest_expires_at,
     )
     invite.grants.set(found)
     audit(manager, "invite_created", str(invite.id), max_uses=invite.max_uses, grants=sorted(data.codes))
@@ -284,3 +298,5 @@ def deactivate_invite(request, invite_id: int):
 
 
 router.add_router("", titles_router)
+router.add_router("", guests_router)
+router.add_router("", access_router)

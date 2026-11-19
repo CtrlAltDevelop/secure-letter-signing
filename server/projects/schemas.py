@@ -17,6 +17,16 @@ class MemberIn(Schema):
     role: str = Field(pattern=ROLE)
 
 
+class GroupAccessIn(Schema):
+    add: list[MemberIn] = []  # added (or role-changed) on every active project of the group
+    remove: list[int] = []  # deactivated on every project of the group (owners stay)
+
+
+class GroupAccessOut(Schema):
+    group_id: int
+    projects_changed: int
+
+
 class ProjectIn(Schema):
     name: str = Field(min_length=1, max_length=200)
     description: DescriptionIn | None = None

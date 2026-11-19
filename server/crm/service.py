@@ -75,6 +75,8 @@ def checked_members(owner_id: int, members: list[MemberIn]) -> dict[int, str]:
     wanted[owner_id] = membership.MANAGER
     if User.objects.filter(pk__in=wanted, is_active=True).count() != len(wanted):
         raise HttpError(422, "Unknown or inactive user")
+    if User.objects.filter(pk__in=wanted, is_guest=True).exists():  # guests never get customer files
+        raise HttpError(422, "Unknown or inactive user")
     return wanted
 
 

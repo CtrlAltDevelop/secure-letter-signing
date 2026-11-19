@@ -11,6 +11,34 @@ from .models import User
 GUEST_MODULES = frozenset({"tasks", "projects", "chat"})
 
 
+def create_guest(email: str, password: str, full_name: str = "", expires_at=None) -> User:
+    """A guest account: only the base grant, never the default grants."""
+    from .models import BASE_PERMISSION, Permission
+
+    user = User.objects.create_user(email, password, full_name=full_name, is_guest=True, guest_expires_at=expires_at,
+                                    is_active=True)
+    user.grants.add(*Permission.objects.filter(code=BASE_PERMISSION))
+    return user
+
+
+# First path segment (after /api/) -> the module that owns it, for the modules guests may not use.
+PATH_MODULES = {
+    "letters": "letters", "sign-requests": "letters", "referrals": "letters", "secretariat": "letters",
+    "customers": "crm", "finance": "finance", "sales": "sales", "meetings": "meetings",
+    "meeting-templates": "meetings", "notes": "notes", "polls": "polls", "poll-templates": "polls",
+    "manage": "manage",
+}
+
+
+def refuses_path(user: User, path: str) -> bool:
+    """True when `user` is a guest asking for a module's endpoints (answered 404, like a switched-off module)."""
+    if not user.is_guest:
+        return False
+    parts = path.strip("/").split("/")
+    module = PATH_MODULES.get(parts[1] if len(parts) > 1 and parts[0] == "api" else "")
+    return module is not None and module not in GUEST_MODULES
+
+
 def is_expired(user: User) -> bool:
     return bool(user.is_guest and user.guest_expires_at and user.guest_expires_at <= timezone.now())
 

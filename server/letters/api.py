@@ -12,6 +12,7 @@ from ninja import File, Form, Router, Schema
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
+from accounts import guests
 from accounts.api_auth import Detail
 from accounts.auth import BearerAuth, require_manager, user_of
 from accounts.models import User, audit
@@ -166,7 +167,7 @@ class DirectoryUser(Schema):
 @router.get("/directory", response=list[DirectoryUser])
 def directory(request):
     """Active colleagues, for picking signers and viewers when writing a letter."""
-    users = User.objects.filter(is_active=True).select_related("org_title").prefetch_related("grants").order_by("email")
+    users = guests.visible_users(user_of(request)).select_related("org_title").prefetch_related("grants").order_by("email")
     return [DirectoryUser(id=u.id, email=u.email, full_name=u.full_name, status_text=u.status_text,
                           title=u.org_title.name if u.org_title_id else "",
                           permissions=sorted(g.code for g in u.grants.all())) for u in users]

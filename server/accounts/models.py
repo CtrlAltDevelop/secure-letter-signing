@@ -149,6 +149,9 @@ class InviteCode(models.Model):
     # Applied to everyone who signs up with this code (the base "user" grant is always given).
     grants = models.ManyToManyField(Permission, blank=True, related_name="invites")
     department = models.ForeignKey(Department, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    # Guest invites create guest accounts (no grants besides the base one), optionally expiring.
+    guest = models.BooleanField(default=False)
+    guest_expires_at = models.DateTimeField(null=True, blank=True)
 
 
 class CompanySettings(models.Model):

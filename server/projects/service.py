@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja.errors import HttpError
 
+from accounts import guests
 from accounts.models import User, audit
 from tasks import history
 from workspace import registry
@@ -51,7 +52,7 @@ def checked_group(user: User, group_id: int | None) -> ProjectGroup | None:
     return group
 
 
-def checked_members(owner_id: int, members: list[MemberIn]) -> dict[int, str]:
+def checked_members(owner_id: int, members: list[MemberIn], actor: User) -> dict[int, str]:
     """{user_id: role} with the owner forced to manager; 422 for duplicates or unknown/inactive users."""
     wanted: dict[int, str] = {}
     for m in members:
@@ -61,7 +62,7 @@ def checked_members(owner_id: int, members: list[MemberIn]) -> dict[int, str]:
     if wanted.get(owner_id, membership.MANAGER) != membership.MANAGER:
         raise HttpError(422, "The owner cannot be demoted")
     wanted[owner_id] = membership.MANAGER
-    if User.objects.filter(pk__in=wanted, is_active=True).count() != len(wanted):
+    if User.objects.filter(pk__in=wanted, is_active=True).count() != len(wanted) or guests.referable_ids(actor, wanted) != set(wanted):
         raise HttpError(422, "Unknown or inactive user")
     return wanted
 
@@ -76,7 +77,7 @@ def check_owner_kept(owner_id: int, members: list[MemberIn]) -> None:
 def create_project(user: User, data: ProjectIn) -> Project:
     check_dates(data.start_date, data.end_date)
     group = checked_group(user, data.group_id)
-    wanted = checked_members(user.id, data.members)
+    wanted = checked_members(user.id, data.members, user)
     subject = Subject.objects.create(module=notices.MODULE, kind="project")
     description = seal_text(data.description.text if data.description else "")
     project = Project.objects.create(
@@ -163,7 +164,7 @@ def _sync_members(project: Project, wanted: dict[int, str], actor: User) -> None
 def set_members(user: User, project_id: UUID, members: list[MemberIn]) -> Project:
     project = lock_project(user, project_id, "edit")
     check_owner_kept(project.owner_id, members)
-    wanted = checked_members(project.owner_id, members)
+    wanted = checked_members(project.owner_id, members, user)
     before = _members_state(project)
     if before == wanted:
         return project
