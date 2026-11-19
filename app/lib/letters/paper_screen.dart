@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/paper_preview.dart';
 
@@ -37,7 +38,11 @@ class _PaperScreenState extends State<PaperScreen> {
     try {
       await _preview.currentState?.print();
     } on Object catch (e) {
-      if (mounted) setState(() => _error = 'Could not print: $e');
+      if (mounted) {
+        setState(
+          () => _error = AppLocalizations.of(context).paperPrintFailed('$e'),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -46,7 +51,7 @@ class _PaperScreenState extends State<PaperScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Paper preview'),
+      title: Text(AppLocalizations.of(context).paperPreviewTitle),
       actions: [PrintButton(busy: _busy, onPressed: () => unawaited(_print()))],
     ),
     body: Column(
@@ -72,7 +77,7 @@ class PrintButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: 'Print / save PDF',
+    tooltip: AppLocalizations.of(context).paperPrint,
     onPressed: busy ? null : onPressed,
     icon: busy
         ? const SizedBox(

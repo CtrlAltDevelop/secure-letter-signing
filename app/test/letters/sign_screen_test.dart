@@ -4,6 +4,7 @@ import 'package:letter_signing/letters/models.dart';
 import 'package:letter_signing/letters/sign_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../helpers.dart';
 import 'fakes.dart';
 
 const me = FakeUser(2, 'me@x.test');
@@ -27,7 +28,7 @@ Future<void> open(
 }) async {
   await useTallSurface(t);
   await t.pumpWidget(
-    MaterialApp(
+    faMaterial(
       home: SignScreen(
         env: env,
         letter: letter(),
@@ -39,7 +40,7 @@ Future<void> open(
   await t.pumpAndSettle();
 }
 
-Finder pinField() => find.widgetWithText(TextFormField, 'Signing PIN');
+Finder pinField() => find.widgetWithText(TextFormField, 'رمز امضا');
 
 void main() {
   layoutTests();
@@ -54,10 +55,10 @@ void main() {
       return json({});
     });
     await open(t, testEnv(f));
-    await t.tap(find.text('Reject'));
-    await t.enterText(find.widgetWithText(TextField, 'Note (optional)'), 'no');
+    await t.tap(find.text('رد'));
+    await t.enterText(find.widgetWithText(TextField, 'یادداشت (اختیاری)'), 'no');
     await t.enterText(pinField(), '123456');
-    await t.tap(find.text('Sign with PIN'));
+    await t.tap(find.text('امضا با رمز'));
     await t.pumpAndSettle();
     expect(posted, {'decision': 'rejected', 'note': 'no', 'pin': '123456'});
   });
@@ -68,9 +69,9 @@ void main() {
     );
     await open(t, testEnv(f));
     await t.enterText(pinField(), '123');
-    await t.tap(find.text('Sign with PIN'));
+    await t.tap(find.text('امضا با رمز'));
     await t.pumpAndSettle();
-    expect(find.text('Enter 6 digits'), findsOneWidget);
+    expect(find.text('۶ رقم وارد کنید'), findsOneWidget);
     expect(f.calls.where((c) => c.url.path.endsWith('/sign')), isEmpty);
   });
 
@@ -83,7 +84,7 @@ void main() {
     });
     await open(t, testEnv(f));
     await t.enterText(pinField(), '000000');
-    await t.tap(find.text('Sign with PIN'));
+    await t.tap(find.text('امضا با رمز'));
     await t.pumpAndSettle();
     expect(find.text('Wrong signing PIN'), findsOneWidget);
     expect(find.byType(SignScreen), findsOneWidget);
@@ -92,21 +93,21 @@ void main() {
   testWidgets('no biometric button on a non-biometric session', (t) async {
     final f = fakeApi((req, _) => json(sessions()));
     await open(t, testEnv(f));
-    expect(find.text('Fingerprint / face'), findsNothing);
+    expect(find.text('اثر انگشت / چهره'), findsNothing);
   });
 
   testWidgets('enable link appears when available but not enrolled', (t) async {
     final f = fakeApi((req, _) => json(sessions()));
     await open(t, testEnv(f, enrollBiometric: (_) async => true));
-    expect(find.text('Enable fingerprint / face'), findsOneWidget);
-    expect(find.text('Fingerprint / face'), findsNothing);
-    expect(find.text('Ask my phone'), findsOneWidget);
+    expect(find.text('فعال‌سازی اثر انگشت / چهره'), findsOneWidget);
+    expect(find.text('اثر انگشت / چهره'), findsNothing);
+    expect(find.text('تأیید با phone من'), findsOneWidget);
   });
 
   testWidgets('enable link is hidden when enrolled or unavailable', (t) async {
     final enrolled = fakeApi((req, _) => json(sessions(biometric: true)));
     await open(t, testEnv(enrolled, enrollBiometric: (_) async => true));
-    expect(find.text('Enable fingerprint / face'), findsNothing);
+    expect(find.text('فعال‌سازی اثر انگشت / چهره'), findsNothing);
     final none = fakeApi((req, _) => json(sessions()));
     await open(
       t,
@@ -116,7 +117,7 @@ void main() {
         enrollBiometric: (_) async => true,
       ),
     );
-    expect(find.text('Enable fingerprint / face'), findsNothing);
+    expect(find.text('فعال‌سازی اثر انگشت / چهره'), findsNothing);
   });
 
   testWidgets('enable link opens the dialog', (t) async {
@@ -132,7 +133,7 @@ void main() {
         },
       ),
     );
-    await t.tap(find.text('Enable fingerprint / face'));
+    await t.tap(find.text('فعال‌سازی اثر انگشت / چهره'));
     await t.pumpAndSettle();
     expect(find.text('Use fingerprint / face on this device'), findsOneWidget);
     await t.enterText(
@@ -158,7 +159,7 @@ void main() {
     });
     final bio = FakeBiometrics();
     await open(t, testEnv(f, biometrics: bio));
-    await t.tap(find.text('Fingerprint / face'));
+    await t.tap(find.text('اثر انگشت / چهره'));
     await t.pumpAndSettle();
     expect(bio.reasons.single, contains('Budget'));
     expect(posted, {'decision': 'approved', 'note': ''});
@@ -167,9 +168,9 @@ void main() {
   testWidgets('nothing is posted when local auth fails', (t) async {
     final f = fakeApi((req, _) => json(sessions(biometric: true)));
     await open(t, testEnv(f, biometrics: FakeBiometrics(result: false)));
-    await t.tap(find.text('Fingerprint / face'));
+    await t.tap(find.text('اثر انگشت / چهره'));
     await t.pumpAndSettle();
-    expect(find.text('Fingerprint / face check failed'), findsOneWidget);
+    expect(find.text('تأیید اثر انگشت یا چهره ناموفق بود'), findsOneWidget);
     expect(f.calls.where((c) => c.url.path.contains('sign')), isEmpty);
   });
 
@@ -191,7 +192,7 @@ void main() {
     LetterBrief? result;
     await useTallSurface(t);
     await t.pumpWidget(
-      MaterialApp(
+      faMaterial(
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async => result = await Navigator.of(context)
@@ -207,7 +208,7 @@ void main() {
     );
     await t.tap(find.text('go'));
     await t.pumpAndSettle();
-    await t.tap(find.text('Ask my phone'));
+    await t.tap(find.text('تأیید با phone من'));
     await t.pump();
     await t.pump();
     expect(posted, {
@@ -215,7 +216,7 @@ void main() {
       'note': '',
       'approver_session_id': 'S2',
     });
-    expect(find.text('Waiting for approval on phone'), findsOneWidget);
+    expect(find.text('در انتظار تأیید روی phone'), findsOneWidget);
 
     live.push({
       'type': 'sign_request_update',
@@ -232,16 +233,16 @@ void main() {
       return json(signRequestJson('R1'));
     });
     await open(t, testEnv(f));
-    await t.tap(find.text('Ask my phone'));
+    await t.tap(find.text('تأیید با phone من'));
     await t.pump();
     await t.pump();
-    await t.tap(find.text('Cancel'));
+    await t.tap(find.text('انصراف'));
     await t.pumpAndSettle();
     expect(
       f.calls.any((c) => c.url.path == '/api/sign-requests/R1/cancel'),
       isTrue,
     );
-    expect(find.text('Sign with PIN'), findsOneWidget);
+    expect(find.text('امضا با رمز'), findsOneWidget);
   });
 
   testWidgets('a declined update returns to the PIN with a message', (t) async {
@@ -251,7 +252,7 @@ void main() {
     });
     final live = FakeLive(f.client);
     await open(t, testEnv(f, live: live));
-    await t.tap(find.text('Ask my phone'));
+    await t.tap(find.text('تأیید با phone من'));
     await t.pump();
     await t.pump();
     live.push({
@@ -259,8 +260,8 @@ void main() {
       'request': signRequestJson('R1', status: 'declined'),
     });
     await t.pumpAndSettle();
-    expect(find.textContaining('phone declined'), findsOneWidget);
-    expect(find.text('Sign with PIN'), findsOneWidget);
+    expect(find.textContaining('phone رد کرد'), findsOneWidget);
+    expect(find.text('امضا با رمز'), findsOneWidget);
   });
 
   testWidgets('polling picks up a decision without a live frame', (t) async {
@@ -277,12 +278,12 @@ void main() {
       return json({});
     });
     await open(t, testEnv(f));
-    await t.tap(find.text('Ask my phone'));
+    await t.tap(find.text('تأیید با phone من'));
     await t.pump();
     await t.pump(const Duration(seconds: 4));
     await t.pumpAndSettle();
     expect(polls, greaterThan(0));
-    expect(find.textContaining('expired'), findsOneWidget);
+    expect(find.textContaining('منقضی'), findsOneWidget);
   });
 
   testWidgets('the timeout falls back to the PIN', (t) async {
@@ -294,12 +295,12 @@ void main() {
       return json(signRequestJson('R1'));
     });
     await open(t, testEnv(f), timeout: const Duration(seconds: 10));
-    await t.tap(find.text('Ask my phone'));
+    await t.tap(find.text('تأیید با phone من'));
     await t.pump();
     await t.pump(const Duration(seconds: 11));
     await t.pumpAndSettle();
-    expect(find.textContaining('No answer from phone'), findsOneWidget);
-    expect(find.text('Sign with PIN'), findsOneWidget);
+    expect(find.textContaining('phone پاسخ نداد'), findsOneWidget);
+    expect(find.text('امضا با رمز'), findsOneWidget);
     expect(f.calls.any((c) => c.url.path.endsWith('/cancel')), isTrue);
   });
 }
@@ -310,13 +311,13 @@ void layoutTests() {
       await useTallSurface(t, size);
       final f = fakeApi((req, _) => json(sessions(biometric: true)));
       await t.pumpWidget(
-        MaterialApp(
+        faMaterial(
           home: SignScreen(env: testEnv(f), letter: letter()),
         ),
       );
       await t.pumpAndSettle();
       expect(t.takeException(), isNull);
-      expect(find.text('Ask my phone', skipOffstage: false), findsOneWidget);
+      expect(find.text('تأیید با phone من', skipOffstage: false), findsOneWidget);
     });
   }
 }

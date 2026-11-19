@@ -77,7 +77,10 @@ void main() {
       final seen = <LiveEvent>[];
       live.events.listen(seen.add);
       await settle();
-      expect(jsonDecode(channels.single.sent.single), {'after': 5});
+      expect(jsonDecode(channels.single.sent.single), {
+        'after': 5,
+        'after_w': 0,
+      });
       expect(uris.single.queryParameters['token'], 'tok');
 
       channels.single.incoming
@@ -123,7 +126,7 @@ void main() {
       await channels[0].drop();
       await settle();
       expect(channels.length, 2);
-      expect(jsonDecode(channels[1].sent.single), {'after': 4});
+      expect(jsonDecode(channels[1].sent.single), {'after': 4, 'after_w': 0});
       expect(delays, [const Duration(seconds: 1)]);
       await live.dispose();
     },

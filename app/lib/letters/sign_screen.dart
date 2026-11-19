@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/api_client.dart';
+import 'package:letter_signing/jalali/jalali_format.dart';
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
@@ -102,8 +104,12 @@ class _SignScreenState extends State<SignScreen> {
 
   String get _noteText => _note.text.trim();
 
-  String get _reason =>
-      '${_decision == 'approved' ? 'Approve' : 'Reject'}: ${letter.title}';
+  String get _reason {
+    final l = AppLocalizations.of(context);
+    return _decision == 'approved'
+        ? l.signReasonApprove(letter.title)
+        : l.signReasonReject(letter.title);
+  }
 
   /// Runs one signing attempt, showing failures inline.
   Future<void> _guard(Future<void> Function() action) async {
@@ -126,7 +132,11 @@ class _SignScreenState extends State<SignScreen> {
 
   Future<void> _signWithPin() async {
     final problem = validatePin(_pin.text);
-    setState(() => _pinError = problem);
+    setState(
+      () => _pinError = problem == null
+          ? null
+          : AppLocalizations.of(context).signPinInvalid,
+    );
     if (problem != null) return;
     await _guard(() async {
       final brief = await env.api.sign(
@@ -140,8 +150,9 @@ class _SignScreenState extends State<SignScreen> {
   }
 
   Future<void> _signWithBiometrics() => _guard(() async {
+    final failed = AppLocalizations.of(context).signBiometricFailed;
     if (!await env.biometrics.authenticate(_reason)) {
-      throw const LetterException('Fingerprint / face check failed');
+      throw LetterException(failed);
     }
     final brief = await env.api.signBiometric(
       letter.id,
@@ -201,12 +212,13 @@ class _SignScreenState extends State<SignScreen> {
       unawaited(_finish());
       return;
     }
+    final l = AppLocalizations.of(context);
     setState(() {
       _request = null;
       _error = switch (update.status) {
-        SignRequest.declined => '$_askedDevice declined. Use your PIN instead.',
-        SignRequest.expired => 'The request expired. Use your PIN instead.',
-        _ => 'The request was cancelled.',
+        SignRequest.declined => l.signDeclined(_askedDevice),
+        SignRequest.expired => l.signExpired,
+        _ => l.signCancelled,
       };
     });
   }
@@ -222,9 +234,10 @@ class _SignScreenState extends State<SignScreen> {
     }
     if (!mounted) return;
     _stopTimers();
+    final l = AppLocalizations.of(context);
     setState(() {
       _request = null;
-      _error = 'No answer from $_askedDevice. Use your PIN instead.';
+      _error = l.signNoAnswer(_askedDevice);
     });
   }
 
@@ -256,9 +269,10 @@ class _SignScreenState extends State<SignScreen> {
   @override
   Widget build(BuildContext context) {
     final l = letter;
+    final t = AppLocalizations.of(context);
     final signed = l.signers.where((p) => p.decision.isNotEmpty).length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign letter')),
+      appBar: AppBar(title: Text(t.signTitle)),
       body: ListView(
         children: [
           PageBody(
@@ -267,7 +281,7 @@ class _SignScreenState extends State<SignScreen> {
               children: [
                 _summary(l, signed),
                 ..._decisionSection(),
-                const SectionHeader('How do you want to sign?'),
+                SectionHeader(t.signHow),
                 if (_error != null) ...[
                   ErrorBanner(_error!),
                   const SizedBox(height: 10),
@@ -284,6 +298,7 @@ class _SignScreenState extends State<SignScreen> {
 
   Widget _summary(LetterDetail l, int signed) {
     final scheme = Theme.of(context).colorScheme;
+    final t = AppLocalizations.of(context);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +308,7 @@ class _SignScreenState extends State<SignScreen> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
-                '#${l.brief.no}',
+                '#${toPersianDigits(l.brief.no)}',
                 style: TextStyle(color: scheme.onSurfaceVariant),
               ),
               StatusChip(l.status),
@@ -303,7 +318,10 @@ class _SignScreenState extends State<SignScreen> {
           Text(l.title, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 6),
           Text(
-            '$signed of ${l.signers.length} signed',
+            t.signProgress(
+              toPersianDigits(signed),
+              toPersianDigits(l.signers.length),
+            ),
             style: TextStyle(color: scheme.onSurfaceVariant),
           ),
         ],
@@ -313,8 +331,9 @@ class _SignScreenState extends State<SignScreen> {
 
   List<Widget> _decisionSection() {
     final locked = _busy || _request != null;
+    final t = AppLocalizations.of(context);
     return [
-      const SectionHeader('Your decision'),
+      SectionHeader(t.signDecision),
       IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -322,8 +341,8 @@ class _SignScreenState extends State<SignScreen> {
             Expanded(
               child: DecisionChoice(
                 icon: Icons.check_circle_outline,
-                label: 'Approve',
-                hint: 'I agree with this letter',
+                label: t.decisionApprove,
+                hint: t.signApproveHint,
                 color: Tokens.ok,
                 selected: _decision == 'approved',
                 onTap: locked ? null : () => _pick('approved'),
@@ -333,8 +352,8 @@ class _SignScreenState extends State<SignScreen> {
             Expanded(
               child: DecisionChoice(
                 icon: Icons.cancel_outlined,
-                label: 'Reject',
-                hint: 'I do not agree',
+                label: t.decisionReject,
+                hint: t.signRejectHint,
                 color: Tokens.error,
                 selected: _decision == 'rejected',
                 onTap: locked ? null : () => _pick('rejected'),
@@ -344,11 +363,9 @@ class _SignScreenState extends State<SignScreen> {
         ),
       ),
       if (_decision == 'rejected')
-        const Padding(
-          padding: EdgeInsets.only(top: 8),
-          child: Text(
-            'A rejection is final. The creator can start a new chained letter.',
-          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(t.signRejectFinal),
         ),
       const SizedBox(height: 16),
       TextField(
@@ -356,8 +373,8 @@ class _SignScreenState extends State<SignScreen> {
         enabled: !locked,
         maxLength: 2000,
         maxLines: 3,
-        decoration: const InputDecoration(
-          labelText: 'Note (optional)',
+        decoration: InputDecoration(
+          labelText: t.signNoteOptional,
           alignLabelWithHint: true,
         ),
       ),

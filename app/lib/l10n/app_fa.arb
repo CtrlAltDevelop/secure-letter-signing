@@ -1,0 +1,911 @@
+{
+  "@@locale": "fa",
+  "moduleTasks": "وظایف",
+  "moduleProjects": "پروژه‌ها",
+  "moduleLetters": "نامه‌ها",
+  "navMore": "بیشتر",
+  "navProfile": "پروفایل",
+  "navDevices": "دستگاه‌ها",
+  "navAllLetters": "همه نامه‌ها",
+  "navAdmin": "مدیریت",
+  "signOut": "خروج",
+  "comingSoonTitle": "به‌زودی",
+  "comingSoonMessage": "این بخش به‌زودی در دسترس خواهد بود.",
+  "jalaliPickerConfirm": "تأیید",
+  "jalaliPickerCancel": "انصراف",
+  "jalaliFieldHint": "انتخاب تاریخ",
+  "jalaliFieldClear": "پاک کردن تاریخ",
+  "commonCancel": "انصراف",
+  "commonConfirm": "تأیید",
+  "commonRetry": "تلاش دوباره",
+  "commonSave": "ذخیره",
+  "tasksTabInbox": "صندوق",
+  "tasksTabFollowup": "پیگیری",
+  "tasksTabAll": "همه",
+  "tasksSearchHint": "جستجوی عنوان وظیفه",
+  "tasksSearchClear": "پاک کردن جستجو",
+  "tasksFilterAll": "همه وضعیت‌ها",
+  "tasksLoadFailed": "بارگذاری وظایف ممکن نشد",
+  "tasksLoadMore": "نمایش بیشتر",
+  "tasksEmptyInboxTitle": "وظیفه‌ای در صندوق نیست",
+  "tasksEmptyInboxMessage": "وظایفی که باید انجام یا تأیید کنید اینجا نمایش داده می‌شوند.",
+  "tasksEmptyFollowupTitle": "وظیفه‌ای برای پیگیری نیست",
+  "tasksEmptyFollowupMessage": "وظایفی که ایجاد کرده‌اید یا دنبال می‌کنید اینجا نمایش داده می‌شوند.",
+  "tasksEmptyAllTitle": "هنوز وظیفه‌ای ثبت نشده",
+  "tasksEmptyAllMessage": "همه وظایفی که به شما مربوط است اینجا نمایش داده می‌شود.",
+  "tasksEmptyFilteredTitle": "وظیفه‌ای پیدا نشد",
+  "tasksEmptyFilteredMessage": "جستجو یا فیلترها را تغییر دهید.",
+  "taskNew": "وظیفه جدید",
+  "taskEdit": "ویرایش وظیفه",
+  "taskDetailTitle": "وظیفه",
+  "taskLoadFailed": "بارگذاری وظیفه ممکن نشد",
+  "taskStatusOpen": "باز",
+  "taskStatusAwaiting": "در انتظار تأیید",
+  "taskStatusDone": "انجام‌شده",
+  "taskStatusCancelled": "لغوشده",
+  "taskPriorityLow": "کم",
+  "taskPriorityNormal": "معمولی",
+  "taskPriorityHigh": "زیاد",
+  "taskPriorityUrgent": "فوری",
+  "taskChecklistCount": "{done} از {total}",
+  "@taskChecklistCount": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "taskCreatedBy": "ایجاد‌کننده: {name}",
+  "@taskCreatedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "taskProgressFromChecklist": "پیشرفت از روی فهرست کارها محاسبه می‌شود.",
+  "taskComplete": "انجام شد",
+  "taskApprove": "تأیید",
+  "taskReject": "رد",
+  "taskReopen": "بازگشایی",
+  "taskCancel": "لغو وظیفه",
+  "taskCancelConfirm": "این وظیفه لغو شود؟",
+  "taskCancelYes": "بله، لغو شود",
+  "taskNoteOptional": "یادداشت (اختیاری)",
+  "taskRejectNoteRequired": "دلیل رد را بنویسید",
+  "taskConflict": "این وظیفه همزمان توسط فرد دیگری تغییر کرده است. نسخه جدید بارگذاری شد؛ دوباره تلاش کنید.",
+  "taskForbidden": "اجازه انجام این کار را ندارید.",
+  "taskNotFound": "این وظیفه دیگر در دسترس نیست.",
+  "taskActionFailed": "انجام کار ممکن نشد.",
+  "fieldTitle": "عنوان",
+  "fieldDescription": "توضیحات",
+  "fieldPriority": "اولویت",
+  "fieldStatus": "وضعیت",
+  "fieldStart": "شروع",
+  "fieldDue": "سررسید",
+  "fieldAllDay": "تمام روز",
+  "fieldProgress": "پیشرفت",
+  "fieldOwners": "مسئولان",
+  "fieldApprovers": "تأییدکنندگان",
+  "fieldFollowers": "دنبال‌کنندگان",
+  "fieldChecklist": "فهرست کارها",
+  "approverApproved": "تأیید کرد",
+  "approverRejected": "رد کرد",
+  "approverPending": "در انتظار",
+  "approverTurn": "نوبت تأیید",
+  "checklistAdd": "افزودن",
+  "checklistAddHint": "مورد جدید",
+  "checklistRemove": "حذف مورد",
+  "formTitleRequired": "عنوان را وارد کنید",
+  "formOwnerRequired": "دست‌کم یک مسئول لازم است",
+  "formDueBeforeStart": "سررسید باید بعد از شروع باشد",
+  "labelsTitle": "برچسب‌ها",
+  "peopleAdd": "افزودن",
+  "peopleSearch": "جستجوی همکار",
+  "peopleEmpty": "همکاری پیدا نشد",
+  "peopleRemove": "حذف {name}",
+  "@peopleRemove": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tabComments": "نظرها",
+  "tabFiles": "پرونده‌ها",
+  "tabHistory": "تاریخچه",
+  "commentsEmpty": "هنوز نظری ثبت نشده",
+  "commentHint": "نظر خود را بنویسید",
+  "commentSend": "ارسال",
+  "commentReply": "پاسخ",
+  "commentEdit": "ویرایش",
+  "commentDelete": "حذف",
+  "commentEdited": "ویرایش‌شده",
+  "commentEditing": "ویرایش نظر",
+  "commentReplyingTo": "پاسخ به {name}",
+  "@commentReplyingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentKindComment": "نظر",
+  "commentKindReport": "گزارش",
+  "commentAttachProgress": "ثبت درصد پیشرفت",
+  "commentProgress": "پیشرفت: {percent}٪",
+  "@commentProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "filesEmpty": "پرونده‌ای پیوست نشده",
+  "fileUpload": "بارگذاری پرونده",
+  "fileDownload": "دریافت",
+  "fileDelete": "حذف پرونده",
+  "historyEmpty": "تغییری ثبت نشده",
+  "historyNone": "—",
+  "historyYes": "بله",
+  "historyNo": "خیر",
+  "historySystem": "سیستم",
+  "historyChanged": "{actor}، «{field}» را تغییر داد",
+  "@historyChanged": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "seenByTitle": "دیده‌شده توسط",
+  "seenByEmpty": "هنوز کسی ندیده است",
+  "seenByFailed": "بارگذاری ممکن نشد",
+  "fieldProject": "پروژه",
+  "fieldColumn": "ستون",
+  "projectNone": "بدون پروژه",
+  "projectStatusActive": "فعال",
+  "projectStatusDone": "انجام‌شده",
+  "projectStatusArchived": "بایگانی‌شده",
+  "roleManager": "مدیر",
+  "roleMember": "عضو",
+  "roleViewer": "بیننده",
+  "sortManual": "ترتیب دستی",
+  "sortCreatedAsc": "قدیمی‌ترین ایجاد",
+  "sortCreatedDesc": "جدیدترین ایجاد",
+  "sortDueAsc": "سررسید نزدیک‌تر",
+  "sortDueDesc": "سررسید دورتر",
+  "sortUpdatedAsc": "قدیمی‌ترین تغییر",
+  "sortUpdatedDesc": "جدیدترین تغییر",
+  "projectConflict": "پروژه همزمان تغییر کرده است. دوباره تلاش کنید.",
+  "projectNotFound": "این پروژه یا مورد دیگر در دسترس نیست.",
+  "boardCompact": "کارت فشرده",
+  "columnAdd": "ستون جدید",
+  "columnTitleHint": "عنوان ستون",
+  "boardEmpty": "ستونی وجود ندارد",
+  "columnRename": "تغییر نام ستون",
+  "columnHide": "پنهان کردن ستون",
+  "columnMoveEarlier": "جابه‌جایی به قبل",
+  "columnMoveLater": "جابه‌جایی به بعد",
+  "columnSort": "مرتب‌سازی",
+  "columnMenu": "گزینه‌های ستون",
+  "boardAddTask": "افزودن وظیفه",
+  "boardAddTaskHint": "عنوان وظیفه",
+  "projectListEmpty": "وظیفه‌ای پیدا نشد",
+  "calendarPickDay": "یک روز را انتخاب کنید.",
+  "calendarDayEmpty": "وظیفه‌ای در این روز نیست.",
+  "fileTypeImage": "تصویر",
+  "fileTypeVideo": "ویدئو",
+  "fileTypeDocument": "سند",
+  "projectFilesUnavailable": "پرونده‌های پروژه هنوز در دسترس نیست.",
+  "filesSearchHint": "جستجوی نام پرونده",
+  "projectArchive": "بایگانی پروژه",
+  "projectArchiveConfirm": "پروژه بایگانی شود؟ دیگر وظیفه جدیدی نمی‌پذیرد.",
+  "projectCopy": "کپی پروژه",
+  "projectCopyUnavailable": "کپی پروژه روی این سرور در دسترس نیست.",
+  "projectEnd": "پایان",
+  "projectMembers": "اعضا",
+  "projectEdit": "ویرایش پروژه",
+  "projectMarkDone": "پایان پروژه",
+  "projectReactivate": "فعال‌سازی دوباره",
+  "projectTabBoard": "برد",
+  "projectTabList": "فهرست",
+  "projectTabCalendar": "تقویم",
+  "projectTabFiles": "پرونده‌ها",
+  "projectTabMembers": "اعضا و تنظیمات",
+  "projectTabChat": "گفتگو",
+  "projectLoadFailed": "بارگذاری پروژه ممکن نشد",
+  "projectNew": "پروژه جدید",
+  "projectName": "نام پروژه",
+  "projectNameRequired": "نام پروژه را وارد کنید",
+  "projectEndBeforeStart": "پایان باید بعد از شروع باشد",
+  "projectGroup": "گروه",
+  "projectColor": "رنگ",
+  "groupNew": "گروه جدید",
+  "groupNameHint": "نام گروه",
+  "groupScopeTitle": "نوع گروه",
+  "groupScopeOrg": "گروه سازمان",
+  "groupScopePersonal": "گروه شخصی",
+  "groupRename": "تغییر نام گروه",
+  "groupsTitle": "گروه‌های پروژه",
+  "groupsEmpty": "گروهی وجود ندارد",
+  "groupDeactivate": "غیرفعال‌سازی گروه",
+  "groupActivate": "فعال‌سازی گروه",
+  "projectsSearchHint": "جستجوی پروژه",
+  "projectsLoadFailed": "بارگذاری پروژه‌ها ممکن نشد",
+  "projectsEmptyFilteredTitle": "پروژه‌ای پیدا نشد",
+  "projectsEmptyTitle": "هنوز پروژه‌ای ندارید",
+  "projectsEmptyMessage": "پروژه‌هایی که عضو آن هستید اینجا نمایش داده می‌شوند.",
+  "projectsUngrouped": "بدون گروه",
+  "labelNew": "برچسب جدید",
+  "labelEdit": "ویرایش برچسب",
+  "labelName": "نام برچسب",
+  "labelDuplicate": "برچسبی با این نام وجود دارد.",
+  "labelScopeOrg": "برچسب سازمان (برای همه)",
+  "labelsLoadFailed": "بارگذاری برچسب‌ها ممکن نشد",
+  "labelsOrgTitle": "برچسب‌های سازمان",
+  "labelsPersonalTitle": "برچسب‌های من",
+  "labelsEmpty": "برچسبی وجود ندارد",
+  "labelDeactivate": "غیرفعال‌سازی برچسب",
+  "labelActivate": "فعال‌سازی برچسب",
+  "navLabels": "برچسب‌ها",
+  "remindersTitle": "یادآوری‌های من",
+  "reminderAdd": "افزودن یادآوری",
+  "remindersEmpty": "یادآوری‌ای ثبت نشده",
+  "reminderRemove": "حذف یادآوری",
+  "reminderWhen": "زمان یادآوری",
+  "reminderDateRequired": "یک تاریخ و ساعت در آینده انتخاب کنید",
+  "reminderRepeat": "تکرار",
+  "reminderOnce": "یک‌بار",
+  "reminderDaily": "روزانه",
+  "reminderWeekly": "هفتگی",
+  "reminderMonthly": "ماهانه",
+  "taskMove": "انتقال",
+  "taskCopy": "کپی",
+  "taskCopied": "نسخه‌ای از وظیفه ساخته شد.",
+  "taskNoProject": "این وظیفه در هیچ پروژه‌ای نیست.",
+  "percentValue": "{p}٪",
+  "@percentValue": {
+    "placeholders": {
+      "p": {
+        "type": "String"
+      }
+    }
+  },
+  "projectCopyName": "{name} (کپی)",
+  "@projectCopyName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "projectCopied": "پروژه «{name}» ساخته شد.",
+  "@projectCopied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sizeBytes": "{n} بایت",
+  "@sizeBytes": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "sizeKilobytes": "{n} کیلوبایت",
+  "@sizeKilobytes": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "sizeMegabytes": "{n} مگابایت",
+  "@sizeMegabytes": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "reminderMonthDay": "روز {day}",
+  "@reminderMonthDay": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "lettersBoxInbox": "دریافتی",
+  "lettersBoxOutbox": "ارسالی",
+  "lettersBoxArchive": "بایگانی",
+  "lettersBoxAll": "همه",
+  "lettersSearchHint": "جستجوی عنوان نامه",
+  "lettersSearchClear": "پاک کردن جستجو",
+  "lettersAdvancedSearch": "جستجوی پیشرفته",
+  "lettersLoadFailed": "بارگذاری نامه‌ها ممکن نشد",
+  "lettersEmptyTitle": "نامه‌ای وجود ندارد",
+  "lettersEmptyMessage": "نامه‌هایی که می‌نویسید یا برای شما ارسال می‌شود اینجا نمایش داده می‌شود.",
+  "lettersNoMatchTitle": "نامه‌ای پیدا نشد",
+  "lettersNoMatchMessage": "جستجو یا فیلترها را تغییر دهید.",
+  "lettersNew": "نامه جدید",
+  "lettersCreatedByYou": "ایجاد شده توسط شما",
+  "lettersSharedWithYou": "ارسال شده برای شما",
+  "lettersPublic": "عمومی",
+  "lettersPrivate": "خصوصی",
+  "lettersArchive": "بایگانی کردن",
+  "lettersUnarchive": "خروج از بایگانی",
+  "lettersEditLabels": "ویرایش برچسب‌ها",
+  "lettersNoLabels": "هنوز برچسبی تعریف نشده است.",
+  "lettersMenu": "گزینه‌ها",
+  "lettersSecretariat": "دبیرخانه",
+  "lettersReferralCount": "{n} ارجاع",
+  "@lettersReferralCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "lettersSearchText": "متن جستجو",
+  "lettersSearchStatus": "وضعیت",
+  "lettersSearchAnyStatus": "همه وضعیت‌ها",
+  "lettersSearchLabel": "برچسب",
+  "lettersSearchNumber": "شماره نامه",
+  "lettersSearchCreator": "نویسنده",
+  "lettersSearchSigner": "امضاکننده",
+  "lettersSearchFrom": "از تاریخ",
+  "lettersSearchTo": "تا تاریخ",
+  "lettersSearchReset": "پاک کردن",
+  "lettersSearchApply": "اعمال",
+  "letterStatusDraft": "پیش‌نویس",
+  "letterStatusInSigning": "در حال امضا",
+  "letterStatusPublished": "منتشرشده",
+  "letterStatusRejected": "ردشده",
+  "letterStatusCancelled": "لغوشده",
+  "letterTitle": "نامه {no}",
+  "@letterTitle": {
+    "placeholders": {
+      "no": {
+        "type": "String"
+      }
+    }
+  },
+  "letterLoadFailed": "بارگذاری نامه ممکن نشد",
+  "paperTooltip": "کاغذ / چاپ",
+  "certTooltip": "گواهی امضا",
+  "letterAttachments": "پیوست‌ها",
+  "letterFileCount": "{n} پرونده",
+  "@letterFileCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "letterSigning": "امضا",
+  "letterSerial": "امضاکنندگان یکی پس از دیگری امضا می‌کنند",
+  "letterParallel": "امضاکنندگان به هر ترتیب می‌توانند امضا کنند",
+  "letterViewers": "بینندگان",
+  "letterChained": "نامه‌های زنجیره‌ای",
+  "letterCustomers": "پرونده‌های مشتری",
+  "letterUnlisted": "فهرست‌نشده",
+  "letterArchived": "بایگانی‌شده",
+  "letterCreatedSent": "ایجاد: {created}{sent}",
+  "@letterCreatedSent": {
+    "placeholders": {
+      "created": {
+        "type": "String"
+      },
+      "sent": {
+        "type": "String"
+      }
+    }
+  },
+  "letterSent": "ارسال: {date}",
+  "@letterSent": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "letterRepliesTo": "پاسخ به نامه‌ای قبلی",
+  "letterYourTurn": "امضای شما روی این نامه لازم است.",
+  "letterNoText": "(بدون متن)",
+  "letterNoSigners": "امضاکننده‌ای نیست",
+  "letterRelist": "فهرست کردن",
+  "letterUnlist": "حذف از فهرست",
+  "letterCancel": "لغو نامه",
+  "letterReply": "پاسخ با نامه",
+  "letterSend": "ارسال",
+  "letterSign": "امضا",
+  "letterAttachmentFallback": "پیوست",
+  "decisionApproved": "تأیید شد",
+  "decisionRejected": "رد شد",
+  "decisionPending": "در انتظار",
+  "decisionOpened": "باز کرده",
+  "decisionApprove": "تأیید",
+  "decisionReject": "رد",
+  "signMethodPin": "رمز",
+  "signMethodBiometric": "زیست‌سنجی",
+  "paraphTitle": "پاراف",
+  "paraphNone": "هنوز پارافی ثبت نشده است.",
+  "paraphAction": "پاراف",
+  "paraphExplain": "پاراف مهر می‌شود و برای هر نفر یک بار ثبت می‌شود.",
+  "paraphReason": "پاراف نامه: {title}",
+  "@paraphReason": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "referralTitle": "ارجاعات",
+  "referralRefer": "ارجاع",
+  "referralEmpty": "این نامه ارجاعی ندارد.",
+  "referralSheetTitle": "ارجاع به",
+  "referralNoteOptional": "یادداشت (اختیاری)",
+  "referralSend": "ارسال ارجاع",
+  "referralMarkDone": "انجام شد",
+  "referralMarkDeclined": "رد ارجاع",
+  "referralDone": "انجام شد",
+  "referralDeclined": "ردشده",
+  "referralPending": "در انتظار",
+  "referralFromTo": "{from} به {to}",
+  "@referralFromTo": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "referralAnswer": "پاسخ",
+  "letterTasksTitle": "وظایف مرتبط",
+  "letterTaskLink": "پیوند وظیفه",
+  "letterTaskCreate": "ایجاد وظیفه",
+  "letterTaskUnlink": "جدا کردن وظیفه",
+  "letterTasksEmpty": "وظیفه‌ای به این نامه وصل نشده است.",
+  "letterTaskPickerEmpty": "وظیفه‌ای پیدا نشد.",
+  "letterTaskTitle": "پیگیری نامه: {title}",
+  "@letterTaskTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "letterTaskDescription": "مربوط به نامه {number}: {title}",
+  "@letterTaskDescription": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "certVerified": "امضاها تأیید شد",
+  "certFailed": "تأیید امضاها ناموفق بود",
+  "certNoSignatures": "هنوز امضایی نیست",
+  "certParaphsVerified": "پاراف‌ها تأیید شد",
+  "certParaphsFailed": "تأیید پاراف‌ها ناموفق بود",
+  "certDevice": "دستگاه {device}",
+  "@certDevice": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "certValid": "معتبر",
+  "certInvalid": "نامعتبر",
+  "commonClose": "بستن",
+  "signTitle": "امضای نامه",
+  "signHow": "چگونه امضا می‌کنید؟",
+  "signDecision": "تصمیم شما",
+  "signApproveHint": "با این نامه موافقم",
+  "signRejectHint": "موافق نیستم",
+  "signRejectFinal": "رد کردن قطعی است. نویسنده می‌تواند نامه زنجیره‌ای جدید بنویسد.",
+  "signNoteOptional": "یادداشت (اختیاری)",
+  "signProgress": "{signed} از {total} امضا شده",
+  "@signProgress": {
+    "placeholders": {
+      "signed": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "signReasonApprove": "تأیید: {title}",
+  "@signReasonApprove": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "signReasonReject": "رد: {title}",
+  "@signReasonReject": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "signPinInvalid": "۶ رقم وارد کنید",
+  "signPinLabel": "رمز امضا",
+  "signBiometricFailed": "تأیید اثر انگشت یا چهره ناموفق بود",
+  "signDeclined": "{device} رد کرد. به‌جای آن رمز خود را وارد کنید.",
+  "@signDeclined": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "signExpired": "درخواست منقضی شد. به‌جای آن رمز خود را وارد کنید.",
+  "signCancelled": "درخواست لغو شد.",
+  "signNoAnswer": "{device} پاسخ نداد. به‌جای آن رمز خود را وارد کنید.",
+  "@signNoAnswer": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "signBusy": "در حال امضا...",
+  "signWithPin": "امضا با رمز",
+  "signOrBiometric": "یا با زیست‌سنجی تأیید کنید",
+  "signFingerprint": "اثر انگشت / چهره",
+  "signEnableBiometric": "فعال‌سازی اثر انگشت / چهره",
+  "signAskDevice": "تأیید با {device} من",
+  "@signAskDevice": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "signWaiting": "در انتظار تأیید روی {device}",
+  "@signWaiting": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "signWaitingHint": "برنامه را آنجا باز کنید و با اثر انگشت یا چهره تأیید کنید. درخواست پس از ۵ دقیقه منقضی می‌شود.",
+  "paperNumber": "شماره: {number}",
+  "@paperNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "paperDate": "تاریخ: {date}",
+  "@paperDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "paperSubject": "موضوع: {title}",
+  "@paperSubject": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "paperDecisionApproved": "تصمیم: تأیید",
+  "paperDecisionRejected": "تصمیم: رد",
+  "paperDocumentId": "شناسه سند: {id}",
+  "@paperDocumentId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "paperSeal": "مهر سرور: {seal}",
+  "@paperSeal": {
+    "placeholders": {
+      "seal": {
+        "type": "String"
+      }
+    }
+  },
+  "paperParaphs": "پاراف‌ها",
+  "paperPrintFailed": "چاپ ممکن نشد: {error}",
+  "@paperPrintFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "paperPreviewTitle": "پیش‌نمایش کاغذ",
+  "paperPrint": "چاپ / ذخیره PDF",
+  "secretariatAll": "همه",
+  "secretariatIn": "وارده",
+  "secretariatOut": "صادره",
+  "secretariatAnyYear": "همه سال‌ها",
+  "secretariatSearchHint": "جستجو در دبیرخانه",
+  "secretariatLoadFailed": "بارگذاری دفتر دبیرخانه ممکن نشد",
+  "secretariatEmpty": "موردی ثبت نشده است",
+  "secretariatRegister": "ثبت نامه",
+  "secretariatFrom": "فرستنده",
+  "secretariatTo": "گیرنده",
+  "secretariatEdit": "ویرایش",
+  "secretariatTitle": "عنوان",
+  "secretariatTitleRequired": "عنوان را وارد کنید",
+  "secretariatPartyFrom": "نام فرستنده",
+  "secretariatPartyTo": "نام گیرنده",
+  "secretariatPartyRef": "شماره یا ارجاع طرف مقابل",
+  "secretariatSummary": "خلاصه",
+  "secretariatPickLetter": "انتخاب نامه موجود (اختیاری)",
+  "secretariatRegisteredBy": "ثبت‌کننده: {name}",
+  "@secretariatRegisteredBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "secretariatDetailTitle": "مورد دبیرخانه",
+  "secretariatOpenLetter": "باز کردن نامه",
+  "moduleMeetings": "جلسات",
+  "meetingStatusDraft": "پیش‌نویس",
+  "meetingStatusScheduled": "برنامه‌ریزی‌شده",
+  "meetingStatusHeld": "برگزارشده",
+  "meetingStatusClosed": "بسته‌شده",
+  "meetingStatusCancelled": "لغوشده",
+  "meetingKindOrganizational": "سازمانی",
+  "meetingKindSimple": "ساده",
+  "meetingKindAny": "همه انواع",
+  "meetingRoleChair": "رئیس جلسه",
+  "meetingRoleSecretary": "دبیر",
+  "meetingRoleMember": "عضو",
+  "meetingRoleGuest": "مهمان",
+  "meetingAttendancePresent": "حاضر",
+  "meetingAttendanceAbsent": "غایب",
+  "meetingAttendanceExcused": "موجه",
+  "meetingAttendanceUnknown": "نامشخص",
+  "meetingsSearchHint": "جستجوی عنوان جلسه",
+  "meetingsFilters": "فیلترها",
+  "meetingTemplatesTitle": "الگوهای جلسه",
+  "meetingsLoadFailed": "بارگذاری جلسات ممکن نشد",
+  "meetingsEmptyTitle": "جلسه‌ای وجود ندارد",
+  "meetingsEmptyMessage": "جلسه‌هایی که برگزار می‌کنید یا در آن‌ها دعوت هستید اینجا نمایش داده می‌شود.",
+  "meetingNew": "جلسه جدید",
+  "meetingNoDate": "بدون زمان",
+  "meetingAttendeeCount": "{n} نفر",
+  "@meetingAttendeeCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingResolutionCount": "مصوبات {done} از {total}",
+  "@meetingResolutionCount": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingFieldStatus": "وضعیت",
+  "meetingFieldKind": "نوع",
+  "meetingsMineOnly": "فقط جلسات من",
+  "meetingsFrom": "از تاریخ",
+  "meetingsTo": "تا تاریخ",
+  "meetingAttendees": "حاضرین",
+  "meetingExternalGuest": "مهمان بیرونی",
+  "meetingFieldRole": "نقش",
+  "meetingAddPeople": "افزودن همکار",
+  "meetingAddGuest": "افزودن مهمان",
+  "meetingGuestName": "نام مهمان",
+  "meetingEdit": "ویرایش جلسه",
+  "meetingTemplate": "الگو",
+  "meetingProject": "پروژه",
+  "meetingNoProject": "بدون پروژه",
+  "meetingStart": "شروع",
+  "meetingEnd": "پایان",
+  "meetingFieldTitle": "عنوان",
+  "meetingLocation": "مکان",
+  "meetingDescription": "توضیحات",
+  "meetingSaveTemplate": "ذخیره به‌عنوان الگو",
+  "meetingTemplateName": "نام الگو",
+  "meetingTemplateOrg": "الگوی سازمانی (برای همه)",
+  "meetingTemplateSaved": "الگو ذخیره شد",
+  "meetingSaveDraft": "ذخیره پیش‌نویس",
+  "meetingSaveSchedule": "ذخیره و برنامه‌ریزی",
+  "meetingTitleRequired": "عنوان را وارد کنید",
+  "meetingStartRequired": "زمان شروع را مشخص کنید",
+  "meetingEndBeforeStart": "پایان نباید قبل از شروع باشد",
+  "meetingNeedChair": "جلسه سازمانی دقیقاً یک رئیس لازم دارد",
+  "meetingNeedSecretary": "جلسه سازمانی دقیقاً یک دبیر لازم دارد",
+  "meetingTemplateScopeOrg": "سازمانی",
+  "meetingTemplateScopePersonal": "شخصی",
+  "meetingTemplateInactive": "غیرفعال",
+  "meetingTemplateRename": "تغییر نام",
+  "meetingTemplateDeactivate": "غیرفعال کردن",
+  "meetingTemplateActivate": "فعال کردن",
+  "meetingTemplatesEmpty": "الگویی وجود ندارد",
+  "meetingTemplatesEmptyHint": "هنگام ساخت جلسه می‌توانید آن را به‌عنوان الگو ذخیره کنید.",
+  "meetingDetailTitle": "جلسه",
+  "meetingLoadFailed": "بارگذاری جلسه ممکن نشد",
+  "meetingNotFound": "این جلسه دیگر در دسترس نیست.",
+  "meetingConfirmCancel": "این جلسه لغو شود؟",
+  "meetingConfirmClose": "صورتجلسه بسته شود؟",
+  "meetingConfirmReopen": "جلسه دوباره باز شود؟ امضاهای قبلی منسوخ می‌شوند.",
+  "meetingRevision": "ویرایش {n}",
+  "@meetingRevision": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingCreatedBy": "ایجاد‌کننده: {name}",
+  "@meetingCreatedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingAttendanceHint": "برای ثبت حضور روی وضعیت هر نفر بزنید",
+  "meetingNoAttendees": "حاضری ثبت نشده است",
+  "meetingMarkAttendance": "ثبت حضور",
+  "meetingMinutes": "صورتجلسه",
+  "meetingEditMinutes": "ویرایش متن",
+  "meetingNoMinutes": "هنوز متنی نوشته نشده است.",
+  "meetingSignatures": "امضاها",
+  "meetingAllSigned": "همه امضا کرده‌اند",
+  "meetingNoSignatures": "هنوز امضایی نیست.",
+  "meetingSign": "امضای صورتجلسه",
+  "meetingSignatureStale": "منسوخ",
+  "meetingResolutions": "مصوبات",
+  "resolutionAdd": "افزودن مصوبه",
+  "resolutionEdit": "ویرایش",
+  "resolutionDeactivate": "غیرفعال کردن",
+  "resolutionDeactivateConfirm": "این مصوبه و وظیفه پیگیری آن لغو شود؟",
+  "resolutionOwners": "مسئولان",
+  "resolutionDue": "سررسید",
+  "resolutionTask": "وظیفه",
+  "resolutionText": "متن مصوبه",
+  "resolutionOpen": "باز",
+  "resolutionDone": "انجام شد",
+  "resolutionCancelled": "لغوشده",
+  "meetingNoResolutions": "مصوبه‌ای ثبت نشده است.",
+  "meetingSignTitle": "امضای صورتجلسه",
+  "meetingSignApproveHint": "با صورتجلسه موافقم",
+  "meetingSignRejectHint": "با صورتجلسه موافق نیستم",
+  "meetingSignNoteRequired": "یادداشت (برای رد الزامی است)",
+  "meetingRejectNeedsNote": "برای رد کردن باید یادداشت بنویسید.",
+  "meetingSignReason": "امضای صورتجلسه: {title}",
+  "@meetingSignReason": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingActionSchedule": "برنامه‌ریزی",
+  "meetingActionHold": "شروع جلسه",
+  "meetingActionClose": "بستن صورتجلسه",
+  "meetingActionReopen": "بازگشایی",
+  "meetingActionCancel": "لغو جلسه",
+  "meetingRemind": "یادآوری به حاضرین",
+  "meetingSms": "پیامک به حاضرین",
+  "meetingRemindTitle": "یادآوری به حاضرین",
+  "meetingRemindBefore": "چه مدت قبل از شروع",
+  "meetingOffsetDays": "{n} روز",
+  "@meetingOffsetDays": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingOffsetHours": "{n} ساعت",
+  "@meetingOffsetHours": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingOffsetMinutes": "{n} دقیقه",
+  "@meetingOffsetMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingRemindDone": "{n} یادآوری ثبت شد",
+  "@meetingRemindDone": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingSmsTitle": "پیامک به حاضرین",
+  "meetingSmsText": "متن پیامک",
+  "meetingSmsSend": "ارسال",
+  "meetingSmsDone": "ارسال‌شده: {sent}، بدون شماره: {without}",
+  "@meetingSmsDone": {
+    "placeholders": {
+      "sent": {
+        "type": "String"
+      },
+      "without": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingPrint": "چاپ صورتجلسه",
+  "meetingPrintTitle": "صورتجلسه",
+  "meetingPrintDate": "تاریخ",
+  "moduleNotes": "یادداشت‌ها",
+  "notesSearchHint": "جستجو در یادداشت‌ها",
+  "notesViewGrid": "نمایش شبکه‌ای",
+  "notesViewList": "نمایش فهرستی",
+  "notesArchiveToggle": "آرشیو",
+  "notesNew": "یادداشت جدید",
+  "notesPinned": "سنجاق‌شده",
+  "notesOthers": "سایر",
+  "notesEmptyTitle": "یادداشتی ندارید",
+  "notesEmptyMessage": "با دکمه «یادداشت جدید» اولین یادداشت خود را بنویسید. یادداشت‌ها فقط برای شما دیده می‌شوند.",
+  "notesEmptyArchived": "یادداشت آرشیوشده‌ای وجود ندارد",
+  "notesLoadFailed": "بارگذاری یادداشت‌ها ممکن نشد",
+  "noteEdit": "ویرایش یادداشت",
+  "noteTitleHint": "عنوان",
+  "noteBodyHint": "یادداشت",
+  "noteColorName": "رنگ {n}",
+  "@noteColorName": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "notePin": "سنجاق کردن",
+  "noteUnpin": "برداشتن سنجاق",
+  "noteArchive": "بایگانی",
+  "noteUnarchive": "خارج کردن از آرشیو",
+  "noteChecklistAddHint": "افزودن مورد",
+  "noteChecklistAdd": "افزودن",
+  "noteItemUp": "انتقال به بالا",
+  "noteItemDown": "انتقال به پایین",
+  "noteItemRemove": "حذف مورد",
+  "noteImageAdd": "افزودن تصویر",
+  "noteImageRemove": "حذف تصویر",
+  "noteImageOnly": "فقط پرونده تصویر مجاز است."
+}

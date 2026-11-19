@@ -7,6 +7,7 @@ from ninja import Router, Schema
 from ninja.errors import HttpError
 
 from . import mailer
+from .api_titles import router as titles_router
 from .auth import BearerAuth, require_manager
 from .models import BASE_PERMISSION, CompanySettings, Department, InviteCode, Permission, Session, User, audit
 from .schemas import UserOut
@@ -98,7 +99,8 @@ def permissions(request):
 @router.get("/users", response=list[UserOut])
 def users(request):
     require_manager(request)
-    return [UserOut.of(u) for u in User.objects.prefetch_related("grants").order_by("email")]
+    flag = CompanySettings.load().require_2fa
+    return [UserOut.of(u, flag) for u in User.objects.prefetch_related("grants").order_by("email")]
 
 
 @router.put("/users/{user_id}/permissions", response=UserOut)
@@ -279,3 +281,6 @@ def deactivate_invite(request, invite_id: int):
     invite.save(update_fields=["active"])
     audit(manager, "invite_deactivated", str(invite.id))
     return InviteOut.of(invite)
+
+
+router.add_router("", titles_router)

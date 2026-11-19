@@ -18,6 +18,10 @@ class Tokens {
 class AppTheme {
   const AppTheme._();
 
+  /// Vazirmatn (SIL OFL). TODO: bundle the TTF files under assets/fonts and declare them in
+  /// pubspec; until then the platform's Persian fallback font is used.
+  static const fontFamily = 'Vazirmatn';
+
   static ThemeData dark(Brand brand) {
     final surface = Color.alphaBlend(
       Colors.white.withValues(alpha: 0.06),
@@ -76,6 +80,7 @@ class AppTheme {
     );
     return ThemeData(
       useMaterial3: true,
+      fontFamily: fontFamily,
       colorScheme: s,
       scaffoldBackgroundColor: s.surface,
       appBarTheme: AppBarTheme(

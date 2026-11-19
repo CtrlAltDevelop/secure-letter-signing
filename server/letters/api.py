@@ -5,7 +5,6 @@ from uuid import UUID
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Max
-from django.core.files.base import ContentFile
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -16,9 +15,11 @@ from ninja.files import UploadedFile
 from accounts.api_auth import Detail
 from accounts.auth import BearerAuth, require_manager, user_of
 from accounts.models import User, audit
-from core import cryptoutil
+from core import cryptoutil, filestore
 
-from . import events, rules, signing
+from workspace.models import Subject
+
+from . import access, briefs, inbox, events, paraphs, rules, secretariat, signing, task_links
 from .models import Attachment, Letter, LetterEvent, Participant
 from .schemas import (AdminLetterOut, AttachmentOut, LetterBrief, LetterIn, LetterOut, ParticipantOut, SignatureOut,
                       SignBiometricIn, SignPinIn, SignRequestIn, SignRequestOut)
@@ -27,11 +28,11 @@ from .sign_requests import create_request, request_out
 logger = logging.getLogger(__name__)
 router = Router(tags=["letters"], auth=BearerAuth())
 MAX_PEOPLE, MAX_BODY_CHARS, MAX_ATTACHMENTS = 500, 2_000_000, 20
-ATTACHMENT_TYPES = {"application/pdf", "image/png", "image/jpeg", "image/webp", "image/heic"}
+ATTACHMENT_TYPES = filestore.ATTACHMENT_TYPES
 
 
-def _brief(letter: Letter) -> LetterBrief:
-    return LetterBrief.from_orm(letter)
+def _brief(user: User, letter: Letter) -> LetterBrief:
+    return briefs.brief_of(user, letter)
 
 
 def _participants(letter: Letter) -> list[ParticipantOut]:
@@ -40,11 +41,7 @@ def _participants(letter: Letter) -> list[ParticipantOut]:
                            position=p.position, decision=p.decision, decided_at=p.decided_at) for p in rows]
 
 
-def _get_visible(user: User, letter_id: UUID) -> Letter:
-    letter = get_object_or_404(Letter, pk=letter_id)
-    if not rules.can_see(user, letter):
-        raise HttpError(404, "Letter not found")
-    return letter
+_get_visible = access.get_visible
 
 
 def _lock_own_draft(user: User, letter_id: UUID, sent_message: str) -> Letter:
@@ -101,12 +98,13 @@ def _apply(letter: Letter, user: User, data: LetterIn) -> None:
 def create_letter(request, data: LetterIn):
     user = user_of(request)
     _require(user, rules.CREATE)
-    letter = Letter(creator=user, no=(Letter.objects.aggregate(m=Max("no"))["m"] or 0) + 1, body={},
+    subject = Subject.objects.create(module="letters", kind="letter")
+    letter = Letter(creator=user, subject=subject, no=(Letter.objects.aggregate(m=Max("no"))["m"] or 0) + 1, body={},
                     title=data.title, visibility=data.visibility, publish_mode=data.publish_mode, order=data.order)
     letter.save()
     _apply(letter, user, data)
     audit(user, "letter_created", str(letter.id), no=letter.no)
-    return 201, _brief(letter)
+    return 201, _brief(user, letter)
 
 
 @router.put("/{uuid:letter_id}", response=LetterBrief)
@@ -115,7 +113,7 @@ def update_draft(request, letter_id: UUID, data: LetterIn):
     user = user_of(request)
     letter = _lock_own_draft(user, letter_id, "A sent letter is immutable; write a new chained letter")
     _apply(letter, user, data)
-    return _brief(letter)
+    return _brief(user, letter)
 
 
 # --- send ------------------------------------------------------------------------------------------------------
@@ -139,34 +137,38 @@ def send_letter(request, letter_id: UUID):
     signing.notify_next(letter, "Letter to sign")
     if letter.shown_at:
         signing.notify_viewers(letter, "New letter")
-    return _brief(letter)
+    return _brief(user, letter)
 
 
 # --- read ------------------------------------------------------------------------------------------------------
 
 
 @router.get("", response=list[LetterBrief])
-def list_letters(request, limit: int = 100, offset: int = 0, q: str = ""):
-    """Everything this user may see, newest first: this is also the history, identical on every device."""
-    offset, limit = max(offset, 0), max(min(limit, 200), 0)
-    qs = rules.visible_letters(user_of(request)).order_by("-no")
+def list_letters(request, limit: int = 100, offset: int = 0, q: str = "", box: str = "all"):
+    """Everything this user may see, newest first (`box=all`, the default), or one box: inbox, outbox, archive."""
+    inbox.check_box(box)
+    user = user_of(request)
+    rows = inbox.box_of(user, rules.visible_letters(user), box).order_by("-no")
     if q:
-        qs = qs.filter(title__icontains=q)  # titles are the only searchable text
-    return [_brief(x) for x in qs[offset : offset + limit]]
+        rows = rows.filter(title__icontains=q)  # use /letters/search for numbers, people, labels and body text
+    return briefs.briefs(user, inbox.paged(rows, limit, offset))
 
 
 class DirectoryUser(Schema):
     id: int
     email: str
     full_name: str
+    title: str
+    status_text: str
     permissions: list[str]
 
 
 @router.get("/directory", response=list[DirectoryUser])
 def directory(request):
     """Active colleagues, for picking signers and viewers when writing a letter."""
-    users = User.objects.filter(is_active=True).prefetch_related("grants").order_by("email")
-    return [DirectoryUser(id=u.id, email=u.email, full_name=u.full_name,
+    users = User.objects.filter(is_active=True).select_related("org_title").prefetch_related("grants").order_by("email")
+    return [DirectoryUser(id=u.id, email=u.email, full_name=u.full_name, status_text=u.status_text,
+                          title=u.org_title.name if u.org_title_id else "",
                           permissions=sorted(g.code for g in u.grants.all())) for u in users]
 
 
@@ -184,10 +186,10 @@ def replay_events(user: User, after: int) -> list[dict]:
 @router.get("/admin", response=list[AdminLetterOut])
 def admin_list(request, limit: int = 100, offset: int = 0):
     """Manager view: title, status and participants only. No body, no wraps, no signatures' notes."""
-    require_manager(request)
+    manager = require_manager(request)
     offset, limit = max(offset, 0), max(min(limit, 200), 0)
     rows = Letter.objects.exclude(status=Letter.DRAFT).select_related("creator").order_by("-no")[offset : offset + limit]
-    return [AdminLetterOut(**_brief(x).dict(), creator_email=x.creator.email, participants=_participants(x)) for x in rows]
+    return [AdminLetterOut(**_brief(manager, x).dict(), creator_email=x.creator.email, participants=_participants(x)) for x in rows]
 
 
 @router.get("/seal-key", response=dict)
@@ -217,12 +219,14 @@ def get_letter(request, letter_id: UUID):
     letter = _get_visible(user, letter_id)
     children = rules.visible_letters(user).filter(parent=letter).order_by("no")
     return LetterOut(
-        **_brief(letter).dict(), publish_mode=letter.publish_mode, order=letter.order, due_at=letter.due_at,
+        **_brief(user, letter).dict(), publish_mode=letter.publish_mode, order=letter.order, due_at=letter.due_at,
         body=_decrypted_body(letter), participants=_participants(letter),
         signatures=[_signature_out(s) for s in letter.signatures.order_by("id")],
-        children=[_brief(c) for c in children],
+        children=briefs.briefs(user, children),
         attachments=[AttachmentOut(id=a.id, content_type=a.content_type, label=a.label, size=a.size)
                      for a in letter.attachments.order_by("created_at")],
+        paraphs=paraphs.paraphs_of(letter), tasks=task_links.linked(user, letter),
+        customer_refs=secretariat.customer_refs(letter.subject_id),
     )
 
 
@@ -239,11 +243,13 @@ def certificate(request, letter_id: UUID):
             "decision": s.decision, "signed_at": s.payload.get("signedAt"), "payload": s.payload, "seal": s.seal,
             "verified": cryptoutil.verify_seal(s.payload, s.seal) and s.payload.get("contentHash") == current_hash,
         })
+    paraph_rows = paraphs.certificate_rows(letter, current_hash)
     return {"letter": {"id": str(letter.id), "no": letter.no, "title": letter.title, "status": letter.status,
                        "creator": letter.creator.email, "sent_at": letter.sent_at, "closed_at": letter.closed_at,
                        "content_hash": current_hash},
             "seal_key": cryptoutil.seal_public_info(),
-            "signatures": sigs, "all_verified": bool(sigs) and all(x["verified"] for x in sigs)}
+            "signatures": sigs, "all_verified": bool(sigs) and all(x["verified"] for x in sigs),
+            "paraphs": paraph_rows, "paraphs_verified": all(x["verified"] for x in paraph_rows)}
 
 
 @router.post("/{uuid:letter_id}/opened", response=Detail)
@@ -275,7 +281,7 @@ def sign_letter(request, letter_id: UUID, data: SignPinIn):
     user = user_of(request)
     signing.require_turn(_get_visible(user, letter_id), user)  # non-signers cannot burn PIN attempts
     signing.check_pin(user, data.pin, request.auth)
-    return _brief(_sign_locked(letter_id, user, request.auth, data, "pin"))
+    return _brief(user, _sign_locked(letter_id, user, request.auth, data, "pin"))
 
 
 @router.post("/{uuid:letter_id}/sign-biometric", response=LetterBrief)
@@ -284,7 +290,7 @@ def sign_biometric(request, letter_id: UUID, data: SignBiometricIn):
     user = user_of(request)
     if not request.auth.biometric:
         raise HttpError(403, "This session has no biometrics")
-    return _brief(_sign_locked(letter_id, user, request.auth, data, "biometric"))
+    return _brief(user, _sign_locked(letter_id, user, request.auth, data, "biometric"))
 
 
 @router.post("/{uuid:letter_id}/sign-requests", response={201: SignRequestOut})
@@ -310,7 +316,7 @@ def cancel_letter(request, letter_id: UUID):
     audit(user, "letter_cancelled", str(letter.id))
     if not was_draft:
         events.emit(letter, "cancelled", user)
-    return _brief(letter)
+    return _brief(user, letter)
 
 
 class UnlistIn(Schema):
@@ -329,7 +335,7 @@ def unlist(request, letter_id: UUID, data: UnlistIn):
     letter.save(update_fields=["unlisted"])
     audit(manager, "letter_unlisted" if data.unlisted else "letter_relisted", str(letter.id))  # no titles in audit: the superuser reads the audit log
     events.emit(letter, "unlisted" if data.unlisted else "relisted", manager)
-    return _brief(letter)
+    return _brief(manager, letter)
 
 
 # --- attachments -----------------------------------------------------------------------------------------------
@@ -348,7 +354,7 @@ def add_attachment(request, letter_id: UUID, content_type: Form[str], label: For
     if file.size > settings.MAX_ATTACHMENT_BYTES:
         raise HttpError(413, "Attachment is larger than 25 MB")
     att = Attachment(letter=letter, content_type=content_type, label=label[:100], size=file.size)
-    att.file.save("blob", ContentFile(cryptoutil.encrypt_bytes(file.read())), save=False)
+    filestore.save_encrypted(att.file, file.read())
     att.save()
     return 201, AttachmentOut(id=att.id, content_type=att.content_type, label=att.label, size=att.size)
 
@@ -357,11 +363,18 @@ def add_attachment(request, letter_id: UUID, content_type: Form[str], label: For
 def download_attachment(request, letter_id: UUID, attachment_id: UUID):
     letter = _get_visible(user_of(request), letter_id)
     att = get_object_or_404(Attachment, pk=attachment_id, letter=letter)
-    with att.file.open("rb") as handle:
-        stored = handle.read()
     try:
-        plain = cryptoutil.decrypt_bytes(stored)
-    except cryptoutil.DecryptError as exc:
+        plain = filestore.read_decrypted(att.file)
+    except filestore.DecryptError as exc:
         logger.error("Attachment %s cannot be decrypted: %s", att.id, exc)
         raise HttpError(500, "Attachment cannot be decrypted; check DJANGO_DATA_KEY") from exc
     return HttpResponse(plain, content_type=att.content_type)
+
+
+# Letters v2 sub-routers (same prefix); kept in their own modules so this file stays small.
+from .api_inbox import router as _inbox_router  # noqa: E402
+from .api_links import router as _links_router  # noqa: E402
+from .api_referrals import router as _referrals_router  # noqa: E402
+
+for _sub in (_inbox_router, _referrals_router, _links_router):
+    router.add_router("", _sub)

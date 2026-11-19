@@ -7,6 +7,8 @@ from accounts.auth import ACCESS_MAX_AGE
 from accounts.models import Session
 from accounts.notify import session_group, user_group
 
+from workspace.events import replay_events as replay_workspace_events
+
 from .api import replay_events
 
 AUTH_FAILED = 4401
@@ -41,13 +43,14 @@ class LetterConsumer(AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_discard(session_group(self.session_id), self.channel_name)
 
     async def receive_json(self, content, **kwargs):
-        """Client sends {"after": <last event id it has>} after (re)connecting to catch up."""
+        """Client sends {"after": <last letter event id>, "after_w": <last workspace event id>} to catch up."""
         if not await self._still_valid():
             return
-        after = content.get("after") if isinstance(content, dict) else None
-        if isinstance(after, int) and after >= 0:
-            for event in await sync_to_async(replay_events)(self.user, after):
-                await self.send_json(event)
+        for key, replay in (("after", replay_events), ("after_w", replay_workspace_events)):
+            cursor = content.get(key) if isinstance(content, dict) else None
+            if isinstance(cursor, int) and not isinstance(cursor, bool) and cursor >= 0:
+                for event in await sync_to_async(replay)(self.user, cursor):
+                    await self.send_json(event)
 
     async def event(self, message):
         """Group message from the server. A revoked session stops receiving and is closed."""

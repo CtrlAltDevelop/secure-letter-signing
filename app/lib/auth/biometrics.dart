@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:local_auth/local_auth.dart';
 
 /// Local biometric check. A failed or cancelled check returns false, never throws.
@@ -11,6 +12,10 @@ class LocalAuthBiometrics implements Biometrics {
 
   @override
   Future<bool> available() async {
+    // No platform authenticator behind local_auth on web.
+    if (kIsWeb) {
+      return false;
+    }
     try {
       final auth = LocalAuthentication();
       return await auth.isDeviceSupported() &&
@@ -22,6 +27,9 @@ class LocalAuthBiometrics implements Biometrics {
 
   @override
   Future<bool> authenticate(String reason) async {
+    if (kIsWeb) {
+      return false;
+    }
     try {
       return await LocalAuthentication().authenticate(
         localizedReason: reason,

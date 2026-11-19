@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:letter_signing/tasks/models.dart' show TaskBrief;
+import 'package:letter_signing/workspace/models.dart'
+    show UserRef, asInt, asIntList, asMap, asMapList, asString, parseDate;
+
 DateTime? _date(Object? v) => v == null ? null : DateTime.parse(v as String);
 
 /// Letter states as the server sends them.
@@ -25,6 +29,11 @@ class LetterBrief {
     required this.unlisted,
     required this.createdAt,
     required this.sentAt,
+    this.subjectId,
+    this.labelIds = const [],
+    this.numberLabel = '',
+    this.referralCount = 0,
+    this.archived = false,
   });
 
   final String id;
@@ -38,6 +47,35 @@ class LetterBrief {
   final DateTime createdAt;
   final DateTime? sentAt;
 
+  /// Workspace anchor (labels, comments, files); null on an older server.
+  final String? subjectId;
+  final List<int> labelIds;
+
+  /// Secretariat number such as `1405/0012`; empty until registered.
+  final String numberLabel;
+  final int referralCount;
+
+  /// Archived by the caller (a per-user mark).
+  final bool archived;
+
+  LetterBrief copyWith({List<int>? labelIds, bool? archived}) => LetterBrief(
+    id: id,
+    no: no,
+    title: title,
+    status: status,
+    creatorId: creatorId,
+    parentId: parentId,
+    visibility: visibility,
+    unlisted: unlisted,
+    createdAt: createdAt,
+    sentAt: sentAt,
+    subjectId: subjectId,
+    labelIds: labelIds ?? this.labelIds,
+    numberLabel: numberLabel,
+    referralCount: referralCount,
+    archived: archived ?? this.archived,
+  );
+
   factory LetterBrief.fromJson(Map<String, dynamic> j) => LetterBrief(
     id: j['id'] as String,
     no: j['no'] as int,
@@ -49,6 +87,11 @@ class LetterBrief {
     unlisted: j['unlisted'] as bool,
     createdAt: DateTime.parse(j['created_at'] as String),
     sentAt: _date(j['sent_at']),
+    subjectId: j['subject_id'] as String?,
+    labelIds: asIntList(j['label_ids']),
+    numberLabel: asString(j['number_label']),
+    referralCount: asInt(j['referral_count']) ?? 0,
+    archived: j['archived'] == true,
   );
 }
 
@@ -161,6 +204,9 @@ class LetterDetail {
     required this.signatures,
     required this.children,
     required this.attachments,
+    this.paraphs = const [],
+    this.tasks = const [],
+    this.customerRefs = const [],
   });
 
   final LetterBrief brief;
@@ -172,6 +218,11 @@ class LetterDetail {
   final List<SignatureInfo> signatures;
   final List<LetterBrief> children;
   final List<AttachmentInfo> attachments;
+  final List<ParaphInfo> paraphs;
+
+  /// Linked tasks the caller may see.
+  final List<TaskBrief> tasks;
+  final List<String> customerRefs;
 
   String get id => brief.id;
   String get title => brief.title;
@@ -196,8 +247,153 @@ class LetterDetail {
       signatures: list('signatures', SignatureInfo.fromJson),
       children: list('children', LetterBrief.fromJson),
       attachments: list('attachments', AttachmentInfo.fromJson),
+      paraphs: [
+        for (final e in asMapList(j['paraphs'])) ParaphInfo.fromJson(e),
+      ],
+      tasks: [for (final e in asMapList(j['tasks'])) TaskBrief.fromJson(e)],
+      customerRefs: [
+        if (j['customer_refs'] is List)
+          for (final e in j['customer_refs'] as List) '$e',
+      ],
     );
   }
+}
+
+/// A sealed initial of one participant on a letter (`ParaphOut`).
+@immutable
+class ParaphInfo {
+  const ParaphInfo({
+    required this.signerId,
+    required this.signerName,
+    required this.method,
+    required this.deviceName,
+    required this.paraphedAt,
+    this.seal = '',
+  });
+
+  final int signerId;
+  final String signerName;
+
+  /// `pin` or `biometric`.
+  final String method;
+  final String deviceName;
+  final DateTime? paraphedAt;
+  final String seal;
+
+  factory ParaphInfo.fromJson(Map<String, dynamic> j) => ParaphInfo(
+    signerId: asInt(j['signer_id']) ?? 0,
+    signerName: asString(j['signer_name']),
+    method: asString(j['method']),
+    deviceName: asString(j['device_name']),
+    paraphedAt: parseDate(j['paraphed_at']),
+    seal: asString(j['seal']),
+  );
+}
+
+/// One referral of a letter to a colleague (`ReferralOut`).
+@immutable
+class ReferralInfo {
+  const ReferralInfo({
+    required this.id,
+    required this.letterId,
+    required this.fromUser,
+    required this.toUser,
+    required this.note,
+    required this.status,
+    required this.responseNote,
+    this.createdAt,
+    this.respondedAt,
+  });
+
+  static const pending = 'pending';
+  static const done = 'done';
+  static const declined = 'declined';
+
+  final int id;
+  final String letterId;
+  final UserRef fromUser;
+  final UserRef toUser;
+  final String note;
+  final String status;
+  final String responseNote;
+  final DateTime? createdAt;
+  final DateTime? respondedAt;
+
+  bool get isPending => status == pending;
+
+  factory ReferralInfo.fromJson(Map<String, dynamic> j) => ReferralInfo(
+    id: asInt(j['id']) ?? 0,
+    letterId: asString(j['letter_id']),
+    fromUser: UserRef.maybe(j['from_user']) ?? const UserRef(id: 0),
+    toUser: UserRef.maybe(j['to_user']) ?? const UserRef(id: 0),
+    note: asString(asMap(j['note'])['text']),
+    status: asString(j['status'], pending),
+    responseNote: asString(asMap(j['response_note'])['text']),
+    createdAt: parseDate(j['created_at']),
+    respondedAt: parseDate(j['responded_at']),
+  );
+}
+
+/// One row of the secretariat register (`EntryOut`).
+@immutable
+class SecretariatEntry {
+  const SecretariatEntry({
+    required this.id,
+    required this.subjectId,
+    required this.direction,
+    required this.number,
+    required this.title,
+    this.partyName = '',
+    this.partyRef = '',
+    this.letterId,
+    this.summary = '',
+    this.customerRefs = const [],
+    this.labelIds = const [],
+    this.registeredBy = const UserRef(id: 0),
+    this.registeredAt,
+  });
+
+  static const incoming = 'in';
+  static const outgoing = 'out';
+
+  final String id;
+  final String subjectId;
+
+  /// `in` or `out`.
+  final String direction;
+
+  /// `1405/0012`.
+  final String number;
+  final String title;
+  final String partyName;
+  final String partyRef;
+  final String? letterId;
+  final String summary;
+  final List<String> customerRefs;
+  final List<int> labelIds;
+  final UserRef registeredBy;
+  final DateTime? registeredAt;
+
+  bool get isIncoming => direction == incoming;
+
+  factory SecretariatEntry.fromJson(Map<String, dynamic> j) => SecretariatEntry(
+    id: asString(j['id']),
+    subjectId: asString(j['subject_id']),
+    direction: asString(j['direction'], incoming),
+    number: asString(j['number']),
+    title: asString(j['title']),
+    partyName: asString(j['party_name']),
+    partyRef: asString(j['party_ref']),
+    letterId: j['letter_id'] as String?,
+    summary: asString(asMap(j['summary'])['text']),
+    customerRefs: [
+      if (j['customer_refs'] is List)
+        for (final e in j['customer_refs'] as List) '$e',
+    ],
+    labelIds: asIntList(j['label_ids']),
+    registeredBy: UserRef.maybe(j['registered_by']) ?? const UserRef(id: 0),
+    registeredAt: parseDate(j['registered_at']),
+  );
 }
 
 @immutable
@@ -424,6 +620,9 @@ class LiveEvent {
   bool get isNotification => type == 'notification';
   bool get isSignRequest => type == 'sign_request';
   bool get isSignRequestUpdate => type == 'sign_request_update';
+
+  /// A workspace (tasks/projects) frame: `{"type": "ws", "stream": "w", ...}`.
+  bool get isWorkspace => type == 'ws' && raw['stream'] == 'w';
 
   /// The request carried by a `sign_request` / `sign_request_update` frame.
   SignRequest? get request {

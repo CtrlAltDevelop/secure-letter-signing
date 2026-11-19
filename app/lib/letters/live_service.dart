@@ -39,17 +39,25 @@ typedef ChannelFactory = LiveChannel Function(Uri uri);
 LiveChannel _connect(Uri uri) => _WsChannel(WebSocketChannel.connect(uri));
 
 /// Persists the last seen event id so catch-up survives restarts.
+/// Letters and workspace (`stream: "w"`) frames have independent id sequences, so two cursors.
 abstract class CursorStore {
   Future<int> read();
   Future<void> write(int id);
+  Future<int> readWorkspace();
+  Future<void> writeWorkspace(int id);
 }
 
 class MemoryCursorStore implements CursorStore {
   int _id = 0;
+  int _workspaceId = 0;
   @override
   Future<int> read() async => _id;
   @override
   Future<void> write(int id) async => _id = id;
+  @override
+  Future<int> readWorkspace() async => _workspaceId;
+  @override
+  Future<void> writeWorkspace(int id) async => _workspaceId = id;
 }
 
 class SecureCursorStore implements CursorStore {
@@ -57,15 +65,24 @@ class SecureCursorStore implements CursorStore {
   final int userId;
   static const _storage = appSecureStorage;
   String get _key => 'live_cursor_$userId';
+  String get _workspaceKey => 'live_cursor_w_$userId';
+
+  Future<int> _get(String key) async =>
+      int.tryParse(await _storage.read(key: key) ?? '') ?? 0;
+
   @override
-  Future<int> read() async =>
-      int.tryParse(await _storage.read(key: _key) ?? '') ?? 0;
+  Future<int> read() => _get(_key);
   @override
   Future<void> write(int id) => _storage.write(key: _key, value: '$id');
+  @override
+  Future<int> readWorkspace() => _get(_workspaceKey);
+  @override
+  Future<void> writeWorkspace(int id) =>
+      _storage.write(key: _workspaceKey, value: '$id');
 }
 
 /// Live letter events and notifications over `ws(s)://<apiUrl>/ws/?token=...`.
-/// On every (re)connect it sends `{"after": cursor}` for catch-up; reconnects with capped backoff.
+/// On every (re)connect it sends `{"after": n, "after_w": m}` for catch-up; reconnects with capped backoff.
 class LiveService {
   LiveService({
     required this.api,
@@ -144,7 +161,12 @@ class LiveService {
     try {
       await channel.ready;
       _connected.add(true);
-      channel.send(jsonEncode({'after': await cursor.read()}));
+      channel.send(
+        jsonEncode({
+          'after': await cursor.read(),
+          'after_w': await cursor.readWorkspace(),
+        }),
+      );
       await for (final raw in channel.stream) {
         traffic = true;
         await _handle(raw);
@@ -171,9 +193,19 @@ class LiveService {
     }
     if (data is! Map) return;
     final event = LiveEvent(Map<String, dynamic>.from(data));
-    final id = event.eventId;
-    if (id != null && id > await cursor.read()) await cursor.write(id);
+    await _advanceCursor(event);
     _events.add(event);
+  }
+
+  /// Workspace frames move only the workspace cursor, everything else the letters one.
+  Future<void> _advanceCursor(LiveEvent event) async {
+    final id = event.eventId;
+    if (id == null) return;
+    if (event.isWorkspace) {
+      if (id > await cursor.readWorkspace()) await cursor.writeWorkspace(id);
+    } else if (id > await cursor.read()) {
+      await cursor.write(id);
+    }
   }
 
   Future<void> dispose() async {

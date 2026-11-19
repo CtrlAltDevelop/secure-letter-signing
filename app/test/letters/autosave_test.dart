@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:letter_signing/letters/create_letter_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../helpers.dart';
 import 'fakes.dart';
 
 void main() {
@@ -34,7 +35,7 @@ void main() {
       ];
 
       await t.pumpWidget(
-        MaterialApp(
+        faMaterial(
           home: CreateLetterScreen(
             env: env,
             autosaveEvery: const Duration(milliseconds: 200),

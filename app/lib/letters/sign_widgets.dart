@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/letters/models.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/app_theme.dart';
@@ -17,6 +18,7 @@ class SignMethods extends StatelessWidget {
     required this.devices,
     required this.onAsk,
     this.onEnableBiometric,
+    this.actionLabel,
   });
   final TextEditingController pin;
   final String? pinError;
@@ -31,8 +33,12 @@ class SignMethods extends StatelessWidget {
   /// Non-null when biometrics are available here but this session is not enrolled.
   final VoidCallback? onEnableBiometric;
 
+  /// Label of the PIN button; defaults to "sign with PIN".
+  final String? actionLabel;
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final muted = TextStyle(
       color: Theme.of(context).colorScheme.onSurfaceVariant,
       fontSize: 13,
@@ -43,6 +49,7 @@ class SignMethods extends StatelessWidget {
         children: [
           PinField(
             controller: pin,
+            label: l.signPinLabel,
             enabled: !busy,
             errorText: pinError,
             onSubmitted: onPin,
@@ -57,18 +64,18 @@ class SignMethods extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.lock_open_outlined),
-            label: Text(busy ? 'Signing...' : 'Sign with PIN'),
+            label: Text(busy ? l.signBusy : (actionLabel ?? l.signWithPin)),
           ),
           if (onBiometric != null || devices.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Or confirm with biometrics', style: muted),
+            Text(l.signOrBiometric, style: muted),
             const SizedBox(height: 8),
           ],
           if (onBiometric != null)
             OutlinedButton.icon(
               onPressed: busy ? null : onBiometric,
               icon: const Icon(Icons.fingerprint),
-              label: const Text('Fingerprint / face'),
+              label: Text(l.signFingerprint),
             ),
           if (onEnableBiometric != null)
             Align(
@@ -76,7 +83,7 @@ class SignMethods extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: busy ? null : onEnableBiometric,
                 icon: const Icon(Icons.fingerprint),
-                label: const Text('Enable fingerprint / face'),
+                label: Text(l.signEnableBiometric),
               ),
             ),
           for (final d in devices) ...[
@@ -84,7 +91,7 @@ class SignMethods extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: busy ? null : () => onAsk(d),
               icon: Icon(platformIcon(d.platform)),
-              label: Text('Ask my ${d.displayName}'),
+              label: Text(l.signAskDevice(d.displayName)),
             ),
           ],
         ],
@@ -105,6 +112,7 @@ class WaitingForApproval extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final muted = TextStyle(
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
@@ -115,19 +123,14 @@ class WaitingForApproval extends StatelessWidget {
           const Center(child: CircularProgressIndicator()),
           const SizedBox(height: 16),
           Text(
-            'Waiting for approval on $device',
+            l.signWaiting(device),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 6),
-          Text(
-            'Open the app there and confirm with your fingerprint or face. '
-            'The request expires after 5 minutes.',
-            textAlign: TextAlign.center,
-            style: muted,
-          ),
+          Text(l.signWaitingHint, textAlign: TextAlign.center, style: muted),
           const SizedBox(height: 16),
-          OutlinedButton(onPressed: onCancel, child: const Text('Cancel')),
+          OutlinedButton(onPressed: onCancel, child: Text(l.commonCancel)),
         ],
       ),
     );

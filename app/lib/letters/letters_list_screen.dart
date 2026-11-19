@@ -2,16 +2,26 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/letters/create_letter_screen.dart';
+import 'package:letter_signing/letters/letter_card.dart';
 import 'package:letter_signing/letters/letter_detail_screen.dart';
-import 'package:letter_signing/letters/letters_env.dart';
-import 'package:letter_signing/letters/models.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
+import 'package:letter_signing/letters/letters_env.dart';
+import 'package:letter_signing/letters/letters_search_sheet.dart';
+import 'package:letter_signing/letters/letters_v2_api.dart';
+import 'package:letter_signing/letters/models.dart';
 import 'package:letter_signing/letters/notifications_screen.dart';
+import 'package:letter_signing/letters/secretariat_screen.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
+import 'package:letter_signing/workspace/models.dart';
 
-/// History: everything visible to this user, newest first; chained letters nest under their parent.
+/// The boxes of the letters list, in tab order.
+const letterBoxes = ['inbox', 'outbox', 'archive', 'all'];
+
+/// Letters visible to this user, newest first, in four boxes (inbox, outbox, archive, all);
+/// chained letters nest under their parent.
 class LettersListScreen extends StatefulWidget {
   const LettersListScreen({
     super.key,
@@ -27,34 +37,66 @@ class LettersListScreen extends StatefulWidget {
   State<LettersListScreen> createState() => _LettersListScreenState();
 }
 
-class _LettersListScreenState extends State<LettersListScreen> {
+class _LettersListScreenState extends State<LettersListScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(
+    length: letterBoxes.length,
+    vsync: this,
+  )..addListener(_onTab);
   List<LetterBrief> _all = const [];
+  List<LabelInfo> _labels = const [];
   Object? _error;
   bool _loading = true;
-  String _query = '';
+  LetterSearch _criteria = const LetterSearch(box: 'inbox');
   final _search = TextEditingController();
   final Set<String> _statuses = {};
   StreamSubscription<dynamic>? _sub;
 
+  LettersEnv get env => widget.env;
+
   @override
   void initState() {
     super.initState();
-    _sub = widget.env.live.events.listen((e) {
+    _sub = env.live.events.listen((e) {
       if (e.isLetter && mounted) unawaited(_load());
     });
     unawaited(_load());
+    unawaited(_loadLabels());
   }
 
   @override
   void dispose() {
     unawaited(_sub?.cancel());
+    _tabs
+      ..removeListener(_onTab)
+      ..dispose();
     _search.dispose();
     super.dispose();
   }
 
+  void _onTab() {
+    if (_tabs.indexIsChanging) return;
+    final box = letterBoxes[_tabs.index];
+    if (box == _criteria.box) return;
+    setState(() {
+      _criteria = _criteria.copyWith(box: box);
+      _loading = true;
+    });
+    unawaited(_load());
+  }
+
+  Future<void> _loadLabels() async {
+    final labels = await env.labels();
+    if (mounted) setState(() => _labels = labels);
+  }
+
+  Future<List<LetterBrief>> _fetch() => _criteria.activeCount == 0
+      ? env.api.list(box: _criteria.box)
+      : env.v2.search(_criteria);
+
   Future<void> _load() async {
     try {
-      final rows = await widget.env.api.list(q: _query);
+      final rows = await _fetch();
       if (!mounted) return;
       setState(() {
         _all = rows;
@@ -79,8 +121,9 @@ class _LettersListScreenState extends State<LettersListScreen> {
     final ids = {for (final l in _all) l.id};
     final kids = <String, List<LetterBrief>>{};
     for (final l in _all) {
-      if (l.parentId != null && ids.contains(l.parentId)) {
-        kids.putIfAbsent(l.parentId!, () => []).add(l);
+      final parent = l.parentId;
+      if (parent != null && ids.contains(parent)) {
+        kids.putIfAbsent(parent, () => []).add(l);
       }
     }
     final out = <(LetterBrief, int)>[];
@@ -101,7 +144,7 @@ class _LettersListScreenState extends State<LettersListScreen> {
   Future<void> _open(String id) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => LetterDetailScreen(env: widget.env, letterId: id),
+        builder: (_) => LetterDetailScreen(env: env, letterId: id),
       ),
     );
     if (mounted) unawaited(_load());
@@ -109,62 +152,141 @@ class _LettersListScreenState extends State<LettersListScreen> {
 
   Future<void> _create() async {
     final created = await Navigator.of(context).push<LetterBrief>(
-      MaterialPageRoute(builder: (_) => CreateLetterScreen(env: widget.env)),
+      MaterialPageRoute(builder: (_) => CreateLetterScreen(env: env)),
     );
     if (created != null && mounted) unawaited(_load());
   }
 
-  Widget _filters() => SizedBox(
+  Future<void> _openSecretariat() => Navigator.of(
+    context,
+  ).push<void>(MaterialPageRoute(builder: (_) => SecretariatScreen(env: env)));
+
+  Future<void> _advanced() async {
+    final picked = await showLetterSearchSheet(
+      context,
+      criteria: _criteria,
+      labels: _labels,
+    );
+    if (picked == null || !mounted) return;
+    _search.text = picked.q;
+    setState(() {
+      _criteria = picked;
+      _loading = true;
+    });
+    unawaited(_load());
+  }
+
+  void _submitQuery(String v) {
+    setState(() {
+      _criteria = _criteria.copyWith(q: v.trim());
+      _loading = true;
+    });
+    unawaited(_load());
+  }
+
+  void _clearAll() {
+    _search.clear();
+    setState(() {
+      _criteria = LetterSearch(box: _criteria.box);
+      _statuses.clear();
+      _loading = true;
+    });
+    unawaited(_load());
+  }
+
+  Future<void> _toggleArchive(LetterBrief l) async {
+    try {
+      await env.v2.archive(l.id, archived: !l.archived);
+      await _load();
+    } on Object catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
+  Future<void> _editLabels(LetterBrief l) async {
+    final subject = l.subjectId;
+    if (subject == null) return;
+    final picked = await showLetterLabelsSheet(
+      context,
+      env: env,
+      subjectId: subject,
+      selected: l.labelIds,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _all = [
+        for (final x in _all)
+          if (x.id == l.id) x.copyWith(labelIds: picked) else x,
+      ];
+    });
+  }
+
+  Widget _statusFilters(AppLocalizations l) => SizedBox(
     height: 48,
     child: ListView(
       scrollDirection: Axis.horizontal,
       children: [
         for (final s in LetterStatus.all)
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsetsDirectional.only(end: 8),
             child: FilterChip(
-              label: Text(statusLabel(s)),
+              label: Text(letterStatusLabel(l, s)),
               selected: _statuses.contains(s),
-              onSelected: (on) {
-                setState(() {
-                  if (on) {
-                    _statuses.add(s);
-                  } else {
-                    _statuses.remove(s);
-                  }
-                });
-              },
+              onSelected: (on) => setState(() {
+                if (on) {
+                  _statuses.add(s);
+                } else {
+                  _statuses.remove(s);
+                }
+              }),
             ),
           ),
       ],
     ),
   );
 
-  Widget _searchField() => TextField(
-    controller: _search,
-    textInputAction: TextInputAction.search,
-    decoration: InputDecoration(
-      prefixIcon: const Icon(Icons.search),
-      hintText: 'Search titles',
-      suffixIcon: _query.isEmpty
-          ? null
-          : IconButton(
-              tooltip: 'Clear search',
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                _search.clear();
-                setState(() => _query = '');
-                unawaited(_load());
-              },
+  Widget _searchRow(AppLocalizations l) {
+    final count = _criteria.activeCount;
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _search,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: l.lettersSearchHint,
+              suffixIcon: count == 0
+                  ? null
+                  : IconButton(
+                      tooltip: l.lettersSearchClear,
+                      icon: const Icon(Icons.close),
+                      onPressed: _clearAll,
+                    ),
             ),
-    ),
-    onSubmitted: (v) {
-      setState(() => _query = v.trim());
-      unawaited(_load());
-    },
-  );
+            onSubmitted: _submitQuery,
+          ),
+        ),
+        IconButton(
+          tooltip: l.lettersAdvancedSearch,
+          onPressed: _advanced,
+          icon: Badge(
+            isLabelVisible: count > 0,
+            label: Text('$count'),
+            child: const Icon(Icons.tune),
+          ),
+        ),
+        if (env.canSecretariat)
+          IconButton(
+            tooltip: l.lettersSecretariat,
+            onPressed: _openSecretariat,
+            icon: const Icon(Icons.how_to_vote_outlined),
+          ),
+      ],
+    );
+  }
 
-  Widget _stateBody(List<(LetterBrief, int)> rows) {
+  Widget _stateBody(List<(LetterBrief, int)> rows, AppLocalizations l) {
     if (_loading) return const SkeletonList();
     if (_error != null) {
       return ListView(
@@ -172,7 +294,7 @@ class _LettersListScreenState extends State<LettersListScreen> {
           const SizedBox(height: 48),
           EmptyState(
             icon: Icons.cloud_off_outlined,
-            title: 'Could not load letters',
+            title: l.lettersLoadFailed,
             message: '$_error',
             action: OutlinedButton.icon(
               onPressed: () {
@@ -180,164 +302,106 @@ class _LettersListScreenState extends State<LettersListScreen> {
                 unawaited(_load());
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(l.commonRetry),
             ),
           ),
         ],
       );
     }
-    if (rows.isEmpty) {
-      final filtered = _query.isNotEmpty || _statuses.isNotEmpty;
-      return ListView(
-        children: [
-          const SizedBox(height: 48),
-          EmptyState(
-            icon: Icons.mail_outline,
-            title: filtered ? 'No matching letters' : 'No letters yet',
-            message: filtered
-                ? 'Try a different search or clear the filters.'
-                : 'Letters you write or that are shared with you appear here.',
-            action: !filtered && widget.env.canCreate
-                ? FilledButton.icon(
-                    onPressed: _create,
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('New letter'),
-                  )
-                : null,
-          ),
-        ],
-      );
-    }
+    if (rows.isEmpty) return _empty(l);
     return ListView(
       padding: const EdgeInsets.only(bottom: 96),
       children: [
-        for (final (l, depth) in rows)
+        for (final (letter, depth) in rows)
           Padding(
-            key: ValueKey(l.id),
-            padding: EdgeInsets.only(
-              left: 20.0 * depth,
+            key: ValueKey(letter.id),
+            padding: EdgeInsetsDirectional.only(
+              start: 20.0 * depth,
               bottom: Tokens.gap * 0.75,
             ),
-            child: _LetterCard(
-              letter: l,
+            child: LetterCard(
+              letter: letter,
               depth: depth,
-              mine: l.creatorId == widget.env.userId,
-              onTap: () => _open(l.id),
+              mine: letter.creatorId == env.userId,
+              labels: _labels,
+              onTap: () => _open(letter.id),
+              onToggleArchive: () => unawaited(_toggleArchive(letter)),
+              onEditLabels: letter.subjectId == null
+                  ? null
+                  : () => unawaited(_editLabels(letter)),
             ),
           ),
       ],
     );
   }
 
+  Widget _empty(AppLocalizations l) {
+    final filtered = _criteria.activeCount > 0 || _statuses.isNotEmpty;
+    return ListView(
+      children: [
+        const SizedBox(height: 48),
+        EmptyState(
+          icon: Icons.mail_outline,
+          title: filtered ? l.lettersNoMatchTitle : l.lettersEmptyTitle,
+          message: filtered ? l.lettersNoMatchMessage : l.lettersEmptyMessage,
+          action: !filtered && env.canCreate
+              ? FilledButton.icon(
+                  onPressed: _create,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: Text(l.lettersNew),
+                )
+              : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _tabBar(AppLocalizations l) => TabBar(
+    controller: _tabs,
+    tabs: [
+      Tab(text: l.lettersBoxInbox),
+      Tab(text: l.lettersBoxOutbox),
+      Tab(text: l.lettersBoxArchive),
+      Tab(text: l.lettersBoxAll),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final rows = _rows();
     return Scaffold(
       appBar: widget.embedded
           ? null
           : AppBar(
-              title: const Text('Letters'),
-              actions: [NotificationBell(env: widget.env, onOpenLetter: _open)],
+              title: Text(l.moduleLetters),
+              actions: [NotificationBell(env: env, onOpenLetter: _open)],
             ),
-      floatingActionButton: widget.env.canCreate && rows.isNotEmpty
+      floatingActionButton: env.canCreate && rows.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: _create,
-              tooltip: 'New letter',
+              tooltip: l.lettersNew,
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('New letter'),
+              label: Text(l.lettersNew),
             )
           : null,
       body: PageBody(
         child: Column(
           children: [
-            _searchField(),
+            _tabBar(l),
             const SizedBox(height: 8),
-            _filters(),
+            _searchRow(l),
+            const SizedBox(height: 8),
+            _statusFilters(l),
             const SizedBox(height: 4),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _load,
-                child: _stateBody(rows),
+                child: _stateBody(rows, l),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _LetterCard extends StatelessWidget {
-  const _LetterCard({
-    required this.letter,
-    required this.depth,
-    required this.mine,
-    required this.onTap,
-  });
-  final LetterBrief letter;
-  final int depth;
-  final bool mine;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final muted = TextStyle(color: scheme.onSurfaceVariant, fontSize: 12.5);
-    final date = fmtDate(letter.sentAt ?? letter.createdAt);
-    final public = letter.visibility == 'public';
-    return AppCard(
-      onTap: onTap,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (depth > 0) ...[
-            Icon(
-              Icons.subdirectory_arrow_right,
-              size: 18,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text('#${letter.no}', style: muted),
-                    const SizedBox(width: 8),
-                    StatusChip(letter.status),
-                    const Spacer(),
-                    if (mine)
-                      Icon(Icons.edit_note, size: 18, color: scheme.secondary),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  letter.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.titleMedium,
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 2,
-                  children: [
-                    Text(
-                      mine ? 'Created by you' : 'Shared with you',
-                      style: muted,
-                    ),
-                    Text(date, style: muted),
-                    Text(public ? 'Public' : 'Private', style: muted),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-        ],
       ),
     );
   }

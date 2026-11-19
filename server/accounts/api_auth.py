@@ -12,16 +12,17 @@ from ninja import Router, Schema, Status
 from ninja.errors import HttpError
 from ninja.throttling import AnonRateThrottle
 
-from . import mailer, ratelimit
+from . import guests, loginlog, mailer, ratelimit, twofactor
 from .auth import BearerAuth, hash_token, issue_access, new_refresh_token
-from .models import BASE_PERMISSION, CompanySettings, InviteCode, Permission, RetiredRefresh, Session, User, audit
-from .schemas import TokenOut, UserOut
+from .models import BASE_PERMISSION, DEFAULT_GRANTS, CompanySettings, InviteCode, Permission, RetiredRefresh, Session, User, audit
+from .schemas import TokenOut, TwoFactorChallengeOut, UserOut
 
 router = Router(tags=["auth"])
 throttle = [AnonRateThrottle("20/m")]
 VERIFY_MAX_AGE = 3 * 24 * 3600
 RESET_MAX_AGE = 24 * 3600
 REFRESH_GRACE = timedelta(seconds=10)
+CHALLENGE_MAX_FAILURES = 5  # wrong second factors per login challenge
 
 
 class SignupIn(Schema):
@@ -69,7 +70,8 @@ def check_password(password: str, user: User | None = None) -> None:
 
 def _create_user(email: str, password: str, full_name: str, *, active: bool) -> User:
     user = User.objects.create_user(email, password, full_name=full_name, is_active=active)
-    user.grants.add(Permission.objects.get(code=BASE_PERMISSION))
+    Permission.objects.get(code=BASE_PERMISSION)  # the catalog must be seeded
+    user.grants.add(*Permission.objects.filter(code__in=DEFAULT_GRANTS))
     return user
 
 
@@ -140,23 +142,89 @@ def verify_email(request, data: TokenIn):
     return {"detail": "Email verified"}
 
 
-@router.post("/login", auth=None, throttle=throttle, response=TokenOut)
-def login(request, data: LoginIn):
-    email = data.email.strip().lower()
-    ratelimit.check("login", email)
-    user = authenticate(request, username=email, password=data.password)
-    if user is None:
-        ratelimit.fail("login", email)
-        raise HttpError(401, "Invalid email or password")
-    ratelimit.reset("login", email)
+def _locked_out(request, email: str, scope_ident: str | None = None, max_failures: int | None = None) -> None:
+    try:
+        ratelimit.check("login", email)
+        if scope_ident:
+            ratelimit.check("login", scope_ident, max_failures or ratelimit.MAX_FAILURES)
+    except HttpError:
+        loginlog.record(request, email=email, user=User.objects.filter(email=email).first(), success=False, reason="locked")
+        raise
+
+
+def _start_session(request, user: User, device_name: str, platform: str) -> TokenOut:
     refresh = new_refresh_token()
     session = Session.objects.create(
-        user=user, refresh_hash=hash_token(refresh), device_name=data.device_name[:100],
-        platform=data.platform[:30], ip=ratelimit.client_ip(request),
+        user=user, refresh_hash=hash_token(refresh), device_name=device_name[:100],
+        platform=platform[:30], ip=ratelimit.client_ip(request),
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:300],
     )
     audit(user, "login", str(session.id), device=session.device_name)
-    return TokenOut(access=issue_access(session), refresh=refresh, session_id=session.id, user=UserOut.of(user))
+    loginlog.record(request, email=user.email, user=user, success=True, device_name=session.device_name)
+    out = UserOut.of(user)
+    return TokenOut(access=issue_access(session), refresh=refresh, session_id=session.id, user=out,
+                    two_factor_setup_required=out.two_factor_setup_required)
+
+
+def _refuse_expired_guest(request, user: User, email: str, device_name: str) -> None:
+    if guests.is_expired(user):
+        audit(user, "guest_login_refused", str(user.id))
+        loginlog.record(request, email=email, user=user, success=False, device_name=device_name, reason="guest_expired")
+        raise HttpError(403, "Your guest access has expired; ask the company manager to extend it")
+
+
+@router.post("/login", auth=None, throttle=throttle, response=TokenOut | TwoFactorChallengeOut)
+def login(request, data: LoginIn):
+    email = data.email.strip().lower()
+    _locked_out(request, email)
+    user = authenticate(request, username=email, password=data.password)
+    if user is None:
+        ratelimit.fail("login", email)
+        loginlog.record(request, email=email, user=User.objects.filter(email=email).first(), success=False,
+                        device_name=data.device_name, reason="bad_password")
+        raise HttpError(401, "Invalid email or password")
+    _refuse_expired_guest(request, user, email, data.device_name)
+    if user.totp_enabled:  # the failure counter is reset only once the second factor is done
+        return TwoFactorChallengeOut(challenge=twofactor.issue_challenge(user))
+    ratelimit.reset("login", email)
+    return _start_session(request, user, data.device_name, data.platform)
+
+
+class Login2faIn(Schema):
+    challenge: str
+    code: str | None = None
+    recovery_code: str | None = None
+    device_name: str = ""
+    platform: str = ""
+
+
+def _second_factor_ok(user: User, data: Login2faIn) -> bool:
+    if data.recovery_code:
+        return twofactor.use_recovery_code(user, data.recovery_code)
+    return bool(data.code) and twofactor.code_ok(user, data.code)
+
+
+@router.post("/login/2fa", auth=None, throttle=throttle, response=TokenOut)
+def login_2fa(request, data: Login2faIn):
+    payload = twofactor.read_challenge(data.challenge)
+    user = User.objects.filter(pk=payload["u"], is_active=True).first()
+    if user is None or user.password[-16:] != payload["p"] or not user.totp_enabled:
+        raise HttpError(401, "The login challenge is invalid or expired")
+    challenge_key = f"challenge:{payload['n']}"
+    _locked_out(request, user.email, challenge_key, CHALLENGE_MAX_FAILURES)
+    if not data.code and not data.recovery_code:
+        raise HttpError(422, "A code or a recovery code is required")
+    if not _second_factor_ok(user, data):
+        ratelimit.fail("login", user.email)
+        ratelimit.fail("login", challenge_key)
+        audit(user, "login_2fa_failed", str(user.id))
+        loginlog.record(request, email=user.email, user=user, success=False, device_name=data.device_name, reason="bad_code")
+        raise HttpError(401, "The code is wrong")
+    _refuse_expired_guest(request, user, user.email, data.device_name)
+    twofactor.burn_challenge(payload)
+    ratelimit.reset("login", user.email)
+    ratelimit.reset("login", challenge_key)
+    return _start_session(request, user, data.device_name, data.platform)
 
 
 def _find_refreshable(presented: str):
@@ -189,7 +257,7 @@ def refresh(request, data: RefreshIn):
     new_refresh = new_refresh_token()
     with transaction.atomic():
         session, reuse_detected = _find_refreshable(presented)
-        if session is not None and session.user.is_active:
+        if session is not None and session.user.is_active and not guests.is_expired(session.user):
             now = timezone.now()
             RetiredRefresh.objects.get_or_create(token_hash=session.refresh_hash, defaults={"session": session})
             if session.refresh_hash == presented:  # normal rotation (not a grace-window retry)

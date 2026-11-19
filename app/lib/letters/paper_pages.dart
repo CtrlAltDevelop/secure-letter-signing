@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/rich/rich_doc.dart';
 import 'package:letter_signing/letters/rich/rich_layout.dart';
@@ -20,6 +21,7 @@ class PaperPage extends StatelessWidget {
     required this.number,
     required this.date,
     this.signatures = const [],
+    this.paraphs = const [],
   });
   final Letterhead head;
   final int index;
@@ -31,9 +33,11 @@ class PaperPage extends StatelessWidget {
   final String number;
   final String date;
   final List<PaperSignature> signatures;
+  final List<PaperParaph> paraphs;
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final dir = paraIsRtl(doc.paras.first, doc.text)
         ? TextDirection.rtl
         : TextDirection.ltr;
@@ -67,18 +71,18 @@ class PaperPage extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'No: $number',
+                            l.paperNumber(number),
                             style: const TextStyle(fontSize: 12, color: _ink),
                           ),
                           Text(
-                            'Date: $date',
+                            l.paperDate(date),
                             style: const TextStyle(fontSize: 12, color: _ink),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Subject: $title',
+                        l.paperSubject(title),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -102,6 +106,8 @@ class PaperPage extends StatelessWidget {
             ),
             if (index == count - 1)
               for (final sig in signatures) SignatureBlock(sig: sig),
+            if (index == count - 1 && paraphs.isNotEmpty)
+              ParaphStrip(paraphs: paraphs),
             SizedBox(
               height: footerHeight,
               child: Column(
@@ -153,12 +159,62 @@ class PaperSignature {
   final String documentId;
 }
 
+/// One paraph (initials) printed under the signatures.
+class PaperParaph {
+  const PaperParaph({
+    required this.name,
+    required this.method,
+    required this.date,
+  });
+  final String name;
+  final String method;
+  final String date;
+}
+
+/// The paraphs of the letter as a compact strip: name, method and time of each.
+class ParaphStrip extends StatelessWidget {
+  const ParaphStrip({super.key, required this.paraphs});
+  final List<PaperParaph> paraphs;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return SizedBox(
+      height: paraphHeight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(height: 8, color: paperGold),
+          Text(
+            l.paperParaphs,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: _ink,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              [for (final p in paraphs) '${p.name} (${p.method}، ${p.date})']
+                  .join(' | '),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 9, color: paperMid),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class SignatureBlock extends StatelessWidget {
   const SignatureBlock({super.key, required this.sig});
   final PaperSignature sig;
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final approved = sig.decision == 'approved';
     final color = approved ? const Color(0xFF1F8F78) : const Color(0xFFD65959);
     const small = TextStyle(fontSize: 9, color: paperMid);
@@ -169,7 +225,7 @@ class SignatureBlock extends StatelessWidget {
         children: [
           const Divider(height: 14, color: paperGold),
           Text(
-            approved ? 'Decision: Approved' : 'Decision: Rejected',
+            approved ? l.paperDecisionApproved : l.paperDecisionRejected,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -192,9 +248,9 @@ class SignatureBlock extends StatelessWidget {
               color: _ink,
             ),
           ),
-          Text('Document ID: ${sig.documentId}', style: small, maxLines: 1),
+          Text(l.paperDocumentId(sig.documentId), style: small, maxLines: 1),
           Text(
-            'Server seal: ${sig.seal}',
+            l.paperSeal(sig.seal),
             style: small,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

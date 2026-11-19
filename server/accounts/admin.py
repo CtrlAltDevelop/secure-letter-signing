@@ -29,7 +29,7 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 
 from .api_manager import LETTERHEAD_MAX_LOGO, LETTERHEAD_TEXT_FIELDS, clean_letterhead
 from .models import (
-    BASE_PERMISSION, AuditEvent, audit, verify_audit_chain, CompanySettings, Department, InviteCode, Permission, User,
+    DEFAULT_GRANTS, AuditEvent, audit, verify_audit_chain, CompanySettings, Department, InviteCode, Permission, User,
 )
 
 
@@ -136,7 +136,7 @@ def import_users_from_csv(text: str) -> dict:
     reader = csv.DictReader(text.splitlines())
     if not reader.fieldnames or "email" not in [f.strip().lower() for f in reader.fieldnames]:
         raise ValidationError("The first row must be a header containing at least: email")
-    base = Permission.objects.filter(code=BASE_PERMISSION).first()
+    defaults = list(Permission.objects.filter(code__in=DEFAULT_GRANTS))
     report = {"created": [], "skipped": [], "invalid": []}
     for n, raw in enumerate(reader, start=2):
         if n > IMPORT_MAX_ROWS + 1:
@@ -158,8 +158,7 @@ def import_users_from_csv(text: str) -> dict:
         user = User.objects.create_user(
             email, None, full_name=row.get("full_name", ""), title=row.get("title", ""), department=dept,
         )
-        if base:
-            user.grants.add(base)
+        user.grants.add(*defaults)
         report["created"].append(email)
     return report
 

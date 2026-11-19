@@ -1,28 +1,36 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
-import 'package:letter_signing/screens/admin_screen.dart';
-import 'package:letter_signing/screens/biometric_enrol.dart';
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/letters/letters_admin_screen.dart';
-import 'package:letter_signing/letters/letters_api.dart';
-import 'package:letter_signing/letters/letters_env.dart';
-import 'package:letter_signing/letters/letters_list_screen.dart';
 import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/letters/notifications_screen.dart';
 import 'package:letter_signing/letters/sign_approval_host.dart';
-import 'package:letter_signing/screens/signing_pin.dart';
+import 'package:letter_signing/screens/admin_screen.dart';
+import 'package:letter_signing/screens/biometric_enrol.dart';
 import 'package:letter_signing/screens/profile_tab.dart';
 import 'package:letter_signing/screens/sessions_tab.dart';
+import 'package:letter_signing/screens/signing_pin.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/widgets.dart';
+import 'package:letter_signing/workspace/labels_screen.dart';
+import 'package:letter_signing/workspace/module_registry.dart';
+import 'package:letter_signing/workspace/workspace_env.dart';
 
 const _wideBreakpoint = 900.0;
 
+/// Module destinations that fill the phone bottom bar; everything else goes under "More".
+const _maxPrimaryModules = 3;
+
+/// Module opened first.
+const _defaultModule = 'tasks';
+
 class _Dest {
-  const _Dest(this.label, this.icon, this.selectedIcon, this.page);
+  const _Dest(this.key, this.label, this.icon, this.selectedIcon, this.page);
+  final String key;
   final String label;
   final IconData icon;
   final IconData selectedIcon;
@@ -30,45 +38,37 @@ class _Dest {
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.auth});
+  const HomeScreen({super.key, required this.auth, this.live});
   final AuthController auth;
+
+  /// Replaces the real socket-backed stream (tests).
+  final LiveService? live;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final LettersEnv _env = _buildEnv();
-  int _index = 0;
-  final _visited = <int>{0};
-  final _pages = <int, Widget>{};
-
-  LettersEnv _buildEnv() {
-    final user = widget.auth.user!;
-    final api = widget.auth.api;
-    return LettersEnv(
-      api: LettersApi(api),
-      live: LiveService(api: api, cursor: SecureCursorStore(user.id)),
-      userId: user.id,
-      biometrics: widget.auth.biometrics,
-      enrollBiometric: widget.auth.enrollBiometric,
-      canCreate: user.permissions.contains('letter.create'),
-      isManager: user.isManager,
-      deviceName: defaultTargetPlatform
-          .name, // not Theme.of(context): this runs in initState
-      sessionId: () => widget.auth.sessionId,
-    );
-  }
+  late final WorkspaceEnv _env = WorkspaceEnv.forAuth(
+    widget.auth,
+    // Not Theme.of(context): this runs in initState.
+    deviceName: kIsWeb ? 'web' : defaultTargetPlatform.name,
+    live: widget.live,
+  );
+  String _selected = _defaultModule;
+  final _visited = <String>{_defaultModule};
+  final _pages = <String, Widget>{};
 
   @override
   void initState() {
     super.initState();
     _env.live.start();
+    unawaited(_env.loadModules());
   }
 
   @override
   void dispose() {
-    unawaited(_env.dispose());
+    unawaited(_env.disposeAll());
     super.dispose();
   }
 
@@ -80,41 +80,58 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!user.hasSigningPin) return SigningPinGate(auth: widget.auth);
     return BiometricEnrolPrompt(
       auth: widget.auth,
-      child: SignApprovalHost(env: _env, child: _shell(user)),
+      child: SignApprovalHost(
+        env: _env.letters,
+        child: ListenableBuilder(
+          listenable: _env,
+          builder: (context, _) => _shell(user),
+        ),
+      ),
     );
   }
 
-  /// Primary destinations first (they fill the phone bottom bar), manager items after.
-  List<_Dest> _destinations(UserInfo user) {
+  /// Enabled modules first (they fill the phone bottom bar), then profile, devices, manager items.
+  List<_Dest> _destinations(UserInfo user, AppLocalizations l) {
     final auth = widget.auth;
     return [
+      for (final m in enabledModules(_env))
+        _Dest(m.code, m.label(l), m.icon, m.selectedIcon, () => m.build(_env)),
       _Dest(
-        'Letters',
-        Icons.mail_outline,
-        Icons.mail,
-        () => LettersListScreen(env: _env, embedded: true),
-      ),
-      _Dest(
-        'Profile',
+        'profile',
+        l.navProfile,
         Icons.person_outline,
         Icons.person,
         () => ProfileTab(auth: auth),
       ),
       _Dest(
-        'Devices',
+        'labels',
+        l.navLabels,
+        Icons.label_outline,
+        Icons.label,
+        () => LabelsScreen(
+          api: _env.tasks.api.workspace,
+          isManager: user.isManager,
+          onChanged: _env.tasks.invalidateLabels,
+        ),
+      ),
+      _Dest(
+        'devices',
+        l.navDevices,
         Icons.devices_other_outlined,
         Icons.devices_other,
         () => SessionsTab(auth: auth),
       ),
       if (user.isManager) ...[
         _Dest(
-          'All letters',
+          'all_letters',
+          l.navAllLetters,
           Icons.inventory_2_outlined,
           Icons.inventory_2,
-          () => LettersAdminScreen(env: _env, embedded: true),
+          () => LettersAdminScreen(env: _env.letters, embedded: true),
         ),
         _Dest(
-          'Admin',
+          'admin',
+          l.navAdmin,
           Icons.admin_panel_settings_outlined,
           Icons.admin_panel_settings,
           () => AdminTab(auth: auth),
@@ -123,35 +140,43 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
-  void _select(int i) {
+  /// Index of the selected destination; falls back to the first when it vanished
+  /// (e.g. its module got disabled).
+  int _indexOf(List<_Dest> dests) {
+    final i = dests.indexWhere((d) => d.key == _selected);
+    return i < 0 ? 0 : i;
+  }
+
+  void _select(String key) {
     setState(() {
-      _index = i;
-      _visited.add(i);
+      _selected = key;
+      _visited.add(key);
     });
   }
 
-  Widget _body(List<_Dest> dests) => IndexedStack(
-    index: _index,
+  Widget _body(List<_Dest> dests, int index) => IndexedStack(
+    index: index,
     children: [
-      for (final (i, d) in dests.indexed)
-        if (_visited.contains(i))
-          _pages.putIfAbsent(i, d.page)
+      for (final d in dests)
+        if (_visited.contains(d.key))
+          _pages.putIfAbsent(d.key, d.page)
         else
           const SizedBox.shrink(),
     ],
   );
 
   Widget _shell(UserInfo user) {
-    final dests = _destinations(user);
+    final l = AppLocalizations.of(context);
+    final dests = _destinations(user, l);
+    final index = _indexOf(dests);
     final wide = MediaQuery.sizeOf(context).width >= _wideBreakpoint;
-    final title = dests[_index].label;
     final appBar = AppBar(
-      title: Text(title),
+      title: Text(dests[index].label),
       actions: [
-        NotificationBell(env: _env),
+        NotificationBell(env: _env.letters),
         if (!wide)
           IconButton(
-            tooltip: 'Sign out',
+            tooltip: l.signOut,
             icon: const Icon(Icons.logout),
             onPressed: widget.auth.logout,
           ),
@@ -160,67 +185,71 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!wide) {
       return Scaffold(
         appBar: appBar,
-        body: _body(dests),
-        bottomNavigationBar: _bottomBar(dests, user),
+        body: _body(dests, index),
+        bottomNavigationBar: _bottomBar(dests, index, l),
       );
     }
     return Scaffold(
       appBar: appBar,
       body: Row(
         children: [
-          _rail(dests, user),
+          _rail(dests, index, user, l),
           const VerticalDivider(width: 1, thickness: 1),
-          Expanded(child: _body(dests)),
+          Expanded(child: _body(dests, index)),
         ],
       ),
     );
   }
 
-  static const _primaryCount = 3;
+  /// How many destinations are module tabs on the bottom bar.
+  int _primaryCount(List<_Dest> dests) =>
+      enabledModules(_env).length
+          .clamp(0, _maxPrimaryModules)
+          .clamp(0, dests.length);
 
-  Widget _bottomBar(List<_Dest> dests, UserInfo user) {
-    final primary = dests.take(_primaryCount).toList();
-    final inMore = _index >= _primaryCount;
+  Widget _bottomBar(List<_Dest> dests, int index, AppLocalizations l) {
+    final count = _primaryCount(dests);
+    final inMore = index >= count;
     return NavigationBar(
-      selectedIndex: inMore ? _primaryCount : _index,
+      selectedIndex: inMore ? count : index,
       onDestinationSelected: (i) {
-        if (i < _primaryCount) {
-          _select(i);
+        if (i < count) {
+          _select(dests[i].key);
         } else {
-          unawaited(_openMore(dests));
+          unawaited(_openMore(dests, count));
         }
       },
       destinations: [
-        for (final d in primary)
+        for (final d in dests.take(count))
           NavigationDestination(
             icon: Icon(d.icon),
             selectedIcon: Icon(d.selectedIcon),
             label: d.label,
           ),
-        if (user.isManager)
-          const NavigationDestination(
-            icon: Icon(Icons.more_horiz),
-            selectedIcon: Icon(Icons.more_horiz),
-            label: 'More',
-          ),
+        NavigationDestination(
+          icon: const Icon(Icons.more_horiz),
+          selectedIcon: const Icon(Icons.more_horiz),
+          label: l.navMore,
+        ),
       ],
     );
   }
 
-  Future<void> _openMore(List<_Dest> dests) async {
-    final picked = await showModalBottomSheet<int>(
+  Future<void> _openMore(List<_Dest> dests, int count) async {
+    final selected = dests[_indexOf(dests)].key;
+    final picked = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (final (i, d) in dests.indexed.skip(_primaryCount))
+            for (final d in dests.skip(count))
               ListTile(
-                leading: Icon(i == _index ? d.selectedIcon : d.icon),
+                leading: Icon(d.key == selected ? d.selectedIcon : d.icon),
                 title: Text(d.label),
-                selected: i == _index,
-                onTap: () => Navigator.pop(ctx, i),
+                selected: d.key == selected,
+                onTap: () => Navigator.pop(ctx, d.key),
               ),
           ],
         ),
@@ -229,51 +258,22 @@ class _HomeScreenState extends State<HomeScreen> {
     if (picked != null && mounted) _select(picked);
   }
 
-  Widget _rail(List<_Dest> dests, UserInfo user) {
-    final text = Theme.of(context).textTheme;
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+  Widget _rail(
+    List<_Dest> dests,
+    int index,
+    UserInfo user,
+    AppLocalizations l,
+  ) {
     return NavigationRail(
       extended: true,
       minExtendedWidth: 220,
-      selectedIndex: _index,
-      onDestinationSelected: _select,
+      selectedIndex: index,
+      onDestinationSelected: (i) => _select(dests[i].key),
       leading: const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: BrandLogo(size: 48),
       ),
-      trailing: Expanded(
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: SizedBox(
-              width: 196,
-              child: Row(
-                children: [
-                  UserAvatar(
-                    fullName: user.fullName,
-                    email: user.email,
-                    radius: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      user.fullName.isEmpty ? user.email : user.fullName,
-                      style: text.bodyMedium?.copyWith(color: muted),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Sign out',
-                    icon: const Icon(Icons.logout),
-                    onPressed: widget.auth.logout,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      trailing: Expanded(child: _railUser(user, l)),
       destinations: [
         for (final d in dests)
           NavigationRailDestination(
@@ -282,6 +282,42 @@ class _HomeScreenState extends State<HomeScreen> {
             label: Text(d.label),
           ),
       ],
+    );
+  }
+
+  Widget _railUser(UserInfo user, AppLocalizations l) {
+    final text = Theme.of(context).textTheme;
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: SizedBox(
+          width: 196,
+          child: Row(
+            children: [
+              UserAvatar(
+                fullName: user.fullName,
+                email: user.email,
+                radius: 18,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  user.fullName.isEmpty ? user.email : user.fullName,
+                  style: text.bodyMedium?.copyWith(color: muted),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                tooltip: l.signOut,
+                icon: const Icon(Icons.logout),
+                onPressed: widget.auth.logout,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -46,6 +46,16 @@ INSTALLED_APPS = [
     "core",
     "accounts",
     "letters",
+    "workspace",
+    "tasks",
+    "projects",
+    "meetings",
+    "notes",
+    "polls",
+    "crm",
+    "finance",
+    "sales",
+    "chat",
 ]
 
 MIDDLEWARE = [
@@ -137,6 +147,9 @@ USE_TZ = True
 
 MEDIA_ROOT = Path(os.environ.get("ATTACHMENTS_DIR", BASE_DIR / "attachments"))
 MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+CUSTOMER_LIMIT = int(os.environ.get("CUSTOMER_LIMIT", "10000"))  # customer files (all statuses) per deployment
+SALES_SHARED_VISIBILITY = os.environ.get("SALES_SHARED_VISIBILITY", "1") not in ("0", "false", "False")  # sales.manage holders see every lead
+SMS_BACKEND = os.environ.get("SMS_BACKEND", "core.sms.ConsoleSmsBackend")  # dotted path, see core/sms.py
 DATA_UPLOAD_MAX_MEMORY_SIZE = MAX_ATTACHMENT_BYTES + 1024 * 1024
 
 STATIC_URL = "static/"

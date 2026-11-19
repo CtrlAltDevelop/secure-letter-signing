@@ -10,6 +10,9 @@ const double headerHeight = 112;
 const double titleHeight = 72;
 const double footerHeight = 36;
 const double signatureHeight = 104;
+
+/// Height of the strip that lists the paraphs (initials) under the signatures.
+const double paraphHeight = 44;
 const double bulletIndent = 22;
 
 bool isListKind(ParaKind k) => k == ParaKind.bullet || k == ParaKind.numbered;
@@ -130,6 +133,7 @@ List<List<PageSlice>> paginateRich(
   RichDoc doc,
   double font, {
   int signatureCount = 0,
+  int paraphCount = 0,
 }) {
   final pages = <List<PageSlice>>[[]];
   var used = 0.0;
@@ -196,10 +200,9 @@ List<List<PageSlice>> paginateRich(
     }
     painter.dispose();
   }
-  if (signatureCount > 0 &&
-      used + signatureCount * signatureHeight > capacity) {
-    pages.add([]);
-  }
+  final tail =
+      signatureCount * signatureHeight + (paraphCount > 0 ? paraphHeight : 0);
+  if (tail > 0 && used + tail > capacity) pages.add([]);
   return pages;
 }
 

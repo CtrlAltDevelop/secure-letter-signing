@@ -6,6 +6,7 @@ import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_list_screen.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../helpers.dart';
 import 'fakes.dart';
 
 void main() {
@@ -32,7 +33,7 @@ void main() {
         return json({});
       });
       await tester.pumpWidget(
-        MaterialApp(home: LettersListScreen(env: testEnv(f))),
+        faMaterial(home: LettersListScreen(env: testEnv(f))),
       );
       await tester.pumpAndSettle();
 
@@ -40,11 +41,11 @@ void main() {
       expect(find.text('Other'), findsOneWidget);
       expect(y('Parent') < y('Child'), isTrue);
       expect(
-        tester.getTopLeft(find.text('Child')).dx,
-        greaterThan(tester.getTopLeft(find.text('Parent')).dx),
+        tester.getTopRight(find.text('Child')).dx,
+        lessThan(tester.getTopRight(find.text('Parent')).dx),
       );
 
-      await tester.tap(find.widgetWithText(FilterChip, 'In signing'));
+      await tester.tap(find.widgetWithText(FilterChip, 'در حال امضا'));
       await tester.pumpAndSettle();
       expect(find.text('Other'), findsOneWidget);
       expect(find.text('Parent'), findsNothing);
@@ -54,7 +55,7 @@ void main() {
   testWidgets('list shows a server error', (tester) async {
     final f = fakeApi((req, _) => json({'detail': 'boom'}, 500));
     await tester.pumpWidget(
-      MaterialApp(home: LettersListScreen(env: testEnv(f))),
+      faMaterial(home: LettersListScreen(env: testEnv(f))),
     );
     await tester.pumpAndSettle();
     expect(find.text('boom'), findsOneWidget);
@@ -78,14 +79,14 @@ void main() {
       return json({});
     });
     await tester.pumpWidget(
-      MaterialApp(
+      faMaterial(
         home: LetterDetailScreen(env: testEnv(f), letterId: 'L1'),
       ),
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('Pay the invoice'), findsOneWidget);
     expect(find.textContaining('phone'), findsOneWidget);
-    expect(find.textContaining('Biometric'), findsWidgets);
+    expect(find.textContaining('زیست‌سنجی'), findsWidgets);
   });
 
   test('attachment limits are enforced before any request', () async {

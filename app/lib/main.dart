@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/l10n/app_locale.dart';
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/screens/home_screen.dart';
 import 'package:letter_signing/theme/app_theme.dart';
@@ -19,7 +21,7 @@ Future<void> main() async {
     await rootBundle.loadString('assets/brand/brand.json'),
   );
   final auth = AuthController(
-    ApiClient(baseUrl: brand.apiUrl, store: const SecureTokenStore()),
+    ApiClient(baseUrl: brand.resolvedApiUrl(), store: const SecureTokenStore()),
   );
   runApp(LetterApp(brand: brand, auth: auth));
 }
@@ -65,6 +67,9 @@ class _LetterAppState extends State<LetterApp> {
       theme: AppTheme.light(widget.brand),
       darkTheme: AppTheme.dark(widget.brand),
       themeMode: ThemeMode.system,
+      locale: appLocale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
       scrollBehavior: const NoScrollbarBehavior(),
       home: _restoring
           ? SplashScreen(brand: widget.brand)

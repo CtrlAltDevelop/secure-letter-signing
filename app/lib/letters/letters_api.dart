@@ -16,6 +16,9 @@ class LettersApi {
   final ApiClient client;
   final http.Client _http;
 
+  /// The HTTP client used for binary calls, shared with the workspace API of the same env.
+  http.Client get httpClient => _http;
+
   Future<List<T>> _list<T>(
     String path,
     T Function(Map<String, dynamic>) parse,
@@ -44,12 +47,14 @@ class LettersApi {
     return q.isEmpty ? '' : '?${Uri(queryParameters: q).query}';
   }
 
+  /// [box] is `all` (default), `inbox`, `outbox` or `archive`.
   Future<List<LetterBrief>> list({
     String q = '',
+    String box = 'all',
     int limit = 200,
     int offset = 0,
   }) => _list(
-    '/letters${_query({'q': q.isEmpty ? null : q, 'limit': limit, 'offset': offset})}',
+    '/letters${_query({'q': q.isEmpty ? null : q, 'box': box == 'all' ? null : box, 'limit': limit, 'offset': offset})}',
     LetterBrief.fromJson,
   );
 

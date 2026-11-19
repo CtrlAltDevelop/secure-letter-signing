@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:material_ui/material_ui.dart';
 
 /// Brand of the company this build belongs to (from assets/brand/brand.json).
@@ -20,6 +21,13 @@ class Brand {
   final Color accent;
   final Color dark;
   final String apiUrl;
+
+  /// The API base URL to use. An empty `apiUrl` means "same origin", which only the web build
+  /// can answer (`Uri.base.origin`); native builds keep the brand value.
+  String resolvedApiUrl({bool? web, Uri? base}) {
+    if (apiUrl.isNotEmpty || !(web ?? kIsWeb)) return apiUrl;
+    return (base ?? Uri.base).origin;
+  }
 
   factory Brand.fromJson(String source) {
     final map = jsonDecode(source) as Map<String, dynamic>;

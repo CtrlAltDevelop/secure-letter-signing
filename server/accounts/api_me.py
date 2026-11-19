@@ -21,6 +21,8 @@ router = Router(tags=["me"], auth=BearerAuth())
 class ProfileIn(Schema):
     full_name: str | None = None
     title: str | None = None
+    phone: str | None = Field(None, pattern=r"^(\+?[0-9]{8,15})?$")  # empty clears it
+    status_text: str | None = Field(None, max_length=80)  # empty clears it
 
 
 class PasswordIn(Schema):
@@ -45,7 +47,8 @@ def update_profile(request, data: ProfileIn):
     user = user_of(request)
     changes = data.dict(exclude_none=True)
     for field, value in changes.items():
-        setattr(user, field, value.strip()[:user._meta.get_field(field).max_length])
+        value = value.strip()[:user._meta.get_field(field).max_length]
+        setattr(user, field, (value or None) if field == "phone" else value)
     user.save(update_fields=list(changes))
     return UserOut.of(user)
 

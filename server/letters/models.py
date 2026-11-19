@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
@@ -29,6 +30,9 @@ class Letter(models.Model):
     sent_at = models.DateTimeField(null=True, blank=True)
     shown_at = models.DateTimeField(null=True, blank=True)  # when viewers (not just signers) may see it
     closed_at = models.DateTimeField(null=True, blank=True)
+    # Workspace anchor (labels, comments, files, seen-by, reminders). Null only until the data migration has run.
+    subject = models.OneToOneField("workspace.Subject", null=True, blank=True, on_delete=models.PROTECT,
+                                   related_name="letter")
 
 
 class Participant(models.Model):
@@ -102,3 +106,115 @@ class LetterEvent(models.Model):
     actor = models.ForeignKey(User, null=True, on_delete=models.PROTECT, related_name="+")
     data = models.JSONField(default=dict, blank=True)
     at = models.DateTimeField(default=timezone.now)
+
+
+class Referral(models.Model):
+    """A participant refers a letter to a colleague for a decision; the referee may read the letter (never sign)."""
+
+    PENDING, DONE, DECLINED = "pending", "done", "declined"
+
+    letter = models.ForeignKey(Letter, on_delete=models.PROTECT, related_name="referrals")
+    from_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
+    to_user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="referrals_received")
+    note = models.JSONField(default=dict, blank=True)  # encrypted text box (workspace.textbox)
+    status = models.CharField(max_length=8, default=PENDING)
+    response_note = models.JSONField(default=dict, blank=True)  # encrypted text box
+    created_at = models.DateTimeField(default=timezone.now)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["to_user", "status"], name="referral_to_status")]
+
+
+class LetterTaskLink(models.Model):
+    letter = models.ForeignKey(Letter, on_delete=models.PROTECT, related_name="task_links")
+    task = models.ForeignKey("tasks.Task", on_delete=models.PROTECT, related_name="+")
+    added_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
+    added_at = models.DateTimeField(default=timezone.now)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["letter", "task"], name="one_link_per_letter_task")]
+
+
+class ArchiveMark(models.Model):
+    """Per-user archive flag of a letter (toggle = `active`)."""
+
+    letter = models.ForeignKey(Letter, on_delete=models.PROTECT, related_name="archive_marks")
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
+    active = models.BooleanField(default=True)
+    at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["letter", "user"], name="one_archive_mark_per_user")]
+
+
+class Paraph(models.Model):
+    """Initialling of a letter. Immutable (DB trigger); sealed exactly like a signature."""
+
+    letter = models.ForeignKey(Letter, on_delete=models.PROTECT, related_name="paraphs")
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
+    method = models.CharField(max_length=10, choices=[("pin", "pin"), ("biometric", "biometric")])
+    payload = models.JSONField()
+    seal = models.CharField(max_length=128)
+    nonce = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["letter", "user"], name="one_paraph_per_user")]
+
+
+class NumberSequence(models.Model):
+    """Last number handed out per kind and Jalali year; always updated under `select_for_update`."""
+
+    IN, OUT, INTERNAL = "in", "out", "internal"
+
+    kind = models.CharField(max_length=8, choices=[(k, k) for k in (IN, OUT, INTERNAL)])
+    jalali_year = models.PositiveSmallIntegerField()
+    last = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["kind", "jalali_year"], name="one_sequence_per_kind_year")]
+
+
+class SecretariatEntry(models.Model):
+    """Secretariat (dabirkhaneh) register row: an incoming external letter or an outgoing number for a letter."""
+
+    IN, OUT = "in", "out"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subject = models.OneToOneField("workspace.Subject", on_delete=models.PROTECT, related_name="secretariat_entry")
+    direction = models.CharField(max_length=3, choices=[(IN, IN), (OUT, OUT)])
+    jalali_year = models.PositiveSmallIntegerField()
+    seq = models.PositiveIntegerField()
+    number = models.CharField(max_length=20)  # "{jalali_year}/{seq:04d}"
+    registered_at = models.DateTimeField(default=timezone.now)
+    registered_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
+    title = models.CharField(max_length=200)
+    party_name = models.CharField(max_length=200, blank=True)
+    party_ref = models.CharField(max_length=100, blank=True)
+    letter = models.ForeignKey(Letter, null=True, blank=True, on_delete=models.PROTECT,
+                               related_name="secretariat_entries")
+    summary = models.JSONField(default=dict, blank=True)  # encrypted text box
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["direction", "jalali_year", "seq"], name="one_number_per_sequence"),
+            models.UniqueConstraint(fields=["letter"], condition=Q(letter__isnull=False),
+                                    name="one_number_per_letter"),
+        ]
+
+
+class CustomerLink(models.Model):
+    """Links a subject (letter or secretariat entry) to a customer file. Customer files do not exist yet:
+    `customer_ref` is a bare UUID today and becomes a foreign key later."""
+
+    subject = models.ForeignKey("workspace.Subject", on_delete=models.PROTECT, related_name="customer_links")
+    customer_ref = models.UUIDField(null=True, blank=True)
+    added_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
+    at = models.DateTimeField(default=timezone.now)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["subject", "customer_ref"], name="one_link_per_customer")]

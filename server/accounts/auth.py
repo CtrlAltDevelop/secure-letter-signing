@@ -7,6 +7,9 @@ from django.utils import timezone
 from ninja.errors import HttpError
 from ninja.security import HttpBearer
 
+from workspace import registry
+
+from . import guests
 from .models import Session, User
 
 ACCESS_MAX_AGE = 600  # seconds; revocation is also checked in the DB on every request
@@ -38,8 +41,9 @@ class BearerAuth(HttpBearer):
             .filter(id=data["s"], revoked_at__isnull=True, user__is_active=True)
             .first()
         )
-        if session is None:
+        if session is None or guests.is_expired(session.user):
             return None
+        registry.set_current_user(session.user)
         if timezone.now() - session.last_active > TOUCH_EVERY:
             Session.objects.filter(pk=session.pk).update(last_active=timezone.now())
         return session

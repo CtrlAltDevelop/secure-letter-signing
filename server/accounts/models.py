@@ -12,6 +12,8 @@ from django.db.models import Q
 from django.utils import timezone
 
 BASE_PERMISSION = "user"
+# Granted to every new user (signup, invite, CSV import); existing users got the extras in a workspace migration.
+DEFAULT_GRANTS = (BASE_PERMISSION, "task.create", "project.create", "customer.create", "chat.create_group")
 
 
 class Permission(models.Model):
@@ -53,6 +55,19 @@ class Department(models.Model):
         return self.name
 
 
+class OrgTitle(models.Model):
+    """Company job positions ('titles'). Managed by the manager only; never deleted, only deactivated."""
+
+    name = models.CharField(max_length=100, unique=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
@@ -65,6 +80,15 @@ class User(AbstractUser):
     grants = models.ManyToManyField(Permission, blank=True, related_name="users")
     # 6-digit signing PIN, hashed with the Django password hasher. Empty = not set yet.
     signing_pin_hash = models.CharField(max_length=256, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)  # mobile number for SMS (meetings)
+    org_title = models.ForeignKey(OrgTitle, null=True, blank=True, on_delete=models.PROTECT, related_name="users")
+    status_text = models.CharField(max_length=80, blank=True)  # short status message shown next to the name
+    # Two-factor login (TOTP). The secret is Fernet-encrypted with the data key; see accounts/twofactor.py.
+    totp_secret = models.TextField(blank=True)
+    totp_enabled = models.BooleanField(default=False)
+    # Guests: external collaborators limited to tasks/projects/chat they were explicitly added to (accounts/guests.py).
+    is_guest = models.BooleanField(default=False)
+    guest_expires_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
@@ -73,6 +97,7 @@ class User(AbstractUser):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["is_manager"], condition=Q(is_manager=True), name="single_manager"),
+            models.CheckConstraint(condition=~Q(is_guest=True, is_manager=True), name="guest_is_not_manager"),
         ]
 
     def has_grant(self, code: str) -> bool:
@@ -140,6 +165,8 @@ class CompanySettings(models.Model):
     smtp_use_tls = models.BooleanField(default=True)
     from_email = models.EmailField(blank=True)
 
+    require_2fa = models.BooleanField(default=False)  # users without 2FA are told to set it up (still log in)
+
     # Printed letter header/footer, filled by the manager. Public to every signed-in user (not secret).
     letterhead = models.JSONField(default=dict, blank=True)
 
@@ -150,6 +177,31 @@ class CompanySettings(models.Model):
     def load(cls) -> "CompanySettings":
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class RecoveryCode(models.Model):
+    """One-time 2FA recovery code (Django hasher). A used or replaced code has `used_at`; rows are never deleted."""
+
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="recovery_codes")
+    hash = models.CharField(max_length=256)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+
+class LoginEvent(models.Model):
+    """Append-only login attempt log (the database refuses UPDATE and DELETE). `user` is null for unknown emails."""
+
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.PROTECT, related_name="login_events")
+    email_tried = models.CharField(max_length=254, blank=True)
+    at = models.DateTimeField(default=timezone.now, db_index=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True)
+    success = models.BooleanField(default=False)
+    device_name = models.CharField(max_length=100, blank=True)
+    reason = models.CharField(max_length=40, blank=True)  # bad_password, bad_code, expired_guest, locked, ...
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "-at"], name="loginevent_user_at")]
 
 
 GENESIS_HASH = "0" * 64
@@ -225,3 +277,34 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ["-id"]
+
+
+def background_path(instance: "UserPrefs", filename: str) -> str:
+    return f"backgrounds/{instance.user_id}"
+
+
+class UserPrefs(models.Model):
+    """Per-user preferences, created lazily. The background image is Fernet-encrypted on disk."""
+
+    THEMES = [(t, t) for t in ("light", "dark", "auto")]
+
+    user = models.OneToOneField(User, on_delete=models.PROTECT, related_name="prefs")
+    theme = models.CharField(max_length=5, choices=THEMES, default="auto")
+    birthday = models.DateField(null=True, blank=True)
+    birthday_visible = models.BooleanField(default=True)
+    dnd_until = models.DateTimeField(null=True, blank=True)
+    personal_email = models.EmailField(blank=True)
+    personal_email_verified = models.BooleanField(default=False)
+    background = models.FileField(upload_to=background_path, blank=True)
+    background_type = models.CharField(max_length=20, blank=True)
+    background_active = models.BooleanField(default=False)
+
+
+class DailyRun(models.Model):
+    """Guard row: a named daily job runs once per Tehran-local date (the unique constraint is the lock)."""
+
+    name = models.CharField(max_length=40)
+    date = models.DateField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["name", "date"], name="one_daily_run_per_name_date")]

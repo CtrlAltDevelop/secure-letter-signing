@@ -1,30 +1,20 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/jalali/jalali_format.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
 String two(int n) => n.toString().padLeft(2, '0');
 
-/// "12 Mar 2026" (local time).
-String fmtDate(DateTime d) {
-  final l = d.toLocal();
-  return '${l.day} ${_months[l.month - 1]} ${l.year}';
-}
+/// Jalali date, e.g. `۱۴۰۵/۰۱/۰۱` (local time).
+String fmtDate(DateTime d) => formatJalaliDate(d);
 
-/// "12 Mar 2026, 14:05".
-String fmtDateTime(DateTime d) {
-  final l = d.toLocal();
-  return '${fmtDate(l)}, ${two(l.hour)}:${two(l.minute)}';
-}
+/// Jalali date and time, e.g. `۱۴۰۵/۰۱/۰۱ ۱۴:۰۵`.
+String fmtDateTime(DateTime d) => formatJalaliDateTime(d);
 
 String fmtSize(int bytes) => bytes >= 1024 * 1024
-    ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
-    : '${(bytes / 1024).ceil()} KB';
+    ? '${toPersianDigits((bytes / (1024 * 1024)).toStringAsFixed(1))} MB'
+    : '${toPersianDigits((bytes / 1024).ceil())} KB';
 
 String initials(String name) {
   final parts = name.trim().split(RegExp(r'\s+|@')).where((p) => p.isNotEmpty);

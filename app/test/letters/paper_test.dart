@@ -1,3 +1,4 @@
+import '../helpers.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letterhead.dart';
@@ -124,7 +125,7 @@ void main() {
             .mapParas(6, 6, (p) => p.copyWith(kind: ParaKind.numbered));
         final slices = paginateRich(broken, 12).first;
         await t.pumpWidget(
-          MaterialApp(
+          faMaterial(
             home: Scaffold(
               body: PaperBody(
                 doc: broken,
@@ -235,7 +236,7 @@ void main() {
     (t) async {
       const head = Letterhead(name: 'Acme', phone: '123', website: 'a.test');
       await t.pumpWidget(
-        const MaterialApp(
+        faMaterial(
           home: Scaffold(body: LetterheadHeader(head: head)),
         ),
       );
@@ -249,7 +250,7 @@ void main() {
     (t) async {
       RichDoc? result;
       await t.pumpWidget(
-        MaterialApp(
+        faMaterial(
           home: Builder(
             builder: (c) => TextButton(
               onPressed: () async =>
@@ -282,7 +283,7 @@ void main() {
       await t.tap(find.text('Preview'));
       await t.pumpAndSettle();
       expect(find.text('Acme'), findsOneWidget);
-      expect(find.text('Subject: T'), findsOneWidget);
+      expect(find.text('موضوع: T'), findsOneWidget);
       await t.tap(find.text('Edit'));
       await t.pumpAndSettle();
       await t.tap(find.text('Done'));

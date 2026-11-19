@@ -3,12 +3,13 @@ import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/sign_approval_host.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../helpers.dart';
 import 'fakes.dart';
 
 Future<void> pumpHost(WidgetTester t, LettersEnv env) async {
   await useTallSurface(t);
   await t.pumpWidget(
-    MaterialApp(
+    faMaterial(
       home: SignApprovalHost(
         env: env,
         child: const Scaffold(body: Text('home')),

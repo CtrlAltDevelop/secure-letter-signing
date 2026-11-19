@@ -23,6 +23,7 @@ class PaperDocument {
     required this.date,
     required this.text,
     this.signatures = const [],
+    this.paraphs = const [],
   });
   final Letterhead head;
   final String title;
@@ -30,6 +31,7 @@ class PaperDocument {
   final String date;
   final RichDoc text;
   final List<PaperSignature> signatures;
+  final List<PaperParaph> paraphs;
 }
 
 /// Scrollable A4 pages of a [PaperDocument]. Call [PaperPreviewState.print] through a GlobalKey.
@@ -79,6 +81,7 @@ class PaperPreviewState extends State<PaperPreview> {
       d.text,
       widget.fontSize,
       signatureCount: d.signatures.length,
+      paraphCount: d.paraphs.length,
     );
     _count = pages.length;
     while (_keys.length < pages.length) {
@@ -115,6 +118,7 @@ class PaperPreviewState extends State<PaperPreview> {
                       number: d.number,
                       date: d.date,
                       signatures: d.signatures,
+                      paraphs: d.paraphs,
                     ),
                   ),
                 ),

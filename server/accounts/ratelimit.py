@@ -36,15 +36,16 @@ def count(scope: str, ident: str) -> int:
     return cache.get(_key(scope, ident), 0)
 
 
-def hit(scope: str, ident: str, max_attempts: int) -> int:
+def hit(scope: str, ident: str, max_attempts: int, window: int = WINDOW) -> int:
     """Atomically count one attempt BEFORE the guarded work and raise 429 once the count exceeds `max_attempts`
-    (concurrent guesses cannot race past it). Call `refund` once the attempt turned out to be legitimate."""
+    (concurrent guesses cannot race past it); `window` is the counting period in seconds.
+    Call `refund` once the attempt turned out to be legitimate."""
     key = _key(scope, ident)
-    cache.add(key, 0, WINDOW)
+    cache.add(key, 0, window)
     try:
         attempts = cache.incr(key)
     except ValueError:  # the key expired between add and incr
-        cache.set(key, 1, WINDOW)
+        cache.set(key, 1, window)
         attempts = 1
     if attempts > max_attempts:
         raise HttpError(429, "Too many attempts; try again later")

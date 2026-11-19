@@ -2,6 +2,7 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import transaction
+from django.utils import timezone
 
 import logging
 
@@ -42,17 +43,42 @@ def push(user_id: int, event: dict) -> None:
         logger.exception("Live push to user %s failed", user_id)
 
 
+# Kinds also mailed to a verified personal email (everything is mailed to the account email as before).
+IMPORTANT_KINDS = frozenset({
+    "task.assigned", "task.approval_needed", "meeting.invited", "letter_published", "letter_rejected",
+    "letter_referral", "referral_response", "sign_request", "mention", "reminder", "work.transferred",
+    "lead.assigned", "task.removal_requested"})
+
+
+BODY = "{}\n\nOpen the app to see details.\n"
+
+
+def _prefs_by_user(users) -> dict:
+    from .models import UserPrefs
+
+    return {p.user_id: p for p in UserPrefs.objects.filter(user__in=users)}
+
+
 def notify(users, kind: str, title: str, **data) -> None:
-    """Title-only notification for `users` (User objects). Sent after the surrounding transaction commits."""
+    """Title-only notification for `users` (User objects). Stored at once; pushed and emailed after the surrounding
+    transaction commits, unless the user is in do-not-disturb at that moment (the row is still stored)."""
     users = [u for u in users if u.is_active]
     rows = Notification.objects.bulk_create([Notification(user=u, kind=kind, title=title[:300], data=data) for u in users])
     cs = CompanySettings.load()
+    prefs = _prefs_by_user(users)
 
     def deliver() -> None:
+        now = timezone.now()
         for user, row in zip(users, rows):
+            own = prefs.get(user.id)
+            if own and own.dnd_until and own.dnd_until > now:
+                continue
             push(user.id, {"type": "notification", "id": row.id, "kind": kind, "title": row.title, "data": data})
-            if mailer.email_configured(cs):
-                mailer.send(user.email, row.title, f"{row.title}\n\nOpen the app to see details.\n")
+            if not mailer.email_configured(cs):
+                continue
+            mailer.send(user.email, row.title, BODY.format(row.title))
+            if own and own.personal_email_verified and own.personal_email and kind in IMPORTANT_KINDS:
+                mailer.send(own.personal_email, row.title, BODY.format(row.title))
 
     transaction.on_commit(deliver)
 

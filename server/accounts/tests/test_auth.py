@@ -97,7 +97,7 @@ def test_invite_signup_works_once_for_any_email(api, manager, company):
     invite = InviteCode.objects.create(created_by=manager, max_uses=1)
     ok = api.call("post", "/auth/signup", {"email": "n@gmail.test", "password": PASSWORD, "invite_code": invite.code})
     assert ok.status_code == 201
-    assert api.login("n@gmail.test")["user"]["permissions"] == ["user"]
+    assert api.login("n@gmail.test")["user"]["permissions"] == ["chat.create_group", "customer.create", "project.create", "task.create", "user"]
     again = api.call("post", "/auth/signup", {"email": "m@gmail.test", "password": PASSWORD, "invite_code": invite.code})
     assert again.status_code == 403
 
@@ -212,4 +212,4 @@ def test_invite_gives_chosen_grants_and_department_at_signup(api, manager, compa
     invite.grants.add(Permission.objects.get(code="letter.create"))
     api.call("post", "/auth/signup", {"email": "n@gmail.test", "password": PASSWORD, "invite_code": invite.code})
     user = api.login("n@gmail.test")["user"]
-    assert user["permissions"] == ["letter.create", "user"] and user["department"] == "Legal"
+    assert user["permissions"] == ["chat.create_group", "customer.create", "letter.create", "project.create", "task.create", "user"] and user["department"] == "Legal"
