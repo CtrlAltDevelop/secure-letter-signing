@@ -6,5 +6,5 @@
   "domain": "localhost",
   "apiUrl": "http://localhost:8090",
   "features": { "signupDomain": false, "signupInvite": false },
-  "modules": ["letters", "tasks", "projects", "meetings", "notes", "polls", "crm", "finance", "sales", "chat"]
+  "modules": ["letters", "tasks", "projects", "meetings", "notes", "polls", "crm", "finance", "sales", "chat", "gantt"]
 }
