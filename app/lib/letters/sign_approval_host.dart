@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/models.dart';
 
@@ -111,7 +112,7 @@ class _ApprovalDialogState extends State<ApprovalDialog> {
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
     return AlertDialog(
-      title: const Text('Approve signature?'),
+      title: Text(tr.approvalTitle),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -120,17 +121,20 @@ class _ApprovalDialogState extends State<ApprovalDialog> {
             Text(r.letterTitle, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
-              approve ? 'Decision: Approve' : 'Decision: Reject',
+              approve ? tr.approvalDecisionApprove : tr.approvalDecisionReject,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             if (r.note.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text('Note: "${r.note}"'),
+              Text(tr.approvalNote(r.note)),
             ],
             const SizedBox(height: 10),
             Text(
-              'Requested from ${r.requesterDeviceName.isEmpty ? 'another device' : r.requesterDeviceName}. '
-              'Only approve it if that was you.',
+              tr.approvalRequestedFrom(
+                r.requesterDeviceName.isEmpty
+                    ? tr.approvalAnotherDevice
+                    : r.requesterDeviceName,
+              ),
               style: muted,
             ),
           ],
@@ -141,14 +145,14 @@ class _ApprovalDialogState extends State<ApprovalDialog> {
           onPressed: _busy
               ? null
               : () => _run(() => widget.env.approvals.decline(r)),
-          child: const Text('Decline'),
+          child: Text(tr.approvalDecline),
         ),
         FilledButton.icon(
           onPressed: _busy
               ? null
               : () => _run(() => widget.env.approvals.approve(r)),
           icon: const Icon(Icons.fingerprint),
-          label: const Text('Approve'),
+          label: Text(tr.approvalApprove),
         ),
       ],
     );

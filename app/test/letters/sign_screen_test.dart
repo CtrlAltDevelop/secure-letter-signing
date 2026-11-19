@@ -135,12 +135,12 @@ void main() {
     );
     await t.tap(find.text('فعال‌سازی اثر انگشت / چهره'));
     await t.pumpAndSettle();
-    expect(find.text('Use fingerprint / face on this device'), findsOneWidget);
+    expect(find.text('استفاده از اثر انگشت / چهره در این دستگاه'), findsOneWidget);
     await t.enterText(
-      find.widgetWithText(TextFormField, 'Signing PIN').last,
+      find.widgetWithText(TextFormField, 'رمز امضا').last,
       '123456',
     );
-    await t.tap(find.text('Enable'));
+    await t.tap(find.text('فعال‌سازی'));
     await t.pumpAndSettle();
     expect(pins, ['123456']);
   });

@@ -7,6 +7,7 @@ import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/api/auth_controller.dart';
 import 'package:letter_signing/l10n/app_locale.dart';
 import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/prefs/theme_mode.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/screens/home_screen.dart';
 import 'package:letter_signing/theme/app_theme.dart';
@@ -61,12 +62,19 @@ class _LetterAppState extends State<LetterApp> {
   @override
   Widget build(BuildContext context) {
     final auth = widget.auth;
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: appThemeMode,
+      builder: (context, mode, _) => _app(auth, mode),
+    );
+  }
+
+  Widget _app(AuthController auth, ThemeMode mode) {
     return MaterialApp(
       title: widget.brand.name,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(widget.brand),
       darkTheme: AppTheme.dark(widget.brand),
-      themeMode: ThemeMode.system,
+      themeMode: mode,
       locale: appLocale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: appLocalizationsDelegates,

@@ -242,6 +242,18 @@ class WorkspaceApi {
     return res.bodyBytes;
   }
 
+  /// Raw bytes of an authenticated `GET` (for example `/me/background`).
+  Future<Uint8List> getBytes(String path) async {
+    final res = await _withAuth(
+      (token) => _http.get(
+        Uri.parse('${client.baseUrl}/api$path'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+    if (res.statusCode != 200) _decode(res);
+    return res.bodyBytes;
+  }
+
   Future<void> deactivateFile(String fileId) =>
       call('DELETE', '/files/$fileId');
 

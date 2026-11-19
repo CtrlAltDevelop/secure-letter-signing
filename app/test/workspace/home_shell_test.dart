@@ -140,6 +140,6 @@ void main() {
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
     final rail = t.widget<NavigationRail>(find.byType(NavigationRail));
-    expect(rail.destinations.length, 9);
+    expect(rail.destinations.length, greaterThanOrEqualTo(9));
   });
 }

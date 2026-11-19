@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 
 /// Runs the local check then enrols the session. True = enrolled, false = the
@@ -53,13 +54,13 @@ class _BiometricEnrolDialogState extends State<BiometricEnrolDialog> {
     var enabled = false;
     try {
       enabled = await widget.enroll(_pin.text);
-      if (!enabled) error = 'Fingerprint / face check was cancelled';
+      if (!enabled) error = tr.bioCancelled;
     } on BiometricEnrolError catch (e) {
       error = e.message;
     } on ApiException catch (e) {
       error = e.message;
     } on Exception {
-      error = 'Cannot reach the server';
+      error = tr.authServerUnreachable;
     }
     if (!mounted) return;
     if (enabled) {
@@ -76,7 +77,7 @@ class _BiometricEnrolDialogState extends State<BiometricEnrolDialog> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return AlertDialog(
-      title: const Text('Use fingerprint / face on this device'),
+      title: Text(tr.bioDialogTitle),
       content: SingleChildScrollView(
         child: Form(
           key: _form,
@@ -84,11 +85,7 @@ class _BiometricEnrolDialogState extends State<BiometricEnrolDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Approve signatures without typing your PIN, and let your '
-                'other devices ask this one to approve. Confirm with your '
-                'signing PIN once to turn it on.',
-              ),
+              Text(tr.bioDialogBody),
               const SizedBox(height: 16),
               PinField(
                 controller: _pin,
@@ -107,11 +104,11 @@ class _BiometricEnrolDialogState extends State<BiometricEnrolDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.pop(context, false),
-          child: const Text('Not now'),
+          child: Text(tr.bioNotNow),
         ),
         FilledButton(
           onPressed: _busy ? null : _enable,
-          child: const Text('Enable'),
+          child: Text(tr.bioEnable),
         ),
       ],
     );

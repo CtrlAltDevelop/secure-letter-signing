@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/tasks/models.dart' show TaskBrief;
 import 'package:letter_signing/workspace/models.dart'
     show UserRef, asInt, asIntList, asMap, asMapList, asString, parseDate;
@@ -595,7 +596,7 @@ class SessionInfo {
 
   String get displayName {
     if (deviceName.isNotEmpty) return deviceName;
-    return platform.isEmpty ? 'Unknown device' : platform;
+    return platform.isEmpty ? tr.sessionsUnknownDevice : platform;
   }
 
   factory SessionInfo.fromJson(Map<String, dynamic> j) => SessionInfo(

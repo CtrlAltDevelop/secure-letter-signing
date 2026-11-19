@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:letter_signing/api/api_client.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/auth/biometrics.dart';
 
 @immutable
@@ -16,6 +17,10 @@ class UserInfo {
     required this.permissions,
     this.isActive = true,
     this.hasSigningPin = true,
+    this.isGuest = false,
+    this.guestExpiresAt,
+    this.twoFactorEnabled = false,
+    this.twoFactorSetupRequired = false,
   });
 
   final int id;
@@ -29,6 +34,14 @@ class UserInfo {
   final bool hasSigningPin;
   final List<String> permissions;
 
+  /// External collaborator: sees only the modules the server returns; may expire.
+  final bool isGuest;
+  final DateTime? guestExpiresAt;
+  final bool twoFactorEnabled;
+
+  /// The company requires two-step login and this user has not set it up yet.
+  final bool twoFactorSetupRequired;
+
   UserInfo withSigningPin() => UserInfo(
     id: id,
     email: email,
@@ -40,6 +53,27 @@ class UserInfo {
     isActive: isActive,
     hasSigningPin: true,
     permissions: permissions,
+    isGuest: isGuest,
+    guestExpiresAt: guestExpiresAt,
+    twoFactorEnabled: twoFactorEnabled,
+    twoFactorSetupRequired: twoFactorSetupRequired,
+  );
+
+  UserInfo withTwoFactor({required bool enabled}) => UserInfo(
+    id: id,
+    email: email,
+    fullName: fullName,
+    title: title,
+    department: department,
+    departmentId: departmentId,
+    isManager: isManager,
+    isActive: isActive,
+    hasSigningPin: hasSigningPin,
+    permissions: permissions,
+    isGuest: isGuest,
+    guestExpiresAt: guestExpiresAt,
+    twoFactorEnabled: enabled,
+    twoFactorSetupRequired: twoFactorSetupRequired && !enabled,
   );
 
   factory UserInfo.fromJson(Map<String, dynamic> j) => UserInfo(
@@ -53,6 +87,12 @@ class UserInfo {
     isActive: j['is_active'] as bool,
     hasSigningPin: (j['has_signing_pin'] as bool?) ?? false,
     permissions: List<String>.from(j['permissions'] as List),
+    isGuest: j['is_guest'] == true,
+    guestExpiresAt: j['guest_expires_at'] is String
+        ? DateTime.tryParse(j['guest_expires_at'] as String)
+        : null,
+    twoFactorEnabled: j['two_factor_enabled'] == true,
+    twoFactorSetupRequired: j['two_factor_setup_required'] == true,
   );
 }
 
@@ -155,9 +195,7 @@ class AuthController extends ChangeNotifier {
   /// cancelled (nothing is sent). Throws [BiometricEnrolError] for a wrong PIN,
   /// no PIN or too many attempts.
   Future<bool> enrollBiometric(String pin) async {
-    final ok = await biometrics.authenticate(
-      'Enable fingerprint / face on this device',
-    );
+    final ok = await biometrics.authenticate(tr.bioEnableOnDevice);
     if (!ok) return false;
     try {
       final data = await api.call(
@@ -188,7 +226,12 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(
+  /// Login challenge of a password-correct account with two-step login, until the code is sent.
+  String? twoFactorChallenge;
+
+  /// Signs in. Returns false when the account needs a second step: finish it with
+  /// [completeTwoFactor] (the code screen reads [twoFactorChallenge]).
+  Future<bool> login(
     String email,
     String password, {
     String deviceName = '',
@@ -205,6 +248,45 @@ class AuthController extends ChangeNotifier {
         'platform': platform,
       },
     ) as Map<String, dynamic>;
+    if (data['two_factor_required'] == true) {
+      twoFactorChallenge = data['challenge'] as String?;
+      return false;
+    }
+    await _startSession(data);
+    return true;
+  }
+
+  /// Second step of the login: a 6-digit app code or, with [recovery], a recovery code.
+  /// A wrong code is a 401 [ApiException]; an expired challenge is a 401 too (see [challengeLost]).
+  Future<void> completeTwoFactor(
+    String code, {
+    bool recovery = false,
+    String deviceName = '',
+    String platform = '',
+  }) async {
+    final challenge = twoFactorChallenge;
+    if (challenge == null) {
+      throw const ApiException(401, 'No login in progress');
+    }
+    final data = await api.call(
+      'POST',
+      '/auth/login/2fa',
+      auth: false,
+      body: {
+        'challenge': challenge,
+        if (recovery) 'recovery_code': code else 'code': code,
+        'device_name': deviceName,
+        'platform': platform,
+      },
+    ) as Map<String, dynamic>;
+    twoFactorChallenge = null;
+    await _startSession(data);
+  }
+
+  /// Forget a half-finished login (user went back).
+  void cancelTwoFactor() => twoFactorChallenge = null;
+
+  Future<void> _startSession(Map<String, dynamic> data) async {
     api.setSession(
       access: data['access'] as String,
       refresh: data['refresh'] as String,
@@ -216,6 +298,12 @@ class AuthController extends ChangeNotifier {
     _enrolmentDismissed = false;
     _user = UserInfo.fromJson(data['user'] as Map<String, dynamic>);
     biometricAvailable = await biometrics.available();
+    notifyListeners();
+  }
+
+  /// Mirrors a finished 2FA enable/disable in the cached user.
+  void markTwoFactor({required bool enabled}) {
+    _user = _user?.withTwoFactor(enabled: enabled);
     notifyListeners();
   }
 

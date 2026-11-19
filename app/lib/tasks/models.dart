@@ -387,6 +387,7 @@ class TaskDraft {
     this.labelIds = const [],
     this.projectId,
     this.columnId,
+    this.customerId,
   });
 
   final String title;
@@ -404,6 +405,9 @@ class TaskDraft {
   /// Target project (and column) of a new task; null creates a personal task.
   final String? projectId;
   final int? columnId;
+
+  /// Customer file the new task is linked to (CRM).
+  final String? customerId;
 
   factory TaskDraft.fromTask(TaskOut t) => TaskDraft(
     title: t.title,
@@ -436,6 +440,7 @@ class TaskDraft {
     String? projectId,
     int? columnId,
     bool clearProject = false,
+    String? customerId,
   }) => TaskDraft(
     title: title ?? this.title,
     description: description ?? this.description,
@@ -450,6 +455,7 @@ class TaskDraft {
     labelIds: labelIds ?? this.labelIds,
     projectId: clearProject ? null : (projectId ?? this.projectId),
     columnId: clearProject ? null : (columnId ?? this.columnId),
+    customerId: customerId ?? this.customerId,
   );
 
   Set<DraftIssue> get issues => {
@@ -479,6 +485,7 @@ class TaskDraft {
     'label_ids': labelIds,
     'project_id': projectId,
     if (projectId != null && columnId != null) 'column_id': columnId,
+    'customer_id': ?customerId,
   };
 
   /// Fields of `PATCH /tasks/{id}` that differ from [t]; a cleared date is sent as null.

@@ -1,7 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/letters/models.dart';
+import 'package:letter_signing/security/security_api.dart';
+import 'package:letter_signing/workspace/workspace_api.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/screens/biometric_enrol.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
@@ -33,16 +37,16 @@ class _SessionsTabState extends State<SessionsTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sign out this device?'),
-        content: Text('${s.displayName} will need to sign in again.'),
+        title: Text(tr.sessionsSignOutTitle),
+        content: Text(tr.sessionsSignOutBody(s.displayName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(tr.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Sign out'),
+            child: Text(tr.sessionsSignOutAction),
           ),
         ],
       ),
@@ -52,6 +56,34 @@ class _SessionsTabState extends State<SessionsTab> {
       context,
       () => widget.auth.api.call('POST', '/me/sessions/${s.id}/revoke'),
     );
+    if (ok && mounted) _reload();
+  }
+
+  Future<void> _revokeOthers() async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.secCloseOthersTitle),
+        content: Text(l.secCloseOthersBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.commonCancel),
+          ),
+          FilledButton(
+            key: const ValueKey('close-others-confirm'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.commonConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final api = SecurityApi(WorkspaceApi(widget.auth.api));
+    final ok = await runGuarded(context, () async {
+      await api.revokeOtherSessions();
+    });
     if (ok && mounted) _reload();
   }
 
@@ -71,11 +103,11 @@ class _SessionsTabState extends State<SessionsTab> {
         if (snap.hasError) {
           return EmptyState(
             icon: Icons.cloud_off_outlined,
-            title: 'Could not load devices',
+            title: tr.sessionsLoadFailed,
             message: '${snap.error}',
             action: OutlinedButton(
               onPressed: _reload,
-              child: const Text('Retry'),
+              child: Text(tr.commonRetry),
             ),
           );
         }
@@ -84,9 +116,9 @@ class _SessionsTabState extends State<SessionsTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (rows.isEmpty) {
-          return const EmptyState(
+          return EmptyState(
             icon: Icons.devices_outlined,
-            title: 'No signed-in devices',
+            title: tr.sessionsEmpty,
           );
         }
         return RefreshIndicator(
@@ -97,6 +129,18 @@ class _SessionsTabState extends State<SessionsTab> {
               PageBody(
                 child: Column(
                   children: [
+                    if (rows.any((s) => !s.current))
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('close-other-sessions'),
+                          onPressed: _revokeOthers,
+                          icon: const Icon(Icons.phonelink_erase),
+                          label: Text(
+                            AppLocalizations.of(context).secCloseOthers,
+                          ),
+                        ),
+                      ),
                     for (final s in rows) ...[
                       _SessionCard(
                         name: s.displayName,
@@ -164,14 +208,18 @@ class _SessionCard extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(name, style: text.titleSmall),
-                    if (current) const StatusPill('This device', tone: Tone.ok),
+                    if (current)
+                      StatusPill(tr.sessionsThisDevice, tone: Tone.ok),
                     if (biometric)
-                      const StatusPill('Biometric', tone: Tone.info),
+                      StatusPill(tr.sessionsBiometric, tone: Tone.info),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  [if (ip.isNotEmpty) ip, 'Active $lastActive'].join('  ·  '),
+                  [
+                    if (ip.isNotEmpty) ip,
+                    tr.sessionsActive(lastActive),
+                  ].join('  ·  '),
                   style: text.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -180,14 +228,14 @@ class _SessionCard extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onEnableBiometric,
                     icon: const Icon(Icons.fingerprint),
-                    label: const Text('Enable fingerprint / face'),
+                    label: Text(tr.sessionsEnableBiometric),
                   ),
               ],
             ),
           ),
           if (!current)
             IconButton(
-              tooltip: 'Sign out this device',
+              tooltip: tr.sessionsSignOutDevice,
               icon: const Icon(Icons.logout),
               onPressed: onRevoke,
             ),

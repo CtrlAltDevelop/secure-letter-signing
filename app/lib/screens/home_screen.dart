@@ -5,18 +5,26 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
 import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/bookmarks/bookmarks_screen.dart';
+import 'package:letter_signing/bookmarks/pinned_screen.dart';
+import 'package:letter_signing/calendar/calendar_screen.dart';
 import 'package:letter_signing/letters/letters_admin_screen.dart';
 import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/letters/notifications_screen.dart';
 import 'package:letter_signing/letters/sign_approval_host.dart';
+import 'package:letter_signing/prefs/settings_screen.dart';
 import 'package:letter_signing/screens/admin_screen.dart';
+import 'package:letter_signing/search/search_screen.dart';
 import 'package:letter_signing/screens/biometric_enrol.dart';
 import 'package:letter_signing/screens/profile_tab.dart';
 import 'package:letter_signing/screens/sessions_tab.dart';
 import 'package:letter_signing/screens/signing_pin.dart';
+import 'package:letter_signing/security/account_banner.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/widgets.dart';
 import 'package:letter_signing/workspace/labels_screen.dart';
+import 'package:letter_signing/monitor/monitor_screen.dart';
+import 'package:letter_signing/monitor/my_numbers_card.dart';
 import 'package:letter_signing/workspace/module_registry.dart';
 import 'package:letter_signing/workspace/workspace_env.dart';
 
@@ -24,6 +32,18 @@ const _wideBreakpoint = 900.0;
 
 /// Module destinations that fill the phone bottom bar; everything else goes under "More".
 const _maxPrimaryModules = 3;
+
+/// Destinations a guest never sees (everything that is not a module, profile, devices or settings).
+const _guestHidden = {
+  'numbers',
+  'monitor',
+  'calendar',
+  'pinned',
+  'bookmarks',
+  'labels',
+  'all_letters',
+  'admin',
+};
 
 /// Module opened first.
 const _defaultModule = 'tasks';
@@ -64,6 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _env.live.start();
     unawaited(_env.loadModules());
+    unawaited(_env.prefs.load());
   }
 
   @override
@@ -92,10 +113,72 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Enabled modules first (they fill the phone bottom bar), then profile, devices, manager items.
   List<_Dest> _destinations(UserInfo user, AppLocalizations l) {
+    final all = _allDestinations(user, l);
+    // A guest sees only the modules the server returns plus the personal pages.
+    if (!user.isGuest) return all;
+    return [
+      for (final d in all)
+        if (!_guestHidden.contains(d.key)) d,
+    ];
+  }
+
+  List<_Dest> _allDestinations(UserInfo user, AppLocalizations l) {
     final auth = widget.auth;
     return [
       for (final m in enabledModules(_env))
         _Dest(m.code, m.label(l), m.icon, m.selectedIcon, () => m.build(_env)),
+      _Dest(
+        'numbers',
+        l.monMyNumbers,
+        Icons.speed_outlined,
+        Icons.speed,
+        () => MyNumbersScreen(env: _env.monitor),
+      ),
+      if (_env.monitor.canMonitor)
+        _Dest(
+          'monitor',
+          l.monTitle,
+          Icons.monitor_heart_outlined,
+          Icons.monitor_heart,
+          () => MonitorScreen(env: _env.monitor, embedded: true),
+        ),
+      _Dest(
+        'calendar',
+        l.calendarTitle,
+        Icons.calendar_month_outlined,
+        Icons.calendar_month,
+        () => CalendarScreen(env: _env.calendar, embedded: true),
+      ),
+      _Dest(
+        'pinned',
+        l.pinnedTitle,
+        Icons.push_pin_outlined,
+        Icons.push_pin,
+        () => PinnedScreen(api: _env.bookmarks, open: _env.open),
+      ),
+      _Dest(
+        'bookmarks',
+        l.bookmarksTitle,
+        Icons.bookmark_border,
+        Icons.bookmark,
+        () => BookmarksScreen(
+          api: _env.bookmarks,
+          open: _env.open,
+          embedded: true,
+        ),
+      ),
+      _Dest(
+        'settings',
+        l.settingsTitle,
+        Icons.settings_outlined,
+        Icons.settings,
+        () => SettingsScreen(
+          controller: _env.prefs,
+          userTitle: user.title,
+          open: _env.open,
+          embedded: true,
+        ),
+      ),
       _Dest(
         'profile',
         l.navProfile,
@@ -165,6 +248,14 @@ class _HomeScreenState extends State<HomeScreen> {
     ],
   );
 
+  /// Guest-expiry / "set up two-step login" notices above the page.
+  Widget _withBanner(UserInfo user, Widget body) => Column(
+    children: [
+      AccountBanner(user: user),
+      Expanded(child: body),
+    ],
+  );
+
   Widget _shell(UserInfo user) {
     final l = AppLocalizations.of(context);
     final dests = _destinations(user, l);
@@ -173,6 +264,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final appBar = AppBar(
       title: Text(dests[index].label),
       actions: [
+        if (!user.isGuest)
+          IconButton(
+            key: const ValueKey('open-search'),
+            tooltip: l.searchTitle,
+            icon: const Icon(Icons.search),
+            onPressed: () => unawaited(
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      SearchScreen(api: _env.searchApi, open: _env.open),
+                ),
+              ),
+            ),
+          ),
         NotificationBell(env: _env.letters),
         if (!wide)
           IconButton(
@@ -185,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!wide) {
       return Scaffold(
         appBar: appBar,
-        body: _body(dests, index),
+        body: _withBanner(user, _body(dests, index)),
         bottomNavigationBar: _bottomBar(dests, index, l),
       );
     }
@@ -195,7 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _rail(dests, index, user, l),
           const VerticalDivider(width: 1, thickness: 1),
-          Expanded(child: _body(dests, index)),
+          Expanded(child: _withBanner(user, _body(dests, index))),
         ],
       ),
     );
@@ -241,17 +346,19 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final d in dests.skip(count))
-              ListTile(
-                leading: Icon(d.key == selected ? d.selectedIcon : d.icon),
-                title: Text(d.label),
-                selected: d.key == selected,
-                onTap: () => Navigator.pop(ctx, d.key),
-              ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final d in dests.skip(count))
+                ListTile(
+                  leading: Icon(d.key == selected ? d.selectedIcon : d.icon),
+                  title: Text(d.label),
+                  selected: d.key == selected,
+                  onTap: () => Navigator.pop(ctx, d.key),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -264,24 +371,34 @@ class _HomeScreenState extends State<HomeScreen> {
     UserInfo user,
     AppLocalizations l,
   ) {
-    return NavigationRail(
-      extended: true,
-      minExtendedWidth: 220,
-      selectedIndex: index,
-      onDestinationSelected: (i) => _select(dests[i].key),
-      leading: const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: BrandLogo(size: 48),
-      ),
-      trailing: Expanded(child: _railUser(user, l)),
-      destinations: [
-        for (final d in dests)
-          NavigationRailDestination(
-            icon: Icon(d.icon),
-            selectedIcon: Icon(d.selectedIcon),
-            label: Text(d.label),
+    // Scrolls when there are more destinations than the window is tall.
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: box.maxHeight),
+          child: IntrinsicHeight(
+            child: NavigationRail(
+              extended: true,
+              minExtendedWidth: 220,
+              selectedIndex: index,
+              onDestinationSelected: (i) => _select(dests[i].key),
+              leading: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: BrandLogo(size: 48),
+              ),
+              trailing: Expanded(child: _railUser(user, l)),
+              destinations: [
+                for (final d in dests)
+                  NavigationRailDestination(
+                    icon: Icon(d.icon),
+                    selectedIcon: Icon(d.selectedIcon),
+                    label: Text(d.label),
+                  ),
+              ],
+            ),
           ),
-      ],
+        ),
+      ),
     );
   }
 

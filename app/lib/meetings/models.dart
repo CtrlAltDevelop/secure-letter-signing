@@ -400,6 +400,7 @@ class MeetingDraft {
     this.projectId,
     this.attendees = const [],
     this.templateId,
+    this.customerId,
   });
 
   final String title;
@@ -411,6 +412,9 @@ class MeetingDraft {
   final String? projectId;
   final List<AttendeeDraft> attendees;
   final int? templateId;
+
+  /// Customer file the new meeting is linked to (CRM).
+  final String? customerId;
 
   factory MeetingDraft.fromMeeting(MeetingOut m) => MeetingDraft(
     title: m.title,
@@ -440,6 +444,7 @@ class MeetingDraft {
     bool clearProject = false,
     List<AttendeeDraft>? attendees,
     int? templateId,
+    String? customerId,
   }) => MeetingDraft(
     title: title ?? this.title,
     kind: kind ?? this.kind,
@@ -450,6 +455,7 @@ class MeetingDraft {
     projectId: clearProject ? null : (projectId ?? this.projectId),
     attendees: attendees ?? this.attendees,
     templateId: templateId ?? this.templateId,
+    customerId: customerId ?? this.customerId,
   );
 
   /// Problems the server would reject: an organizational meeting needs exactly one chair and one
@@ -480,6 +486,7 @@ class MeetingDraft {
     'project_id': projectId,
     'attendees': [for (final a in attendees) a.toJson()],
     'template_id': templateId,
+    'customer_id': ?customerId,
     'status': schedule ? 'scheduled' : 'draft',
   };
 

@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/bookmarks/pin_button.dart';
 import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/letters/letter_widgets.dart' show SkeletonList;
+import 'package:letter_signing/polls/polls_env.dart';
+import 'package:letter_signing/polls/polls_section.dart';
 import 'package:letter_signing/projects/board_view.dart';
 import 'package:letter_signing/projects/models.dart';
 import 'package:letter_signing/projects/project_calendar_view.dart';
@@ -40,7 +43,7 @@ class ProjectDetailScreen extends StatefulWidget {
   State<ProjectDetailScreen> createState() => _ProjectDetailScreenState();
 }
 
-enum _Tab { board, list, calendar, files, members, chat }
+enum _Tab { board, list, calendar, gantt, files, members, chat }
 
 class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     with SingleTickerProviderStateMixin {
@@ -60,8 +63,14 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     widget.env,
     widget.projectId,
   );
+  /// Built once; null while the `gantt` module is off, which also drops the tab.
+  late final Widget? _gantt = widget.env.ganttTab?.call(widget.projectId);
+  late final List<_Tab> _order = [
+    for (final t in _Tab.values)
+      if (t != _Tab.gantt || _gantt != null) t,
+  ];
   late final TabController _tabs = TabController(
-    length: _Tab.values.length,
+    length: _order.length,
     vsync: this,
   )..addListener(_onTab);
   List<LabelInfo> _labels = const [];
@@ -91,7 +100,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
   /// Loads a tab's data the first time it is shown.
   void _onTab() {
     if (_tabs.indexIsChanging) return;
-    switch (_Tab.values[_tabs.index]) {
+    switch (_order[_tabs.index]) {
       case _Tab.list when !_list.loaded && !_list.loading:
         unawaited(_list.load());
       case _Tab.calendar when !_calendar.loaded && !_calendar.loading:
@@ -171,6 +180,31 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         appBar: AppBar(
           title: Text(project?.name ?? '', overflow: TextOverflow.ellipsis),
           actions: [
+            if (project != null)
+              PinButton(
+                api: widget.env.api.workspace,
+                subjectId: project.subjectId,
+              ),
+            if (project != null)
+              IconButton(
+                key: const ValueKey('project-polls'),
+                tooltip: AppLocalizations.of(context).pollsTitle,
+                icon: const Icon(Icons.poll_outlined),
+                onPressed: () => unawaited(
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => PollsScreen(
+                        env: PollsEnv.of(
+                          widget.env.api.workspace,
+                          widget.env.live,
+                          widget.env.userId,
+                        ),
+                        targetSubjectId: project.subjectId,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             if (project != null &&
                 project.can.createTask &&
                 !project.isArchived)
@@ -198,6 +232,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
         Tab(text: l.projectTabBoard),
         Tab(text: l.projectTabList),
         Tab(text: l.projectTabCalendar),
+        if (_gantt != null) Tab(text: l.projectTabGantt),
         Tab(text: l.projectTabFiles),
         Tab(text: l.projectTabMembers),
         Tab(text: l.projectTabChat),
@@ -239,6 +274,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           labels: _labels,
           onOpenTask: (id) => unawaited(_openTask(id)),
         ),
+        ?_gantt,
         ProjectFilesView(
           controller: _files,
           onDownload: (f) => unawaited(_download(f)),
@@ -249,7 +285,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
           onEdit: () => unawaited(_edit(project)),
           onCopied: _copied,
         ),
-        const ComingSoonScreen(icon: Icons.chat_bubble_outline),
+        widget.env.chatTab?.call(widget.projectId) ??
+            const ComingSoonScreen(icon: Icons.chat_bubble_outline),
       ],
     );
   }

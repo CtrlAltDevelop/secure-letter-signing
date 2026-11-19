@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
@@ -41,24 +42,24 @@ class _DepartmentsCardState extends State<DepartmentsCard> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(dept == null ? 'New department' : 'Rename department'),
+        title: Text(dept == null ? tr.deptNew : tr.deptRename),
         content: SizedBox(
           width: 320,
           child: TextField(
             controller: name,
             autofocus: true,
             maxLength: 100,
-            decoration: const InputDecoration(labelText: 'Name'),
+            decoration: InputDecoration(labelText: tr.deptName),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(tr.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save'),
+            child: Text(tr.commonSave),
           ),
         ],
       ),
@@ -78,12 +79,12 @@ class _DepartmentsCardState extends State<DepartmentsCard> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       SectionHeader(
-        'Departments',
-        subtitle: 'Only the manager can change these',
+        tr.deptSection,
+        subtitle: tr.deptSubtitle,
         trailing: FilledButton.tonalIcon(
           onPressed: _edit,
           icon: const Icon(Icons.add),
-          label: const Text('New'),
+          label: Text(tr.deptNewShort),
         ),
       ),
       FutureBuilder<List<Map<String, dynamic>>>(
@@ -95,7 +96,7 @@ class _DepartmentsCardState extends State<DepartmentsCard> {
             return const Center(child: CircularProgressIndicator());
           }
           if (items.isEmpty) {
-            return const AppCard(child: Text('No departments yet'));
+            return AppCard(child: Text(tr.deptEmpty));
           }
           return Column(
             children: [
@@ -115,15 +116,17 @@ class _DepartmentsCardState extends State<DepartmentsCard> {
                                 style: Theme.of(context).textTheme.titleSmall,
                               ),
                               Text(
-                                '${d['members']} people'
-                                '${d['active'] == true ? '' : '  -  inactive'}',
+                                tr.deptMembers('${d['members']}') +
+                                    (d['active'] == true
+                                        ? ''
+                                        : '  -  ${tr.deptInactiveSuffix}'),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          tooltip: 'Rename',
+                          tooltip: tr.deptRenameTooltip,
                           icon: const Icon(Icons.edit_outlined),
                           onPressed: () => _edit(d),
                         ),
@@ -134,7 +137,9 @@ class _DepartmentsCardState extends State<DepartmentsCard> {
                             {'active': d['active'] != true},
                           ),
                           child: Text(
-                            d['active'] == true ? 'Deactivate' : 'Reactivate',
+                            d['active'] == true
+                                ? tr.adminDeactivate
+                                : tr.adminReactivate,
                           ),
                         ),
                       ],
@@ -167,14 +172,14 @@ Future<bool> pickDepartment(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setLocal) => AlertDialog(
-        title: const Text('Department'),
+        title: Text(tr.adminDepartment),
         content: SizedBox(
           width: 320,
           child: DropdownButtonFormField<int?>(
             initialValue: all.any((d) => d['id'] == chosen) ? chosen : null,
             decoration: InputDecoration(labelText: user.email),
             items: [
-              const DropdownMenuItem<int?>(value: null, child: Text('None')),
+              DropdownMenuItem<int?>(value: null, child: Text(tr.adminNone)),
               for (final d in all)
                 DropdownMenuItem<int?>(
                   value: d['id'] as int,
@@ -187,11 +192,11 @@ Future<bool> pickDepartment(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(tr.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save'),
+            child: Text(tr.commonSave),
           ),
         ],
       ),

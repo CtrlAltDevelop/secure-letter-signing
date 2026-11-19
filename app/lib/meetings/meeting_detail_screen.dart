@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/jalali/jalali_format.dart';
 import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/workspace/widgets/bookmark_button.dart';
 import 'package:letter_signing/letters/letter_widgets.dart' show SkeletonList;
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/meetings/meeting_actions.dart';
@@ -283,6 +284,7 @@ class _MeetingDetailState extends State<MeetingDetailScreen> {
   }
 
   List<Widget> _appBarActions(MeetingOut m, AppLocalizations l) => [
+    BookmarkButton(api: env.api.workspace, module: 'meetings', id: m.id),
     IconButton(
       tooltip: l.meetingPrint,
       icon: const Icon(Icons.print_outlined),

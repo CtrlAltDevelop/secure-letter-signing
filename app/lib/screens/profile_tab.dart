@@ -1,15 +1,24 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
+import 'package:letter_signing/security/login_history_screen.dart';
+import 'package:letter_signing/security/security_api.dart';
+import 'package:letter_signing/security/two_factor_card.dart';
+import 'package:letter_signing/workspace/workspace_api.dart';
 import 'package:letter_signing/screens/signing_pin.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
 class ProfileTab extends StatefulWidget {
-  const ProfileTab({super.key, required this.auth});
+  const ProfileTab({super.key, required this.auth, this.securityApi});
   final AuthController auth;
+
+  /// Replaces the real security API (tests).
+  final SecurityApi? securityApi;
 
   @override
   State<ProfileTab> createState() => _ProfileTabState();
@@ -27,6 +36,8 @@ class _ProfileTabState extends State<ProfileTab> {
   final _next = TextEditingController();
   bool _saving = false;
   bool _changing = false;
+  late final SecurityApi _security =
+      widget.securityApi ?? SecurityApi(WorkspaceApi(widget.auth.api));
 
   @override
   void dispose() {
@@ -49,7 +60,7 @@ class _ProfileTabState extends State<ProfileTab> {
     setState(() {
       _saving = false;
     });
-    if (ok) _toast('Saved');
+    if (ok) _toast(tr.profileSaved);
   }
 
   Future<void> _changePassword() async {
@@ -69,7 +80,7 @@ class _ProfileTabState extends State<ProfileTab> {
     _current.clear();
     _next.clear();
     _passwordForm.currentState?.reset();
-    _toast('Password changed; other devices were signed out');
+    _toast(tr.profilePasswordChanged);
   }
 
   void _toast(String text) =>
@@ -127,7 +138,7 @@ class _ProfileTabState extends State<ProfileTab> {
                           runSpacing: 6,
                           children: [
                             if (user?.isManager ?? false)
-                              const StatusPill('Manager', tone: Tone.info),
+                              StatusPill(tr.profileManager, tone: Tone.info),
                             for (final p
                                 in user?.permissions ?? const <String>[])
                               StatusPill(permissionLabel(p)),
@@ -139,7 +150,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 ],
               ),
             ),
-            const SectionHeader('Profile'),
+            SectionHeader(tr.profileSection),
             AppCard(
               child: Form(
                 key: _profileForm,
@@ -148,16 +159,16 @@ class _ProfileTabState extends State<ProfileTab> {
                   children: [
                     _field(
                       _name,
-                      'Full name',
+                      tr.authFullName,
                       Icons.person_outline,
-                      validator: requiredField('Enter your name'),
+                      validator: requiredField(tr.profileEnterName),
                     ),
                     const SizedBox(height: 14),
-                    _field(_title, 'Job title', Icons.work_outline),
+                    _field(_title, tr.profileJobTitle, Icons.work_outline),
                     const SizedBox(height: 14),
                     _field(
                       _department,
-                      'Department (set by the manager)',
+                      tr.profileDepartmentReadonly,
                       Icons.apartment_outlined,
                       enabled: false,
                     ),
@@ -165,7 +176,7 @@ class _ProfileTabState extends State<ProfileTab> {
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: BusyButton(
-                        label: 'Save',
+                        label: tr.commonSave,
                         busy: _saving,
                         onPressed: _saveProfile,
                       ),
@@ -175,20 +186,20 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
             ),
             SectionHeader(
-              'Signing PIN',
+              tr.authSigningPin,
               subtitle: widget.auth.user?.hasSigningPin ?? false
-                  ? 'Change the 6-digit PIN that confirms your signatures'
-                  : 'Set the 6-digit PIN that confirms your signatures',
+                  ? tr.profilePinChangeSubtitle
+                  : tr.profilePinSetSubtitle,
             ),
             AppCard(
               child: SigningPinForm(
                 auth: widget.auth,
-                onDone: () => _toast('Signing PIN saved'),
+                onDone: () => _toast(tr.profilePinSaved),
               ),
             ),
-            const SectionHeader(
-              'Change password',
-              subtitle: 'Other devices are signed out afterwards',
+            SectionHeader(
+              tr.profileChangePassword,
+              subtitle: tr.profileChangePasswordSubtitle,
             ),
             AppCard(
               child: Form(
@@ -198,14 +209,14 @@ class _ProfileTabState extends State<ProfileTab> {
                   children: [
                     PasswordField(
                       controller: _current,
-                      label: 'Current password',
-                      validator: requiredField('Enter your current password'),
+                      label: tr.profileCurrentPassword,
+                      validator: requiredField(tr.profileEnterCurrentPassword),
                       autofillHints: const [AutofillHints.password],
                     ),
                     const SizedBox(height: 14),
                     PasswordField(
                       controller: _next,
-                      label: 'New password',
+                      label: tr.authNewPassword,
                       helper: passwordHint,
                       validator: validateNewPassword,
                       autofillHints: const [AutofillHints.newPassword],
@@ -215,7 +226,7 @@ class _ProfileTabState extends State<ProfileTab> {
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: BusyButton(
-                        label: 'Change password',
+                        label: tr.profileChangePassword,
                         tonal: true,
                         busy: _changing,
                         onPressed: _changePassword,
@@ -223,6 +234,27 @@ class _ProfileTabState extends State<ProfileTab> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            SectionHeader(AppLocalizations.of(context).secTitle),
+            TwoFactorCard(api: _security, auth: widget.auth),
+            const SizedBox(height: 8),
+            AppCard(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      LoginHistoryScreen(load: _security.myLoginHistory),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.history),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(AppLocalizations.of(context).secLoginHistory),
+                  ),
+                  const Icon(Icons.chevron_right),
+                ],
               ),
             ),
             const SizedBox(height: Tokens.gap),

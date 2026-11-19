@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/tr.dart';
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/letters/letters_api.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/live_service.dart';
@@ -65,7 +67,7 @@ class NotificationBell extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: env.notifications,
     builder: (context, _) => IconButton(
-      tooltip: 'Notifications',
+      tooltip: tr.notifTooltip,
       icon: Badge(
         isLabelVisible: env.notifications.unread > 0,
         label: Text('${env.notifications.unread}'),
@@ -108,7 +110,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   static String _group(DateTime? at) {
-    if (at == null) return 'Earlier';
+    if (at == null) return tr.notifGroupEarlier;
     final now = DateTime.now();
     final d = at.toLocal();
     final days = DateTime(
@@ -116,9 +118,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       now.month,
       now.day,
     ).difference(DateTime(d.year, d.month, d.day)).inDays;
-    if (days <= 0) return 'Today';
-    if (days == 1) return 'Yesterday';
-    return 'Earlier';
+    if (days <= 0) return tr.notifGroupToday;
+    if (days == 1) return tr.notifGroupYesterday;
+    return tr.notifGroupEarlier;
   }
 
   Widget _list() {
@@ -148,12 +150,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Notifications'),
+      title: Text(tr.notifTitle),
       actions: [
         TextButton.icon(
           onPressed: _markRead,
           icon: const Icon(Icons.done_all),
-          label: const Text('Mark all read'),
+          label: Text(tr.notifMarkAllRead),
         ),
       ],
     ),
@@ -164,12 +166,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           if (c.error != null && c.items.isEmpty) {
             return EmptyState(
               icon: Icons.cloud_off_outlined,
-              title: 'Could not load notifications',
+              title: tr.notifLoadFailed,
               message: '${c.error}',
               action: OutlinedButton.icon(
                 onPressed: c.refresh,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: Text(tr.commonRetry),
               ),
             );
           }
@@ -177,12 +179,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             onRefresh: c.refresh,
             child: c.items.isEmpty
                 ? ListView(
-                    children: const [
-                      SizedBox(height: 48),
+                    children: [
+                      const SizedBox(height: 48),
                       EmptyState(
                         icon: Icons.notifications_none,
-                        title: 'Nothing yet',
-                        message: 'You will be told when a letter needs you.',
+                        title: tr.notifEmptyTitle,
+                        message: tr.notifEmptyMessage,
                       ),
                     ],
                   )
@@ -195,6 +197,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 }
 
 (IconData, Color?) _kindStyle(String kind) {
+  if (kind == 'gantt.task_ready') return (Icons.play_circle_outline, Tokens.ok);
   if (kind.contains('reject')) return (Icons.cancel_outlined, Tokens.error);
   if (kind.contains('approv') || kind.contains('publish')) {
     return (Icons.check_circle_outline, Tokens.ok);
@@ -236,7 +239,9 @@ class _NotificationTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  n.title,
+                  n.kind == 'gantt.task_ready'
+                      ? AppLocalizations.of(context).gnTaskReady(n.title)
+                      : n.title,
                   style: TextStyle(
                     fontWeight: n.read ? FontWeight.w400 : FontWeight.w700,
                   ),

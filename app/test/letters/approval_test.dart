@@ -28,7 +28,7 @@ void main() {
     );
     await pumpHost(t, testEnv(f));
     expect(find.text('Budget'), findsOneWidget);
-    expect(find.text('Decision: Approve'), findsOneWidget);
+    expect(find.text('تصمیم: تأیید'), findsOneWidget);
     expect(find.textContaining('please'), findsOneWidget);
     expect(find.textContaining('laptop'), findsOneWidget);
   });
@@ -44,7 +44,7 @@ void main() {
     });
     final bio = FakeBiometrics();
     await pumpHost(t, testEnv(f, biometrics: bio));
-    await t.tap(find.text('Approve'));
+    await t.tap(find.text('تأیید'));
     await t.pumpAndSettle();
     expect(bio.reasons.single, contains('Budget'));
     expect(
@@ -54,7 +54,7 @@ void main() {
       ),
       isTrue,
     );
-    expect(find.text('Approve signature?'), findsNothing);
+    expect(find.text('تأیید امضا؟'), findsNothing);
   });
 
   testWidgets('a failed biometric check posts nothing and keeps the dialog', (
@@ -66,10 +66,10 @@ void main() {
           : json({}),
     );
     await pumpHost(t, testEnv(f, biometrics: FakeBiometrics(result: false)));
-    await t.tap(find.text('Approve'));
+    await t.tap(find.text('تأیید'));
     await t.pumpAndSettle();
     expect(f.calls.where((c) => c.url.path.endsWith('/approve')), isEmpty);
-    expect(find.text('Approve signature?'), findsOneWidget);
+    expect(find.text('تأیید امضا؟'), findsOneWidget);
   });
 
   testWidgets('decline posts decline without biometrics', (t) async {
@@ -81,24 +81,24 @@ void main() {
     });
     final bio = FakeBiometrics();
     await pumpHost(t, testEnv(f, biometrics: bio));
-    await t.tap(find.text('Decline'));
+    await t.tap(find.text('رد درخواست'));
     await t.pumpAndSettle();
     expect(bio.reasons, isEmpty);
     expect(
       f.calls.any((c) => c.url.path == '/api/sign-requests/R1/decline'),
       isTrue,
     );
-    expect(find.text('Approve signature?'), findsNothing);
+    expect(find.text('تأیید امضا؟'), findsNothing);
   });
 
   testWidgets('a live sign_request frame opens the dialog', (t) async {
     final f = fakeApi((req, _) => json(<dynamic>[]));
     final live = FakeLive(f.client);
     await pumpHost(t, testEnv(f, live: live));
-    expect(find.text('Approve signature?'), findsNothing);
+    expect(find.text('تأیید امضا؟'), findsNothing);
     live.push({'type': 'sign_request', 'request': signRequestJson('R9')});
     await t.pumpAndSettle();
-    expect(find.text('Approve signature?'), findsOneWidget);
+    expect(find.text('تأیید امضا؟'), findsOneWidget);
   });
 
   testWidgets('the dialog closes when the request is cancelled elsewhere', (
@@ -116,6 +116,6 @@ void main() {
       'request': signRequestJson('R1', status: 'cancelled'),
     });
     await t.pumpAndSettle();
-    expect(find.text('Approve signature?'), findsNothing);
+    expect(find.text('تأیید امضا؟'), findsNothing);
   });
 }

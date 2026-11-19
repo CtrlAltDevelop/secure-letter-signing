@@ -277,16 +277,16 @@ void main() {
         baseOffset: 0,
         extentOffset: 3,
       );
-      await t.tap(find.byTooltip('Bold'));
+      await t.tap(find.byTooltip('پررنگ'));
       await t.pump();
-      expect(find.textContaining('2 words'), findsOneWidget);
-      await t.tap(find.text('Preview'));
+      expect(find.textContaining('2 کلمه'), findsOneWidget);
+      await t.tap(find.text('پیش‌نمایش'));
       await t.pumpAndSettle();
       expect(find.text('Acme'), findsOneWidget);
       expect(find.text('موضوع: T'), findsOneWidget);
-      await t.tap(find.text('Edit'));
+      await t.tap(find.text('ویرایش'));
       await t.pumpAndSettle();
-      await t.tap(find.text('Done'));
+      await t.tap(find.text('انجام شد'));
       await t.pumpAndSettle();
       expect(result!.text, 'new text');
       expect(result!.flags.take(3), everyElement(flagBold));

@@ -907,5 +907,1284 @@
   "noteItemRemove": "حذف مورد",
   "noteImageAdd": "افزودن تصویر",
   "noteImageRemove": "حذف تصویر",
-  "noteImageOnly": "فقط پرونده تصویر مجاز است."
+  "noteImageOnly": "فقط پرونده تصویر مجاز است.",
+  "moduleChat": "گفتگو",
+  "chatTabMine": "گفتگوهای من",
+  "chatTabPublic": "عمومی",
+  "chatSearchHint": "جستجوی گفتگو یا همکار",
+  "chatKindGroup": "گروه",
+  "chatKindChannel": "کانال",
+  "chatKindDm": "پیام مستقیم",
+  "chatLoadFailed": "بارگذاری گفتگوها ممکن نشد",
+  "chatEmptyTitle": "هنوز گفتگویی ندارید",
+  "chatEmptyMessage": "یک گروه بسازید یا از فهرست همکاران پیام مستقیم بفرستید.",
+  "chatEmptyPublic": "گروه یا کانال عمومی‌ای برای پیوستن نیست.",
+  "chatNew": "گفتگوی جدید",
+  "chatNewGroup": "گروه جدید",
+  "chatNewChannel": "کانال جدید",
+  "chatNewDm": "پیام مستقیم",
+  "chatPinConv": "سنجاق کردن گفتگو",
+  "chatUnpinConv": "برداشتن سنجاق گفتگو",
+  "chatMute": "بی‌صدا کردن",
+  "chatUnmute": "فعال کردن صدا",
+  "chatJoin": "پیوستن",
+  "chatLeave": "ترک گفتگو",
+  "chatLeaveConfirm": "این گفتگو را ترک می‌کنید؟",
+  "chatMembersCount": "{count} عضو",
+  "@chatMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "chatName": "نام",
+  "chatDescription": "توضیحات (اختیاری)",
+  "chatPublicSwitch": "عمومی (همه می‌توانند پیدا کنند و بپیوندند)",
+  "chatPostPolicy": "چه کسی می‌تواند پیام بدهد",
+  "chatPostAll": "همه اعضا",
+  "chatPostAdmins": "فقط مدیران",
+  "chatMembers": "اعضا",
+  "chatAddMembers": "افزودن اعضا",
+  "chatNameRequired": "نام را وارد کنید",
+  "chatCreate": "ایجاد",
+  "chatCreateForbidden": "اجازه ساختن گروه یا کانال را ندارید.",
+  "chatDmPickTitle": "شروع گفتگوی مستقیم",
+  "chatDirectorySearch": "جستجوی همکار",
+  "chatMessageHint": "پیام بنویسید",
+  "chatSend": "ارسال",
+  "chatAttach": "پیوست پرونده",
+  "chatPaste": "چسباندن از کلیپ‌بورد",
+  "chatPasteEmpty": "چیزی برای چسباندن نیست.",
+  "chatMention": "اشاره به همکار",
+  "chatVoice": "پیام صوتی",
+  "chatReply": "پاسخ",
+  "chatReplyingTo": "پاسخ به {name}",
+  "@chatReplyingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCancelReply": "لغو پاسخ",
+  "chatDelete": "حذف پیام",
+  "chatDeleteConfirm": "این پیام حذف شود؟",
+  "chatDeleted": "این پیام حذف شد",
+  "chatPinMessage": "سنجاق پیام",
+  "chatUnpinMessage": "برداشتن سنجاق پیام",
+  "chatBookmark": "نشان کردن",
+  "chatBookmarked": "پیام نشان شد.",
+  "chatToTask": "تبدیل به وظیفه",
+  "chatSeenBy": "چه کسی دیده است",
+  "chatCopy": "رونوشت متن",
+  "chatPinsBar": "{count} پیام سنجاق‌شده",
+  "@chatPinsBar": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "chatJumpToDate": "رفتن به تاریخ",
+  "chatJumpLatest": "رفتن به آخرین پیام",
+  "chatNoMessagesOnDate": "از این تاریخ به بعد پیامی نیست.",
+  "chatSeenTitle": "دیده‌شده توسط",
+  "chatSeenEmpty": "هنوز کسی ندیده است.",
+  "chatSeenUntracked": "در گفتگوهای بزرگ رسید خواندن ثبت نمی‌شود.",
+  "chatSeenFailed": "بارگذاری رسیدها ممکن نشد.",
+  "chatNotMember": "برای دیدن پیام‌ها ابتدا بپیوندید.",
+  "chatArchivedNote": "این گفتگو بایگانی شده است.",
+  "chatReadOnly": "فقط مدیران می‌توانند پیام بدهند.",
+  "chatSendFailed": "ارسال پیام ممکن نشد.",
+  "chatActionFailed": "انجام این کار ممکن نشد.",
+  "chatForbidden": "اجازه انجام این کار را ندارید.",
+  "chatDownload": "دریافت پرونده",
+  "chatEdited": "ویرایش‌شده",
+  "chatTaskCreated": "وظیفه‌ای از یک پیام ساخته شد.",
+  "chatInfo": "اطلاعات گفتگو",
+  "chatAdminRole": "مدیر",
+  "chatMentionSearch": "جستجوی عضو",
+  "chatMessageToTaskPrefix": "پیام گفتگو",
+  "chatSeen": "دیده شد",
+  "chatToday": "امروز",
+  "chatUnreadMentions": "اشاره‌ها",
+  "monTitle": "پایش",
+  "monMyNumbers": "اعداد من",
+  "monOpenTasks": "کار باز",
+  "monOverdue": "عقب‌افتاده",
+  "monDone": "انجام‌شده",
+  "monLettersWaiting": "نامه منتظر شما",
+  "monMeetingsToday": "جلسه امروز",
+  "monUnreadChat": "پیام خوانده‌نشده",
+  "monRemindersToday": "یادآور امروز",
+  "monTabOverview": "نمای کلی",
+  "monTabProjects": "پروژه‌ها",
+  "monTabTasks": "کارها",
+  "monTabMeetings": "جلسات",
+  "monTabMembers": "اعضا",
+  "monTabOnline": "آنلاین",
+  "monTabCustomers": "مشتریان",
+  "monTabFinance": "مالی",
+  "monTabSales": "فروش",
+  "monPeriodWeek": "هفته",
+  "monPeriodMonth": "ماه",
+  "monPeriodQuarter": "فصل",
+  "monPeriodYear": "سال",
+  "monPeriodCustom": "بازه دلخواه",
+  "monBucketDay": "روزانه",
+  "monBucketWeek": "هفتگی",
+  "monBucketMonth": "ماهانه",
+  "monFrom": "از",
+  "monTo": "تا",
+  "monChat": "پیام‌های گفتگو",
+  "monLetters": "نامه‌ها",
+  "monTasks": "کارها",
+  "monCustomers": "مشتریان",
+  "monMeetings": "جلسات",
+  "monProjectsTitle": "پروژه‌ها",
+  "monCreated": "ایجادشده",
+  "monCompleted": "تکمیل‌شده",
+  "monSigned": "امضاشده",
+  "monEvents": "رویدادها",
+  "monMessages": "پیام",
+  "monSortLastDone": "آخرین کار انجام‌شده",
+  "monSortMostOverdue": "بیشترین عقب‌افتادگی",
+  "monSortLeastOverdue": "کمترین عقب‌افتادگی",
+  "monSortCompleted": "بیشترین انجام‌شده",
+  "monSortActivity": "فعالیت",
+  "monGroups": "گروه‌های پروژه",
+  "monNoGroup": "بدون گروه",
+  "monProjectsCount": "پروژه",
+  "monOverdueReport": "گزارش عقب‌افتاده‌ها",
+  "monLate": "تأخیر",
+  "monDays": "روز",
+  "monHours": "ساعت",
+  "monFilterProject": "پروژه",
+  "monFilterLabel": "برچسب",
+  "monFilterPerson": "فرد",
+  "monFilterCustomer": "مشتری",
+  "monFilterAll": "همه",
+  "monFilterNoProject": "بدون پروژه",
+  "monPrint": "چاپ فهرست",
+  "monPrintTitle": "گزارش کارهای عقب‌افتاده",
+  "monMeetingProjectFilter": "عنوان پروژه",
+  "monInvited": "دعوت‌شده",
+  "monPresent": "حاضر",
+  "monOpenResolutions": "مصوبهٔ باز",
+  "monOnTime": "به‌موقع",
+  "monLateDone": "با تأخیر",
+  "monAvgDelay": "میانگین تأخیر (روز)",
+  "monLettersSigned": "نامه امضاشده",
+  "monMeetingsAttended": "جلسه حاضر",
+  "monOnlineNow": "آنلاین",
+  "monLastActive": "آخرین فعالیت",
+  "monNever": "هرگز",
+  "monHistory": "سابقهٔ ورود و دستگاه‌ها",
+  "monRevoked": "خروج‌شده",
+  "monTheirTasks": "کارهای این فرد",
+  "monQuiet": "مشتریان بی‌حرکت",
+  "monQuietHint": "بدون رویداد در ۳۰ روز اخیر",
+  "monCustomerTotal": "کل پرونده‌ها",
+  "monCreatedInPeriod": "ایجادشده در بازه",
+  "monLastEvent": "آخرین رویداد",
+  "monReceipts": "دریافت قطعی",
+  "monPayments": "پرداخت قطعی",
+  "monNet": "خالص",
+  "monProbableReceipts": "دریافت محتمل",
+  "monProbablePayments": "پرداخت محتمل",
+  "monOverdueReceipts": "دریافت معوق",
+  "monOverduePayments": "پرداخت معوق",
+  "monSalesWon": "برده‌شده",
+  "monSalesOpen": "باز",
+  "monSalesLost": "ازدست‌رفته",
+  "monAccess": "دسترسی",
+  "monAccessTitle": "دسترسی گروه",
+  "monAccessAdd": "افزودن عضو",
+  "monAccessRemove": "حذف دسترسی",
+  "monAccessSaved": "دسترسی ذخیره شد",
+  "monRoleManager": "مدیر",
+  "monRoleMember": "عضو",
+  "monRoleViewer": "بیننده",
+  "monAccessPick": "انتخاب فرد",
+  "monEmpty": "داده‌ای برای نمایش نیست",
+  "monStatusOpen": "باز",
+  "monStatusAwaiting": "در انتظار",
+  "monStatusDone": "انجام‌شده",
+  "monStatusCancelled": "لغوشده",
+  "monTotal": "کل",
+  "commonRial": "ریال",
+  "moneyFiles": "پیوست‌ها",
+  "moneyLabels": "برچسب‌ها",
+  "moneyVoidReasonRequired": "دلیل را بنویسید.",
+  "moneyChartLabel": "نمودار میله‌ای",
+  "moduleFinance": "مالی",
+  "moduleSales": "فروش",
+  "moduleCrm": "مشتریان",
+  "crmTitle": "پرونده مشتری",
+  "crmNew": "مشتری جدید",
+  "crmEditTitle": "ویرایش مشتری",
+  "crmSearchHint": "جستجوی نام، تلفن، ایمیل یا کد ملی",
+  "crmFilterAll": "همه",
+  "crmLoadMore": "نمایش بیشتر",
+  "crmLoadFailed": "بارگیری مشتریان ممکن نشد",
+  "crmEmptyTitle": "مشتری‌ای پیدا نشد",
+  "crmEmptyMessage": "با دکمه «مشتری جدید» اولین پرونده را بسازید.",
+  "crmKindPerson": "شخص",
+  "crmKindCompany": "شرکت",
+  "crmStatusActive": "فعال",
+  "crmStatusInactive": "غیرفعال",
+  "crmStatusArchived": "بایگانی",
+  "crmRoleManager": "مدیر",
+  "crmRoleMember": "عضو",
+  "crmRoleViewer": "ناظر",
+  "crmFieldKind": "نوع",
+  "crmFieldStatus": "وضعیت",
+  "crmFieldName": "نام",
+  "crmFieldLegalName": "نام حقوقی",
+  "crmFieldRegistrationNo": "شماره ثبت",
+  "crmFieldNationalId": "کد ملی / شناسه ملی",
+  "crmFieldPhone": "تلفن",
+  "crmFieldMobile": "موبایل",
+  "crmFieldEmail": "ایمیل",
+  "crmFieldAddress": "نشانی",
+  "crmFieldNotes": "یادداشت‌ها",
+  "crmFieldOwner": "مسئول پرونده",
+  "crmNameRequired": "نام را وارد کنید.",
+  "crmLimitReached": "سقف تعداد پرونده‌های مشتری پر شده است.",
+  "crmSaveFailed": "ذخیره انجام نشد",
+  "crmTabOverview": "نمای کلی",
+  "crmTabTimeline": "خط زمانی",
+  "crmTabTasks": "وظایف",
+  "crmTabMeetings": "جلسات",
+  "crmTabLetters": "نامه‌ها",
+  "crmTabFiles": "پرونده‌ها و اسناد",
+  "crmTabCalls": "گزارش تماس",
+  "crmTabFinance": "مالی",
+  "crmTabLeads": "فروش",
+  "crmTabChat": "گفتگو",
+  "crmTabMembers": "اعضا",
+  "crmNoteHint": "یادداشت جدید برای خط زمانی",
+  "crmNoteAdd": "افزودن یادداشت",
+  "crmTimelineEmpty": "هنوز رویدادی ثبت نشده.",
+  "crmEventNote": "یادداشت",
+  "crmEventCall": "تماس",
+  "crmEventMeeting": "جلسه",
+  "crmEventFinance": "مالی",
+  "crmEventLead": "فروش",
+  "crmEventSystem": "سیستم",
+  "crmEventTask": "وظیفه",
+  "crmEventLetter": "نامه",
+  "crmTasksEmpty": "وظیفه‌ای به این پرونده وصل نیست.",
+  "crmTaskNew": "وظیفه جدید",
+  "crmMeetingsEmpty": "جلسه‌ای به این پرونده وصل نیست.",
+  "crmMeetingNew": "جلسه جدید",
+  "crmLettersEmpty": "نامه‌ای به این پرونده وصل نیست.",
+  "crmCallsEmpty": "تماسی ثبت نشده.",
+  "crmCallNew": "ثبت تماس",
+  "crmCallIn": "ورودی",
+  "crmCallOut": "خروجی",
+  "crmCallContact": "نام مخاطب",
+  "crmCallSummary": "خلاصه گفتگو",
+  "crmCallDuration": "مدت (دقیقه)",
+  "crmCallNoContact": "بدون نام",
+  "crmCallToTask": "تبدیل به وظیفه",
+  "crmCallTaskCreated": "وظیفه پیگیری ساخته شد.",
+  "crmMembersAdd": "افزودن عضو",
+  "crmMemberRemove": "حذف عضو",
+  "crmImport": "درون‌ریزی از اکسل",
+  "crmImportHelp": "فایل CSV یا xlsx با ستون‌های kind, name, legal_name, national_id, phone, mobile, email, address, status انتخاب کنید؛ فقط name الزامی است.",
+  "crmImportPick": "انتخاب فایل",
+  "crmImportFailed": "درون‌ریزی انجام نشد.",
+  "crmCallMinutes": "{minutes} دقیقه",
+  "@crmCallMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "crmImportRow": "ردیف {row}",
+  "@crmImportRow": {
+    "placeholders": {
+      "row": {
+        "type": "String"
+      }
+    }
+  },
+  "crmImportSummary": "{created} ایجاد، {skipped} ردشده، {errors} خطا",
+  "@crmImportSummary": {
+    "placeholders": {
+      "created": {
+        "type": "String"
+      },
+      "skipped": {
+        "type": "String"
+      },
+      "errors": {
+        "type": "String"
+      }
+    }
+  },
+  "financeTabDocs": "اسناد",
+  "financeTabReport": "گزارش",
+  "financeTabMonitor": "پایش",
+  "financeNew": "سند مالی جدید",
+  "financeEdit": "ویرایش سند مالی",
+  "financeSearchHint": "جستجو در مشتری، مبلغ و توضیحات",
+  "financeLoadFailed": "بارگذاری اسناد مالی ممکن نشد",
+  "financeEmptyTitle": "سندی پیدا نشد",
+  "financeEmptyMessage": "با دکمه «سند مالی جدید» اولین سند را ثبت کنید.",
+  "financeFilterAll": "همه",
+  "financeKindCash": "نقد",
+  "financeKindCheque": "چک",
+  "financeKindProbable": "احتمالی",
+  "financeKindVoid": "باطل",
+  "financeDirReceipt": "دریافت",
+  "financeDirPayment": "پرداخت",
+  "financeStatusConfirmed": "قطعی",
+  "financeStatusPending": "در انتظار",
+  "financeStatusVoid": "باطل‌شده",
+  "financeOverdue": "سررسید گذشته",
+  "financeKind": "نوع سند",
+  "financeDirection": "جهت",
+  "financeAmount": "مبلغ (ریال)",
+  "financeDate": "تاریخ",
+  "financeDueDate": "تاریخ سررسید",
+  "financeDescription": "توضیحات",
+  "financeCustomer": "مشتری: {name}",
+  "@financeCustomer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "financeAmountInvalid": "مبلغ باید عددی مثبت باشد.",
+  "financeDueRequired": "برای چک و سند احتمالی تاریخ سررسید لازم است.",
+  "financeSaved": "سند ذخیره شد.",
+  "financeSaveFirstFiles": "برای پیوست فایل، ابتدا سند را ذخیره کنید.",
+  "financeConfirm": "قطعی‌سازی",
+  "financeConfirmed": "سند قطعی شد.",
+  "financeVoid": "ابطال سند",
+  "financeVoidReason": "دلیل ابطال",
+  "financeVoidSubmit": "ابطال",
+  "financeVoidedBanner": "این سند باطل شده است: {reason}",
+  "@financeVoidedBanner": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "financeReportMonthly": "ماهانه",
+  "financeReportYearly": "سالانه",
+  "financeReportEmpty": "داده‌ای برای گزارش نیست.",
+  "financeColPeriod": "دوره",
+  "financeColReceipts": "دریافتی",
+  "financeColPayments": "پرداختی",
+  "financeColNet": "خالص",
+  "financeTotals": "جمع کل",
+  "financeProbableReceipts": "دریافتی احتمالی",
+  "financeProbablePayments": "پرداختی احتمالی",
+  "financeOverdueReceipts": "دریافتی معوق",
+  "financeProjectedNet": "خالص پیش‌بینی‌شده",
+  "financeChartTitle": "دریافتی و پرداختی قطعی",
+  "financeDrillTitle": "اسناد {period}",
+  "@financeDrillTitle": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "financeMonitorTitle": "دریافتی‌های احتمالی و معوق",
+  "financeMonitorOverdue": "معوق",
+  "financeMonitorUpcoming": "در راه",
+  "financeMonitorEmpty": "دریافتی احتمالی یا معوقی وجود ندارد.",
+  "financeCustomerTitle": "گزارش مالی مشتری",
+  "financeCustomerEmpty": "سند مالی برای این مشتری ثبت نشده.",
+  "salesTabLeads": "فرصت‌ها",
+  "salesTabMonitor": "پایش فروش",
+  "salesNew": "فرصت فروش جدید",
+  "salesEdit": "ویرایش فرصت فروش",
+  "salesSearchHint": "جستجو در عنوان و مشتری",
+  "salesLoadFailed": "بارگذاری فرصت‌های فروش ممکن نشد",
+  "salesEmptyTitle": "فرصت فروشی پیدا نشد",
+  "salesEmptyMessage": "با دکمه «فرصت فروش جدید» اولین فرصت را ثبت کنید.",
+  "salesStatusOpen": "باز",
+  "salesStatusWon": "موفق",
+  "salesStatusLost": "ناموفق",
+  "salesTitle": "عنوان",
+  "salesValue": "ارزش (ریال)",
+  "salesProbability": "احتمال موفقیت: {percent}٪",
+  "@salesProbability": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "salesOwner": "مسئول",
+  "salesDescription": "توضیحات",
+  "salesTitleRequired": "عنوان را بنویسید.",
+  "salesSaved": "فرصت ذخیره شد.",
+  "salesSaveFirstFiles": "برای پیوست فایل، ابتدا فرصت را ذخیره کنید.",
+  "salesWin": "موفق شد",
+  "salesLose": "ناموفق بود",
+  "salesLoseReason": "دلیل ناموفق بودن",
+  "salesLoseSubmit": "ثبت",
+  "salesReopen": "بازگشایی",
+  "salesWeighted": "ارزش وزنی: {amount}",
+  "@salesWeighted": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "salesLostBanner": "این فرصت ناموفق بسته شد: {reason}",
+  "@salesLostBanner": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "salesMonitorWon": "فروش موفق",
+  "salesMonitorProbable": "فروش احتمالی (وزنی)",
+  "salesMonitorOpen": "مجموع فرصت‌های باز",
+  "salesMonitorChart": "موفق در برابر احتمالی",
+  "salesByBucket": "فرصت‌های باز بر اساس احتمال",
+  "salesBucketLeads": "فرصت‌های با احتمال {bucket}",
+  "@salesBucketLeads": {
+    "placeholders": {
+      "bucket": {
+        "type": "String"
+      }
+    }
+  },
+  "salesWonByMonth": "فروش موفق به تفکیک ماه",
+  "salesCountValue": "{count} فرصت",
+  "@salesCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "salesCustomerTitle": "فرصت‌های فروش مشتری",
+  "salesCustomerEmpty": "فرصت فروشی برای این مشتری ثبت نشده.",
+  "openFailed": "باز کردن مورد ممکن نشد",
+  "bookmarkAdd": "نشان‌دار کردن",
+  "bookmarkRemove": "حذف نشان",
+  "bookmarkFailed": "ذخیره نشان ممکن نشد",
+  "bookmarksTitle": "نشان‌شده‌ها",
+  "bookmarksEmpty": "هنوز چیزی نشان نکرده‌اید",
+  "bookmarksEmptyHint": "با ستاره بالای وظیفه، نامه یا جلسه آن را نشان کنید.",
+  "bookmarksLoadFailed": "بارگذاری نشان‌شده‌ها ممکن نشد",
+  "pinnedTitle": "سنجاق‌شده‌ها",
+  "pinnedEmpty": "چیزی سنجاق نشده",
+  "pinnedEmptyHint": "پروژه‌ها، مشتریان و گفتگوها را سنجاق کنید تا اینجا در دسترس باشند.",
+  "pinnedLoadFailed": "بارگذاری سنجاق‌ها ممکن نشد",
+  "pinAdd": "سنجاق کردن",
+  "pinRemove": "برداشتن سنجاق",
+  "pinFailed": "تغییر سنجاق ممکن نشد",
+  "searchTitle": "جستجو",
+  "searchHint": "جستجو در همه بخش‌ها و نام فایل‌ها",
+  "searchPrompt": "جستجو کنید",
+  "searchMinChars": "دست‌کم دو نویسه وارد کنید.",
+  "searchNoResults": "نتیجه‌ای پیدا نشد",
+  "searchFailed": "جستجو ممکن نشد",
+  "searchRateLimited": "درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کنید.",
+  "searchModuleCrm": "مشتریان",
+  "searchModuleChat": "گفتگو",
+  "searchModuleFinance": "مالی",
+  "searchModuleSales": "فروش",
+  "searchModuleFiles": "فایل‌ها",
+  "searchFileIn": "این فایل در «{owner}» است.",
+  "@searchFileIn": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "calendarTitle": "تقویم",
+  "calendarMonth": "ماه",
+  "calendarWeek": "هفته",
+  "calendarTeam": "تیم",
+  "calendarColleagues": "وظایف همکار",
+  "calendarFilters": "فیلتر",
+  "calendarLoadFailed": "بارگذاری تقویم ممکن نشد",
+  "calendarDayNothing": "موردی در این روز نیست.",
+  "calendarAllDay": "تمام روز",
+  "calendarKindTask": "وظیفه",
+  "calendarKindMeeting": "جلسه",
+  "calendarKindReminder": "یادآوری",
+  "calendarKindProject": "پروژه",
+  "calendarFilterProject": "پروژه",
+  "calendarFilterLabel": "برچسب",
+  "calendarFilterPerson": "فرد",
+  "calendarFilterCustomer": "مشتری",
+  "calendarFilterAll": "همه",
+  "calendarFilterApply": "اعمال",
+  "calendarFilterReset": "پاک کردن فیلترها",
+  "calendarStatusAll": "همه",
+  "calendarStatusOpen": "باز",
+  "calendarStatusDone": "انجام‌شده",
+  "calendarPickPerson": "یک همکار را انتخاب کنید",
+  "calendarMonitorForbidden": "اجازه مشاهده وظایف همکاران را ندارید.",
+  "calendarColleagueEmpty": "وظیفه فعالی نیست.",
+  "settingsTitle": "تنظیمات",
+  "settingsTheme": "تم",
+  "settingsThemeLight": "روشن",
+  "settingsThemeDark": "تیره",
+  "settingsThemeAuto": "خودکار",
+  "settingsBackground": "تصویر پس‌زمینه",
+  "settingsBackgroundChoose": "انتخاب تصویر",
+  "settingsBackgroundRemove": "حذف تصویر",
+  "settingsTitleLabel": "عنوان",
+  "settingsStatus": "وضعیت",
+  "settingsBirthday": "تاریخ تولد",
+  "settingsBirthdayVisible": "نمایش تولد به همکاران",
+  "settingsDnd": "مزاحم نشوید",
+  "settingsDndOff": "خاموش است",
+  "settingsDndTurnOff": "خاموش کردن",
+  "settingsDndUntil": "تا {when}",
+  "@settingsDndUntil": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDndHours": "{hours} ساعت",
+  "@settingsDndHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "prefsFailed": "ذخیره تنظیمات ممکن نشد",
+  "personalEmailTitle": "ایمیل شخصی",
+  "personalEmailField": "نشانی ایمیل",
+  "personalEmailSend": "ارسال کد تأیید",
+  "personalEmailToken": "کد تأیید",
+  "personalEmailVerify": "تأیید ایمیل",
+  "personalEmailSent": "کد تأیید به ایمیل ارسال شد.",
+  "personalEmailFailed": "ارسال ممکن نشد؛ نشانی را بررسی کنید.",
+  "personalEmailVerified": "ایمیل تأیید شد.",
+  "personalEmailBadToken": "کد نامعتبر یا منقضی است.",
+  "personalEmailVerifiedBadge": "تأییدشده",
+  "personalEmailUnverified": "تأییدنشده",
+  "notificationsTitle": "اعلان‌ها",
+  "notificationsMarkAll": "خوانده شد",
+  "notificationsUnread": "خوانده‌نشده",
+  "notificationsMentions": "اشاره‌ها",
+  "notificationsEmpty": "اعلانی نیست",
+  "notificationsNoMentions": "کسی شما را نام نبرده",
+  "notificationsLoadFailed": "بارگذاری اعلان‌ها ممکن نشد",
+  "authWelcomeTitle": "خوش آمدید",
+  "authWelcomeSubtitle": "برای ادامه وارد شوید",
+  "authNewHere": "تازه آمده‌اید؟",
+  "authCreateAccount": "ایجاد حساب",
+  "authEnterPassword": "رمز عبور را وارد کنید",
+  "authSignIn": "ورود",
+  "authForgotPassword": "فراموشی رمز عبور",
+  "authServerUnreachable": "اتصال به سرور برقرار نشد",
+  "authRegistered": "ثبت‌نام انجام شد. اکنون وارد شوید.",
+  "authEmailVerified": "ایمیل تأیید شد. اکنون وارد شوید.",
+  "authCheckEmailTitle": "ایمیل خود را بررسی کنید",
+  "authCheckEmailSubtitle": "کد ارسال‌شده به ایمیل را برای تأیید نشانی خود وارد کنید.",
+  "authVerifyTokenLabel": "کد تأیید",
+  "authVerify": "تأیید",
+  "authSignupSubtitle": "به فضای کاری شرکت بپیوندید",
+  "authFullName": "نام و نام خانوادگی",
+  "authEnterFullName": "نام و نام خانوادگی را وارد کنید",
+  "authInviteCodeOptional": "کد دعوت (اختیاری)",
+  "authInviteHelper": "برای ثبت‌نام با ایمیل سازمانی، خالی بگذارید",
+  "authSignUp": "ثبت‌نام",
+  "authHaveAccount": "حساب کاربری دارید؟",
+  "authBackToSignIn": "بازگشت به ورود",
+  "authResetTitle": "بازیابی رمز عبور",
+  "authResetSubtitle": "کدی به ایمیل شما می‌فرستیم، سپس رمز عبور جدید انتخاب می‌کنید.",
+  "authEmailMeToken": "ارسال کد به ایمیل",
+  "authResetRequested": "اگر حساب وجود داشته باشد، کد به ایمیل ارسال شد.",
+  "authHaveToken": "کد دارید (ایمیل‌شده یا دریافتی از مدیر)؟",
+  "authToken": "کد",
+  "authEnterToken": "کد را وارد کنید",
+  "authNewPassword": "رمز عبور جدید",
+  "authSetNewPassword": "ثبت رمز عبور جدید",
+  "authPasswordChangedSignIn": "رمز عبور تغییر کرد. اکنون وارد شوید.",
+  "authEmail": "ایمیل",
+  "authPassword": "رمز عبور",
+  "authEnterEmail": "ایمیل را وارد کنید",
+  "authEnterValidEmail": "نشانی ایمیل معتبر وارد کنید",
+  "authPasswordHint": "حداقل {min} نویسه؛ از رمزهای رایج استفاده نکنید",
+  "@authPasswordHint": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "authPasswordTooShort": "حداقل {min} نویسه وارد کنید",
+  "@authPasswordTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "authPinDigits": "{count} رقم وارد کنید",
+  "@authPinDigits": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "authShowPassword": "نمایش رمز عبور",
+  "authHidePassword": "پنهان کردن رمز عبور",
+  "authSigningPin": "رمز امضا",
+  "permMember": "عضو",
+  "permLetterCreate": "ایجاد نامه",
+  "permLetterSee": "مشاهده نامه‌ها",
+  "permLetterSign": "امضای نامه",
+  "relTimeNow": "هم‌اکنون",
+  "relTimeMinutes": "{n} دقیقه پیش",
+  "@relTimeMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "relTimeHours": "{n} ساعت پیش",
+  "@relTimeHours": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "relTimeDays": "{n} روز پیش",
+  "@relTimeDays": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "pollsTitle": "نظرسنجی‌ها",
+  "pollsEmpty": "هنوز نظرسنجی‌ای نیست",
+  "pollNew": "نظرسنجی جدید",
+  "pollTitleField": "عنوان",
+  "pollKind": "نوع",
+  "pollKindPoll": "نظرسنجی",
+  "pollKindQuiz": "آزمون",
+  "pollAnonymity": "ناشناس بودن",
+  "pollAnonPublic": "عمومی: نام رأی‌دهندگان دیده می‌شود",
+  "pollAnonUsers": "ناشناس برای اعضا: فقط مدیر نام‌ها را می‌بیند",
+  "pollAnonAll": "کاملاً ناشناس",
+  "pollQuestionText": "متن پرسش",
+  "pollAddQuestion": "افزودن پرسش",
+  "pollRemoveQuestion": "حذف پرسش",
+  "pollAddOption": "افزودن گزینه",
+  "pollRemoveOption": "حذف گزینه",
+  "pollOptionHint": "گزینه",
+  "pollMultiple": "چند پاسخ مجاز است",
+  "pollPoints": "امتیاز",
+  "pollCorrectHint": "گزینه‌های صحیح را علامت بزنید",
+  "pollCreate": "ایجاد",
+  "pollTemplates": "الگوها",
+  "pollNoTemplates": "الگویی ذخیره نشده",
+  "pollSaveTemplate": "ذخیره به‌عنوان الگو",
+  "pollTemplateName": "نام الگو",
+  "pollTemplateSaved": "الگو ذخیره شد",
+  "pollSubmit": "ثبت پاسخ",
+  "pollChangeAnswer": "تغییر پاسخ",
+  "pollSubmitted": "پاسخ شما ثبت شد",
+  "pollClose": "پایان نظرسنجی",
+  "pollCloseConfirm": "با پایان‌دادن، دیگر پاسخی ثبت نمی‌شود. ادامه می‌دهید؟",
+  "pollClosedBadge": "پایان‌یافته",
+  "pollOpenBadge": "باز",
+  "pollResults": "نتایج",
+  "pollVoteFirst": "برای دیدن نتایج ابتدا پاسخ دهید",
+  "pollVoters": "رأی‌دهندگان",
+  "pollVotersHidden": "نام رأی‌دهندگان نمایش داده نمی‌شود",
+  "pollScores": "امتیاز شرکت‌کنندگان",
+  "pollCorrect": "پاسخ صحیح",
+  "pollPrint": "چاپ",
+  "pollPrintTitle": "نتایج آزمون",
+  "pollPrintDate": "تاریخ",
+  "pollLoadFailed": "بارگذاری نظرسنجی ممکن نشد",
+  "pollActionFailed": "انجام کار ممکن نشد",
+  "pollForbidden": "اجازهٔ این کار را ندارید",
+  "pollNoTitle": "عنوان را بنویسید",
+  "pollNoQuestion": "هر پرسش به متن نیاز دارد و دست‌کم یک پرسش لازم است",
+  "pollTooFewOptions": "هر پرسش دست‌کم دو گزینهٔ پر دارد",
+  "pollNoCorrect": "برای هر پرسش آزمون پاسخ صحیح انتخاب کنید",
+  "pollOpenPoll": "باز کردن",
+  "pollNeedAnswer": "دست‌کم یک گزینه انتخاب کنید",
+  "pollQuestionN": "پرسش {n}",
+  "@pollQuestionN": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "pollParticipants": "{count} شرکت‌کننده",
+  "@pollParticipants": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "pollMyScore": "امتیاز شما: {score} از {max}",
+  "@pollMyScore": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "pollScoreLine": "{name}: {score} از {max}",
+  "@pollScoreLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "score": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "pinNewLabel": "رمز امضای جدید (۶ رقم)",
+  "pinRepeatLabel": "تکرار رمز امضا",
+  "pinLoginPassword": "رمز عبور ورود",
+  "pinEnterLoginPassword": "رمز عبور ورود را وارد کنید",
+  "pinMismatch": "رمزهای امضا یکسان نیستند",
+  "pinSave": "ذخیره رمز امضا",
+  "pinGateTitle": "رمز امضای خود را تعیین کنید",
+  "pinGateSubtitle": "هر امضا را با این رمز ۶ رقمی، روی همه دستگاه‌هایتان تأیید می‌کنید.",
+  "bioCancelled": "بررسی اثر انگشت / چهره لغو شد",
+  "bioDialogTitle": "استفاده از اثر انگشت / چهره در این دستگاه",
+  "bioDialogBody": "امضاها را بدون وارد کردن رمز امضا تأیید کنید و اجازه دهید دستگاه‌های دیگرتان از این دستگاه برای تأیید درخواست کنند. برای فعال‌سازی، یک بار رمز امضا را وارد کنید.",
+  "bioNotNow": "فعلاً نه",
+  "bioEnable": "فعال‌سازی",
+  "bioEnableOnDevice": "فعال‌سازی اثر انگشت / چهره در این دستگاه",
+  "sessionsSignOutTitle": "خروج این دستگاه؟",
+  "sessionsSignOutBody": "{name} باید دوباره وارد شود.",
+  "@sessionsSignOutBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionsSignOutAction": "خروج",
+  "sessionsLoadFailed": "بارگذاری دستگاه‌ها ممکن نشد",
+  "sessionsEmpty": "دستگاهی وارد نشده است",
+  "sessionsThisDevice": "این دستگاه",
+  "sessionsBiometric": "زیست‌سنجی",
+  "sessionsActive": "آخرین فعالیت: {when}",
+  "@sessionsActive": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionsEnableBiometric": "فعال‌سازی اثر انگشت / چهره",
+  "sessionsSignOutDevice": "خروج این دستگاه",
+  "profileSaved": "ذخیره شد",
+  "profilePasswordChanged": "رمز عبور تغییر کرد؛ از دستگاه‌های دیگر خارج شدید",
+  "profileManager": "مدیر",
+  "profileSection": "پروفایل",
+  "profileEnterName": "نام را وارد کنید",
+  "profileJobTitle": "سمت",
+  "profileDepartmentReadonly": "دپارتمان (تعیین‌شده توسط مدیر)",
+  "profilePinChangeSubtitle": "رمز ۶ رقمی تأییدکننده امضاهایتان را تغییر دهید",
+  "profilePinSetSubtitle": "رمز ۶ رقمی تأییدکننده امضاهایتان را تعیین کنید",
+  "profilePinSaved": "رمز امضا ذخیره شد",
+  "profileChangePassword": "تغییر رمز عبور",
+  "profileChangePasswordSubtitle": "پس از آن از دستگاه‌های دیگر خارج می‌شوید",
+  "profileCurrentPassword": "رمز عبور فعلی",
+  "profileEnterCurrentPassword": "رمز عبور فعلی را وارد کنید",
+  "adminResetTokenTitle": "رمز بازیابی رمز عبور",
+  "adminResetTokenBody": "این کد را به {email} بدهید. فقط یک بار نمایش داده می‌شود.",
+  "@adminResetTokenBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminTokenCopied": "کد کپی شد",
+  "adminCodeCopied": "کد دعوت کپی شد",
+  "commonCopy": "کپی",
+  "adminPermissions": "دسترسی‌ها",
+  "adminAlwaysGranted": "همیشه فعال",
+  "adminNewInviteTitle": "کد دعوت جدید",
+  "adminMaxUses": "حداکثر تعداد استفاده",
+  "adminUnlimitedHelper": "برای نامحدود، خالی بگذارید",
+  "adminDepartment": "دپارتمان",
+  "adminNone": "بدون دپارتمان",
+  "adminInvitePermsHeader": "دسترسی افرادی که با این کد وارد می‌شوند",
+  "commonCreate": "ایجاد",
+  "adminLoadFailed": "بارگذاری اطلاعات مدیریت ممکن نشد",
+  "adminSignupSection": "ثبت‌نام",
+  "adminSignupSubtitle": "نحوه پیوستن افراد جدید",
+  "adminDomainSignup": "ثبت‌نام با ایمیل سازمانی",
+  "adminDomainLabel": "دامنه: {domain}",
+  "@adminDomainLabel": {
+    "placeholders": {
+      "domain": {
+        "type": "String"
+      }
+    }
+  },
+  "adminNeedsEmail": "نیازمند پیکربندی ایمیل توسط مدیرکل است",
+  "adminInviteSignup": "ثبت‌نام با کد دعوت",
+  "adminInvitesSection": "کدهای دعوت",
+  "adminNewCode": "کد جدید",
+  "adminNoCodes": "هنوز کدی وجود ندارد",
+  "adminPeopleSection": "افراد",
+  "adminInviteUses": "{uses} از {max} استفاده شده",
+  "@adminInviteUses": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      },
+      "uses": {
+        "type": "String"
+      }
+    }
+  },
+  "adminCopyCode": "کپی کد",
+  "adminDeactivate": "غیرفعال‌سازی",
+  "adminInactive": "غیرفعال",
+  "adminDeactivated": "غیرفعال‌شده",
+  "adminActions": "عملیات",
+  "adminReactivate": "فعال‌سازی مجدد",
+  "adminIssueResetToken": "صدور کد بازیابی رمز",
+  "deptNew": "دپارتمان جدید",
+  "deptRename": "تغییر نام دپارتمان",
+  "deptName": "نام",
+  "deptSection": "دپارتمان‌ها",
+  "deptSubtitle": "فقط مدیر می‌تواند این‌ها را تغییر دهد",
+  "deptNewShort": "جدید",
+  "deptEmpty": "هنوز دپارتمانی وجود ندارد",
+  "deptMembers": "{count} نفر",
+  "@deptMembers": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "deptInactiveSuffix": "غیرفعال",
+  "deptRenameTooltip": "تغییر نام",
+  "letterheadSaved": "سربرگ ذخیره شد",
+  "letterheadLogoInvalid": "لوگو باید PNG یا JPEG و کمتر از ۲۰۰ کیلوبایت باشد",
+  "letterheadCompanyName": "نام شرکت",
+  "letterheadTagline": "زیرعنوان",
+  "letterheadAddress": "نشانی",
+  "letterheadPhone": "تلفن",
+  "letterheadEmail": "ایمیل",
+  "letterheadWebsite": "وب‌سایت",
+  "letterheadFooter": "نشانی / تلفن (پایین هر صفحه)",
+  "letterheadTitle": "سربرگ",
+  "letterheadHint": "در بالا و پایین هر نامه چاپ می‌شود.",
+  "letterheadAddLogo": "افزودن لوگو",
+  "letterheadChangeLogo": "تغییر لوگو",
+  "letterheadRemoveLogo": "حذف لوگو",
+  "letterheadSave": "ذخیره سربرگ",
+  "lettersCreateSigners": "امضاکنندگان",
+  "lettersCreateViewers": "بینندگان",
+  "lettersCreateNoSignerCandidates": "فعلاً کسی برای انتخاب نیست. امضاکننده باید کاربر دیگری با دسترسی امضای نامه (تعیین‌شده توسط مدیر) باشد.",
+  "lettersCreateNoViewerCandidates": "فعلاً کسی برای انتخاب نیست. بینندگان باید از همکاران دیگر باشند.",
+  "lettersCreateTitleRequired": "عنوان الزامی است",
+  "lettersCreateSignerRequired": "دست‌کم یک امضاکننده اضافه کنید",
+  "lettersCreateDraftSaved": "پیش‌نویس ذخیره شد",
+  "lettersCreateContent": "محتوا",
+  "lettersCreateContentHint": "عنوان در فهرست‌ها دیده می‌شود. متن نامه به‌صورت رمزنگاری‌شده روی سرور ذخیره می‌شود.",
+  "lettersCreateTitleLabel": "عنوان",
+  "lettersCreateOnPaper": "نوشتن روی کاغذ A4 (پیش‌نمایش و چاپ)",
+  "lettersCreateAutosaved": "پیش‌نویس به‌طور خودکار ذخیره شد: {time}",
+  "@lettersCreateAutosaved": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lettersCreateBodyFormatted": "متن (قالب‌بندی‌شده)",
+  "lettersCreateBody": "متن",
+  "lettersCreateAttachments": "پیوست‌ها",
+  "lettersCreateAttachmentsHint": "PDF یا تصویر، حداکثر ۲۵ مگابایت برای هر فایل. فایل‌ها رمزنگاری‌شده روی سرور ذخیره می‌شوند.",
+  "lettersCreateRemove": "حذف",
+  "lettersCreateAttach": "افزودن PDF / تصویر (حداکثر ۲۵ مگابایت)",
+  "lettersCreateNoSigners": "هنوز امضاکننده‌ای انتخاب نشده",
+  "lettersCreateSignerN": "امضاکننده {n}",
+  "@lettersCreateSignerN": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "lettersCreatePeople": "افراد",
+  "lettersCreatePeopleHint": "چه کسانی نامه را امضا می‌کنند و چه کسانی می‌توانند آن را بخوانند.",
+  "lettersCreateChooseSigners": "انتخاب امضاکنندگان",
+  "lettersCreateParallel": "هم‌زمان",
+  "lettersCreateSerial": "به‌ترتیب",
+  "lettersCreateSerialHelp": "امضاکنندگان یکی‌یکی و از بالا به پایین امضا می‌کنند. برای تغییر ترتیب، بکشید.",
+  "lettersCreateParallelHelp": "همه امضاکنندگان می‌توانند هم‌زمان امضا کنند.",
+  "lettersCreateVisibility": "سطح دسترسی",
+  "lettersCreatePrivate": "خصوصی",
+  "lettersCreatePublic": "عمومی",
+  "lettersCreatePublicHelp": "پس از انتشار، همه افراد شرکت می‌توانند آن را بخوانند.",
+  "lettersCreatePrivateHelp": "فقط ایجادکننده، امضاکنندگان و بینندگان انتخاب‌شده می‌توانند آن را بخوانند.",
+  "lettersCreateNoViewers": "بیننده اضافه‌ای نیست",
+  "lettersCreateChooseViewers": "انتخاب بینندگان",
+  "lettersCreateDelivery": "زمان نمایش",
+  "lettersCreateDeliveryHint": "چه زمانی نامه برای مخاطبان قابل مشاهده می‌شود.",
+  "lettersCreateAfterSign": "پس از امضای همه",
+  "lettersCreateRightAway": "بلافاصله",
+  "lettersCreateNowHelp": "بینندگان به‌محض ارسال، نامه را می‌بینند.",
+  "lettersCreateAfterSignHelp": "بینندگان فقط پس از تأیید همه امضاکنندگان نامه را می‌بینند.",
+  "lettersCreateSaveDraft": "ذخیره پیش‌نویس",
+  "lettersCreateWorking": "در حال انجام...",
+  "lettersCreateSend": "ارسال",
+  "lettersCreateNew": "نامه جدید",
+  "lettersCreateNewChained": "نامه زنجیره‌ای جدید",
+  "lettersAdminLoadFailed": "بارگذاری نامه‌ها ممکن نشد",
+  "lettersAdminEmptyTitle": "هنوز نامه‌ای نیست",
+  "lettersAdminEmptyMessage": "عنوان و شرکت‌کنندگان همه نامه‌ها اینجا نمایش داده می‌شود.",
+  "lettersAdminTitle": "همه نامه‌ها (مدیر)",
+  "lettersAdminBy": "ایجادکننده: {email}  -  {date}",
+  "@lettersAdminBy": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "lettersAdminRoleSigner": "امضاکننده",
+  "lettersAdminRoleViewer": "بیننده",
+  "lettersAdminRelist": "نمایش مجدد در فهرست",
+  "lettersAdminUnlist": "حذف از فهرست",
+  "notifTooltip": "اعلان‌ها",
+  "notifTitle": "اعلان‌ها",
+  "notifMarkAllRead": "خواندن همه",
+  "notifLoadFailed": "بارگذاری اعلان‌ها ممکن نشد",
+  "notifEmptyTitle": "فعلاً چیزی نیست",
+  "notifEmptyMessage": "وقتی نامه‌ای نیازمند اقدام شما باشد، اطلاع داده می‌شود.",
+  "approvalTitle": "تأیید امضا؟",
+  "approvalDecisionApprove": "تصمیم: تأیید",
+  "approvalDecisionReject": "تصمیم: رد",
+  "approvalNote": "یادداشت: «{note}»",
+  "@approvalNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalRequestedFrom": "درخواست از {device}. فقط اگر این درخواست از طرف شما بوده است تأیید کنید.",
+  "@approvalRequestedFrom": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalAnotherDevice": "دستگاه دیگر",
+  "approvalDecline": "رد درخواست",
+  "approvalApprove": "تأیید",
+  "approvalBioReasonApprove": "تأیید امضا: {title}",
+  "@approvalBioReasonApprove": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalBioReasonReject": "رد امضا: {title}",
+  "@approvalBioReasonReject": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalBioFailed": "بررسی اثر انگشت / چهره ناموفق بود",
+  "paperInk": "مشکی",
+  "paperBlue": "آبی",
+  "paperRed": "قرمز",
+  "paperGreen": "سبز",
+  "paperNewNumber": "(جدید)",
+  "paperHint": "متن نامه را اینجا بنویسید...",
+  "paperStatus": "{words} کلمه  |  {chars} نویسه  |  {pages} صفحه A4 با اندازه {pt} پونت",
+  "@paperStatus": {
+    "placeholders": {
+      "chars": {
+        "type": "String"
+      },
+      "pages": {
+        "type": "String"
+      },
+      "pt": {
+        "type": "String"
+      },
+      "words": {
+        "type": "String"
+      }
+    }
+  },
+  "paperUndo": "واگرد",
+  "paperRedo": "بازگرد",
+  "paperBold": "پررنگ",
+  "paperItalic": "کج",
+  "paperUnderline": "زیرخط",
+  "paperHeading": "عنوان",
+  "paperSubheading": "زیرعنوان",
+  "paperBullets": "فهرست نقطه‌ای",
+  "paperNumbered": "فهرست شماره‌دار",
+  "paperSmaller": "متن کوچک‌تر",
+  "paperLarger": "متن بزرگ‌تر",
+  "paperTextColor": "رنگ متن",
+  "paperAlignStart": "چین از ابتدا",
+  "paperAlignCenter": "وسط‌چین",
+  "paperAlignEnd": "چین از انتها",
+  "paperJustify": "تراز دوطرفه",
+  "paperDirAllTooltip": "جهت کل نامه",
+  "paperDirAllRtl": "کل نامه راست‌به‌چپ",
+  "paperDirAllLtr": "کل نامه چپ‌به‌راست",
+  "paperDirAllAuto": "کل نامه خودکار",
+  "paperDirParaLtr": "بند چپ‌به‌راست",
+  "paperDirParaRtl": "بند راست‌به‌چپ",
+  "paperTitle": "نوشتن روی کاغذ",
+  "paperDone": "انجام شد",
+  "paperTabEdit": "ویرایش",
+  "paperTabPreview": "پیش‌نمایش",
+  "notifGroupEarlier": "قدیمی‌تر",
+  "notifGroupToday": "امروز",
+  "notifGroupYesterday": "دیروز",
+  "lettersAdminUnlisted": "خارج از فهرست",
+  "sessionsUnknownDevice": "دستگاه ناشناس",
+  "projectTabGantt": "گانت",
+  "secTitle": "امنیت",
+  "secTwoFactor": "ورود دومرحله‌ای",
+  "secTwoFactorHelp": "با یک برنامه احراز هویت (مثل Google Authenticator) هر ورود با یک کد ۶ رقمی تأیید می‌شود.",
+  "secOn": "فعال",
+  "secOff": "غیرفعال",
+  "secRequiredByCompany": "شرکت فعال‌سازی ورود دومرحله‌ای را الزامی کرده است.",
+  "secEnable": "فعال‌سازی",
+  "secDisable": "غیرفعال‌سازی",
+  "secDisabled": "ورود دومرحله‌ای غیرفعال شد",
+  "secNewCodes": "کدهای بازیابی جدید",
+  "secCodesLeft": "کدهای بازیابی باقی‌مانده: {count}",
+  "@secCodesLeft": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "secSetupSteps": "کلید زیر را در برنامه احراز هویت وارد کنید (یا پیوند را باز کنید)، سپس کد ۶ رقمی نمایش‌داده‌شده را بنویسید.",
+  "secSecretKey": "کلید مخفی",
+  "secSetupLink": "پیوند otpauth",
+  "secAuthCode": "کد ۶ رقمی برنامه",
+  "secConfirmEnable": "تأیید و فعال‌سازی",
+  "secCodeInvalid": "کد باید ۶ رقم باشد",
+  "secCodeRecoveryInvalid": "کد بازیابی را وارد کنید",
+  "secCopy": "کپی",
+  "secCopied": "کپی شد",
+  "secProofMissing": "رمز عبور و کد را وارد کنید",
+  "secPassword": "رمز عبور",
+  "secRecoveryCode": "کد بازیابی",
+  "secUseRecoveryCode": "استفاده از کد بازیابی",
+  "secUseAppCode": "استفاده از کد برنامه",
+  "secRecoveryTitle": "کدهای بازیابی",
+  "secRecoveryWarning": "این ۱۰ کد فقط همین یک بار نمایش داده می‌شوند. هر کد یک بار مصرف است؛ آن‌ها را جای امن نگه دارید.",
+  "secSavedThem": "ذخیره کردم",
+  "secLoadFailed": "بارگذاری ممکن نشد",
+  "secNoConnection": "اتصال به سرور برقرار نشد",
+  "secLoginCodeTitle": "تأیید ورود",
+  "secLoginCodeSubtitle": "کد ۶ رقمی برنامه احراز هویت را وارد کنید",
+  "secLoginRecoverySubtitle": "یکی از کدهای بازیابی خود را وارد کنید",
+  "secContinue": "ادامه",
+  "secLoginHistory": "تاریخچه ورود",
+  "secHistoryEmpty": "هنوز ورودی ثبت نشده است",
+  "secLoginOk": "ورود موفق",
+  "secLoginFailed": "ورود ناموفق",
+  "secReasonBadPassword": "رمز عبور اشتباه",
+  "secReasonBadCode": "کد اشتباه",
+  "secReasonLocked": "حساب موقتاً قفل بود",
+  "secReasonGuestExpired": "دسترسی مهمان منقضی شده",
+  "secCloseOthers": "بستن سایر نشست‌ها",
+  "secCloseOthersTitle": "بستن سایر نشست‌ها؟",
+  "secCloseOthersBody": "همه دستگاه‌ها به‌جز این دستگاه از حساب خارج می‌شوند.",
+  "secGuest": "مهمان",
+  "secGuests": "کاربران مهمان",
+  "secGuestsHelp": "همکاران بیرونی؛ فقط وظایف، پروژه‌ها و گفتگوی مشترک را می‌بینند",
+  "secGuestsEmpty": "مهمانی وجود ندارد",
+  "secGuestNew": "مهمان جدید",
+  "secGuestInvite": "کد دعوت مهمان",
+  "secGuestInviteHelp": "هر کسی با این کد ثبت‌نام کند، مهمان می‌شود.",
+  "secGuestInviteCode": "کد دعوت مهمان",
+  "secGuestInvalid": "ایمیل معتبر و رمز حداقل ۸ نویسه لازم است",
+  "secCreate": "ایجاد",
+  "secEmail": "ایمیل",
+  "secFullName": "نام کامل",
+  "secNoExpiry": "بدون انقضا",
+  "secExpiresOn": "انقضا: {date}",
+  "@secExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "secSetExpiry": "تعیین انقضا",
+  "secClearExpiry": "حذف انقضا",
+  "secActive": "فعال",
+  "secExpired": "منقضی",
+  "secDeactivated": "غیرفعال شده",
+  "secDeactivate": "غیرفعال کردن",
+  "secReactivate": "فعال کردن مجدد",
+  "secGuestNotice": "شما با حساب مهمان وارد شده‌اید و فقط به بخش‌های مجاز دسترسی دارید.",
+  "secGuestNoticeUntil": "شما مهمان هستید؛ دسترسی شما تا {date} معتبر است.",
+  "@secGuestNoticeUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "secSetupRequiredNotice": "شرکت ورود دومرحله‌ای را الزامی کرده است؛ آن را از پروفایل > امنیت فعال کنید.",
+  "secAccess": "دسترسی‌ها",
+  "secAccessTitle": "دسترسی‌های {name}",
+  "@secAccessTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "secAccessProjects": "پروژه‌ها",
+  "secAccessCustomers": "پرونده‌های مشتری",
+  "secAccessChats": "گروه‌های گفتگو",
+  "secAccessAdd": "افزودن",
+  "secAccessEmpty": "موردی نیست",
+  "secAccessNothingToAdd": "موردی برای افزودن نیست",
+  "secRoleManager": "مدیر",
+  "secRoleMember": "عضو",
+  "secRoleViewer": "بیننده",
+  "secRoleAdmin": "ادمین",
+  "gnReadOnly": "فقط مشاهده: شما اجازه ویرایش این نمودار را ندارید.",
+  "gnLoadFailed": "بارگذاری نمودار گانت ممکن نشد",
+  "gnEmpty": "هنوز چیزی در برنامه نیست",
+  "gnEmptyEdit": "یک فاز بسازید یا وظایف برنامه‌ریزی‌نشده را به برنامه اضافه کنید.",
+  "gnZoomDaily": "روزانه",
+  "gnZoomMonthly": "ماهانه",
+  "gnZoomQuarterly": "فصلی",
+  "gnAddPhase": "فاز جدید",
+  "gnUnplanned": "برنامه‌ریزی‌نشده ({count})",
+  "@gnUnplanned": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "gnNoUnplanned": "همه وظایف در برنامه هستند",
+  "gnAddToPlan": "افزودن به برنامه",
+  "gnPrint": "چاپ نمودار",
+  "gnPrintTitle": "نمودار گانت: {name}",
+  "@gnPrintTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gnProgress": "پیشرفت {percent}٪",
+  "@gnProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "gnActions": "عملیات",
+  "gnRename": "تغییر نام",
+  "gnSetDates": "تعیین تاریخ",
+  "gnStart": "شروع",
+  "gnEnd": "پایان",
+  "gnDatesOrder": "پایان نباید قبل از شروع باشد",
+  "gnPhase": "فاز",
+  "gnPhaseTitle": "عنوان فاز",
+  "gnNoPhase": "بدون فاز",
+  "gnMoveToPhase": "انتقال به فاز",
+  "gnMoveUp": "بالا بردن",
+  "gnMoveDown": "پایین بردن",
+  "gnIndent": "زیرمجموعه (تورفتگی)",
+  "gnOutdent": "خروج از زیرمجموعه",
+  "gnOpenTask": "باز کردن وظیفه",
+  "gnDeactivatePhase": "غیرفعال کردن فاز",
+  "gnDeactivatePhaseBody": "فاز «{title}» غیرفعال می‌شود و وظایفش به سطح بالا می‌روند.",
+  "@gnDeactivatePhaseBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "gnRemoveFromPlan": "حذف از برنامه",
+  "gnRemoveFromPlanBody": "«{title}» از نمودار حذف می‌شود (خود وظیفه می‌ماند).",
+  "@gnRemoveFromPlanBody": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "gnDependencies": "وابستگی‌ها",
+  "gnDependenciesHelp": "پیش‌نیازهای «{title}» (باید تمام شوند تا این وظیفه شروع شود):",
+  "@gnDependenciesHelp": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "gnNoDependencies": "پیش‌نیازی ندارد",
+  "gnAddDependency": "افزودن پیش‌نیاز",
+  "gnRemoveDependency": "حذف وابستگی",
+  "gnConflict": "تداخل: این وظیفه زودتر از پایان پیش‌نیاز شروع می‌شود",
+  "gnTaskReady": "آماده شروع: {title}",
+  "@gnTaskReady": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  }
 }

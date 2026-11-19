@@ -16,9 +16,17 @@ import 'package:letter_signing/workspace/widgets/jalali_date_field.dart';
 /// Create (when [meeting] is null) or edit a draft/scheduled meeting. Pops the saved
 /// [MeetingOut].
 class MeetingFormScreen extends StatefulWidget {
-  const MeetingFormScreen({super.key, required this.env, this.meeting});
+  const MeetingFormScreen({
+    super.key,
+    required this.env,
+    this.meeting,
+    this.customerId,
+  });
   final MeetingsEnv env;
   final MeetingOut? meeting;
+
+  /// Links the new meeting to this customer file.
+  final String? customerId;
 
   @override
   State<MeetingFormScreen> createState() => _MeetingFormState();
@@ -34,6 +42,7 @@ class _MeetingFormState extends State<MeetingFormScreen> {
   );
   late MeetingDraft _draft = widget.meeting == null
       ? MeetingDraft(
+          customerId: widget.customerId,
           attendees: [
             AttendeeDraft(userId: widget.env.userId, role: AttendeeRole.chair),
           ],

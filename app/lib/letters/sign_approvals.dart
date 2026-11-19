@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:letter_signing/auth/biometrics.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_api.dart';
 import 'package:letter_signing/letters/live_service.dart';
@@ -76,11 +77,11 @@ class SignApprovals extends ChangeNotifier {
 
   /// Fingerprint/face first, then `POST /sign-requests/{id}/approve`.
   Future<void> approve(SignRequest request) async {
-    final verb = request.decision == 'approved' ? 'Approve' : 'Reject';
-    final ok = await biometrics.authenticate(
-      '$verb signing: ${request.letterTitle}',
-    );
-    if (!ok) throw const LetterException('Fingerprint / face check failed');
+    final reason = request.decision == 'approved'
+        ? tr.approvalBioReasonApprove(request.letterTitle)
+        : tr.approvalBioReasonReject(request.letterTitle);
+    final ok = await biometrics.authenticate(reason);
+    if (!ok) throw LetterException(tr.approvalBioFailed);
     await api.approveSignRequest(request.id);
     _drop(request.id);
   }

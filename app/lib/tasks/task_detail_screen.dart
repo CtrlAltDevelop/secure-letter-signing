@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/workspace/widgets/bookmark_button.dart';
 import 'package:letter_signing/letters/letter_widgets.dart' show SkeletonList;
 import 'package:letter_signing/tasks/models.dart';
 import 'package:letter_signing/tasks/task_detail_controller.dart';
@@ -233,6 +234,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             title: Text(l.taskDetailTitle),
             actions: [
               if (task != null) ...[
+                BookmarkButton(
+                  api: widget.env.api.workspace,
+                  module: 'tasks',
+                  id: task.id,
+                ),
                 IconButton(
                   tooltip: l.seenByTitle,
                   icon: const Icon(Icons.visibility_outlined),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/letters/letter_service.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
@@ -129,7 +130,9 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, set) => AlertDialog(
-          title: Text(signers ? 'Signers' : 'Viewers'),
+          title: Text(
+            signers ? tr.lettersCreateSigners : tr.lettersCreateViewers,
+          ),
           content: SizedBox(
             width: 320,
             child: ListView(
@@ -140,9 +143,8 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
                     padding: const EdgeInsets.all(8),
                     child: Text(
                       signers
-                          ? 'Nobody to choose yet. A signer must be another user who has the '
-                                'letter.sign permission (set by the manager).'
-                          : 'Nobody to choose yet. Viewers must be other colleagues.',
+                          ? tr.lettersCreateNoSignerCandidates
+                          : tr.lettersCreateNoViewerCandidates,
                     ),
                   ),
                 for (final u in candidates)
@@ -162,11 +164,11 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(tr.commonCancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, selected),
-              child: const Text('OK'),
+              child: Text(tr.commonConfirm),
             ),
           ],
         ),
@@ -243,10 +245,10 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
 
   Future<DraftSaved> _save() async {
     if (_title.text.trim().isEmpty) {
-      throw const LetterException('Title is required');
+      throw LetterException(tr.lettersCreateTitleRequired);
     }
     if (_signers.isEmpty) {
-      throw const LetterException('Add at least one signer');
+      throw LetterException(tr.lettersCreateSignerRequired);
     }
     final prev = _saved;
     final saved = await env.letters.saveDraft(
@@ -272,8 +274,9 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
         if (send) {
           Navigator.of(context).pop(brief);
         } else {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('Draft saved')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(tr.lettersCreateDraftSaved)));
         }
       }
     } on Object catch (e) {
@@ -339,94 +342,90 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
     });
   }
 
-  Widget _contentCard() => _card(
-    'Content',
-    'The title is visible in lists. The body is stored encrypted on the server.',
-    [
-      TextField(
-        controller: _title,
-        maxLength: 200,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          labelText: 'Title',
-          errorText: _submitted && _title.text.trim().isEmpty
-              ? 'Title is required'
-              : null,
-        ),
-      ),
-      const SizedBox(height: 8),
-      OutlinedButton.icon(
-        onPressed: _writeOnPaper,
-        icon: const Icon(Icons.description_outlined),
-        label: const Text('Write on A4 paper (preview and print)'),
-      ),
-      const SizedBox(height: 8),
-      if (_autosavedAt != null)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            'Draft auto-saved at $_autosavedAt',
-            style: Theme.of(context).textTheme.bodySmall,
+  Widget _contentCard() =>
+      _card(tr.lettersCreateContent, tr.lettersCreateContentHint, [
+        TextField(
+          controller: _title,
+          maxLength: 200,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            labelText: tr.lettersCreateTitleLabel,
+            errorText: _submitted && _title.text.trim().isEmpty
+                ? tr.lettersCreateTitleRequired
+                : null,
           ),
         ),
-      if (_rich != null)
-        InkWell(
-          onTap: _writeOnPaper,
-          child: InputDecorator(
-            decoration: const InputDecoration(labelText: 'Body (formatted)'),
-            child: Text.rich(
-              editorSpan(_rich!, 14, Theme.of(context).textTheme.bodyMedium),
-              maxLines: 8,
-              overflow: TextOverflow.ellipsis,
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _writeOnPaper,
+          icon: const Icon(Icons.description_outlined),
+          label: Text(tr.lettersCreateOnPaper),
+        ),
+        const SizedBox(height: 8),
+        if (_autosavedAt != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              tr.lettersCreateAutosaved('$_autosavedAt'),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
-        )
-      else
-        TextField(
-          controller: _body,
-          minLines: 6,
-          maxLines: 16,
-          decoration: const InputDecoration(
-            labelText: 'Body',
-            alignLabelWithHint: true,
+        if (_rich != null)
+          InkWell(
+            onTap: _writeOnPaper,
+            child: InputDecorator(
+              decoration: InputDecoration(
+                labelText: tr.lettersCreateBodyFormatted,
+              ),
+              child: Text.rich(
+                editorSpan(_rich!, 14, Theme.of(context).textTheme.bodyMedium),
+                maxLines: 8,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+        else
+          TextField(
+            controller: _body,
+            minLines: 6,
+            maxLines: 16,
+            decoration: InputDecoration(
+              labelText: tr.lettersCreateBody,
+              alignLabelWithHint: true,
+            ),
+          ),
+      ]);
+
+  Widget _attachmentsCard() =>
+      _card(tr.lettersCreateAttachments, tr.lettersCreateAttachmentsHint, [
+        for (final (i, f) in _files.indexed)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(attachmentIcon(mimeFor(f.name) ?? '')),
+            title: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text(fmtSize(f.bytes.length)),
+            trailing: (_saved?.uploaded ?? 0) > i
+                ? const Icon(Icons.cloud_done_outlined, color: Tokens.ok)
+                : IconButton(
+                    tooltip: tr.lettersCreateRemove,
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _files.removeAt(i)),
+                  ),
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: _pickAttachments,
+            icon: const Icon(Icons.attach_file),
+            label: Text(tr.lettersCreateAttach),
           ),
         ),
-    ],
-  );
-
-  Widget _attachmentsCard() => _card(
-    'Attachments',
-    'PDF or image, up to 25 MB each. Files are stored encrypted on the server.',
-    [
-      for (final (i, f) in _files.indexed)
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(attachmentIcon(mimeFor(f.name) ?? '')),
-          title: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(fmtSize(f.bytes.length)),
-          trailing: (_saved?.uploaded ?? 0) > i
-              ? const Icon(Icons.cloud_done_outlined, color: Tokens.ok)
-              : IconButton(
-                  tooltip: 'Remove',
-                  icon: const Icon(Icons.close),
-                  onPressed: () => setState(() => _files.removeAt(i)),
-                ),
-        ),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: OutlinedButton.icon(
-          onPressed: _pickAttachments,
-          icon: const Icon(Icons.attach_file),
-          label: const Text('Attach PDF / image (max 25 MB)'),
-        ),
-      ),
-    ],
-  );
+      ]);
 
   Widget _signerChips() {
     if (_signers.isEmpty) {
       return Text(
-        _submitted ? 'Add at least one signer' : 'No signers chosen yet',
+        _submitted ? tr.lettersCreateSignerRequired : tr.lettersCreateNoSigners,
         style: TextStyle(
           color: _submitted
               ? Tokens.error
@@ -455,12 +454,12 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            subtitle: Text('Signer ${i + 1}'),
+            subtitle: Text(tr.lettersCreateSignerN('${i + 1}')),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  tooltip: 'Remove',
+                  tooltip: tr.lettersCreateRemove,
                   icon: const Icon(Icons.close),
                   onPressed: () => setState(() => _signers.remove(id)),
                 ),
@@ -479,10 +478,13 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
   }
 
   Widget _peopleCard() => _card(
-    'People',
-    'Who signs this letter and who may read it.',
+    tr.lettersCreatePeople,
+    tr.lettersCreatePeopleHint,
     [
-      Text('Signers', style: Theme.of(context).textTheme.titleSmall),
+      Text(
+        tr.lettersCreateSigners,
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
       const SizedBox(height: 4),
       _signerChips(),
       const SizedBox(height: 8),
@@ -491,43 +493,49 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
         child: OutlinedButton.icon(
           onPressed: () => _pickUsers(signers: true),
           icon: const Icon(Icons.person_add_alt_1_outlined),
-          label: const Text('Choose signers'),
+          label: Text(tr.lettersCreateChooseSigners),
         ),
       ),
       const SizedBox(height: 16),
       SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(value: 'parallel', label: Text('Parallel')),
-          ButtonSegment(value: 'serial', label: Text('In order')),
+        segments: [
+          ButtonSegment(
+            value: 'parallel',
+            label: Text(tr.lettersCreateParallel),
+          ),
+          ButtonSegment(value: 'serial', label: Text(tr.lettersCreateSerial)),
         ],
         selected: {_order},
         onSelectionChanged: (s) => setState(() => _order = s.first),
       ),
       _helper(
         _order == 'serial'
-            ? 'Signers sign one after another, top to bottom. Drag to reorder.'
-            : 'Every signer can sign at the same time.',
+            ? tr.lettersCreateSerialHelp
+            : tr.lettersCreateParallelHelp,
       ),
       const SizedBox(height: 16),
-      Text('Visibility', style: Theme.of(context).textTheme.titleSmall),
+      Text(
+        tr.lettersCreateVisibility,
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
       const SizedBox(height: 8),
       SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(value: 'private', label: Text('Private')),
-          ButtonSegment(value: 'public', label: Text('Public')),
+        segments: [
+          ButtonSegment(value: 'private', label: Text(tr.lettersCreatePrivate)),
+          ButtonSegment(value: 'public', label: Text(tr.lettersCreatePublic)),
         ],
         selected: {_visibility},
         onSelectionChanged: (s) => setState(() => _visibility = s.first),
       ),
       _helper(
         _visibility == 'public'
-            ? 'Everyone in the company can read it once published.'
-            : 'Only the creator, signers and chosen viewers can read it.',
+            ? tr.lettersCreatePublicHelp
+            : tr.lettersCreatePrivateHelp,
       ),
       if (_visibility == 'private') ...[
         const SizedBox(height: 12),
         if (_viewers.isEmpty)
-          const Text('No extra viewers')
+          Text(tr.lettersCreateNoViewers)
         else
           Wrap(
             spacing: 8,
@@ -546,7 +554,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
           child: OutlinedButton.icon(
             onPressed: () => _pickUsers(signers: false),
             icon: const Icon(Icons.visibility_outlined),
-            label: const Text('Choose viewers'),
+            label: Text(tr.lettersCreateChooseViewers),
           ),
         ),
       ],
@@ -554,19 +562,22 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
   );
 
   Widget _deliveryCard() =>
-      _card('Delivery', 'When the letter becomes visible to its audience.', [
+      _card(tr.lettersCreateDelivery, tr.lettersCreateDeliveryHint, [
         SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'after_sign', label: Text('After all sign')),
-            ButtonSegment(value: 'now', label: Text('Right away')),
+          segments: [
+            ButtonSegment(
+              value: 'after_sign',
+              label: Text(tr.lettersCreateAfterSign),
+            ),
+            ButtonSegment(value: 'now', label: Text(tr.lettersCreateRightAway)),
           ],
           selected: {_publish},
           onSelectionChanged: (s) => setState(() => _publish = s.first),
         ),
         _helper(
           _publish == 'now'
-              ? 'Viewers see the letter as soon as it is sent.'
-              : 'Viewers see the letter only after every signer has approved.',
+              ? tr.lettersCreateNowHelp
+              : tr.lettersCreateAfterSignHelp,
         ),
       ]);
 
@@ -590,7 +601,7 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: _busy ? null : () => _run(send: false),
-                      child: const Text('Save draft'),
+                      child: Text(tr.lettersCreateSaveDraft),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -604,7 +615,9 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.send_outlined),
-                      label: Text(_busy ? 'Working...' : 'Send'),
+                      label: Text(
+                        _busy ? tr.lettersCreateWorking : tr.lettersCreateSend,
+                      ),
                     ),
                   ),
                 ],
@@ -620,7 +633,9 @@ class _CreateLetterScreenState extends State<CreateLetterScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(
-        widget.parentId == null ? 'New letter' : 'New chained letter',
+        widget.parentId == null
+            ? tr.lettersCreateNew
+            : tr.lettersCreateNewChained,
       ),
     ),
     bottomNavigationBar: _actionBar(),

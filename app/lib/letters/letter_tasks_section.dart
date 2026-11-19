@@ -175,10 +175,7 @@ class _TaskPickerState extends State<_TaskPicker> {
   Widget _list(AppLocalizations l) {
     final rows = _rows;
     if (_error != null) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text('$_error'),
-      );
+      return Padding(padding: const EdgeInsets.all(24), child: Text('$_error'));
     }
     if (rows == null) {
       return const Padding(

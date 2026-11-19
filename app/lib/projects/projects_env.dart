@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart' show Widget;
+
 import 'package:letter_signing/letters/live_service.dart';
 import 'package:letter_signing/projects/projects_api.dart';
 import 'package:letter_signing/tasks/tasks_env.dart';
@@ -13,6 +15,8 @@ class ProjectsEnv {
     required this.userId,
     this.canCreate = true,
     this.isManager = false,
+    this.chatTab,
+    this.ganttTab,
   });
 
   final ProjectsApi api;
@@ -25,6 +29,13 @@ class ProjectsEnv {
 
   /// Company manager: may create and rename organisation project groups.
   final bool isManager;
+
+  /// Builds the chat tab of a project (null while the chat module is off or unwired).
+  final Widget? Function(String projectId)? chatTab;
+
+  /// Builds the Gantt tab of a project; null (or a null result) hides the tab, e.g. while the
+  /// `gantt` module is off.
+  final Widget? Function(String projectId)? ganttTab;
 
   /// Colleagues for the people pickers (shared with Tasks).
   Future<List<UserRef>> directory() => tasks.directory();

@@ -2,10 +2,17 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/screens/departments_card.dart';
 import 'package:letter_signing/screens/letterhead_card.dart';
+import 'package:letter_signing/l10n/app_localizations.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
+import 'package:letter_signing/security/guests_card.dart';
+import 'package:letter_signing/security/login_history_screen.dart';
+import 'package:letter_signing/security/security_api.dart';
+import 'package:letter_signing/security/user_access_screen.dart';
+import 'package:letter_signing/workspace/workspace_api.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/app_theme.dart';
 import 'package:letter_signing/theme/widgets.dart';
@@ -21,6 +28,7 @@ class AdminTab extends StatefulWidget {
 
 class _AdminTabState extends State<AdminTab> {
   late Future<_AdminData> _data = _load();
+  late final SecurityApi _security = SecurityApi(WorkspaceApi(widget.auth.api));
 
   Future<_AdminData> _load() async {
     final api = widget.auth.api;
@@ -70,12 +78,12 @@ class _AdminTabState extends State<AdminTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.key_outlined),
-        title: const Text('Password reset token'),
+        title: Text(tr.adminResetTokenTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Give this token to ${user.email}. It is shown only once.'),
+            Text(tr.adminResetTokenBody(user.email)),
             const SizedBox(height: 12),
             SelectableText(
               token ?? '',
@@ -85,13 +93,13 @@ class _AdminTabState extends State<AdminTab> {
         ),
         actions: [
           TextButton.icon(
-            onPressed: () => _copy(token ?? '', 'Token copied'),
+            onPressed: () => _copy(token ?? '', tr.adminTokenCopied),
             icon: const Icon(Icons.copy, size: 18),
-            label: const Text('Copy'),
+            label: Text(tr.commonCopy),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
+            child: Text(tr.commonClose),
           ),
         ],
       ),
@@ -110,7 +118,7 @@ class _AdminTabState extends State<AdminTab> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Permissions'),
+          title: Text(tr.adminPermissions),
           content: SizedBox(
             width: 360,
             child: Column(
@@ -129,7 +137,7 @@ class _AdminTabState extends State<AdminTab> {
                     contentPadding: EdgeInsets.zero,
                     title: Text(permissionLabel(code)),
                     subtitle: code == 'user'
-                        ? const Text('Always granted')
+                        ? Text(tr.adminAlwaysGranted)
                         : Text(code),
                     value: chosen.contains(code),
                     // The base "user" grant is always kept by the server.
@@ -151,11 +159,11 @@ class _AdminTabState extends State<AdminTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(tr.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save'),
+              child: Text(tr.commonSave),
             ),
           ],
         ),
@@ -167,6 +175,26 @@ class _AdminTabState extends State<AdminTab> {
       });
     }
   }
+
+  void _openAccess(UserInfo user) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => UserAccessScreen(
+        api: _security,
+        userId: user.id,
+        userName: user.fullName.isEmpty ? user.email : user.fullName,
+        isGuest: user.isGuest,
+      ),
+    ),
+  );
+
+  void _openHistory(UserInfo user) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => LoginHistoryScreen(
+        load: () => _security.userLoginHistory(user.id),
+        subtitle: user.email,
+      ),
+    ),
+  );
 
   Future<void> _setDepartment(UserInfo user) async {
     if (await pickDepartment(context, widget.auth.api, user) && mounted) {
@@ -194,7 +222,7 @@ class _AdminTabState extends State<AdminTab> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
           icon: const Icon(Icons.confirmation_number_outlined),
-          title: const Text('New invitation code'),
+          title: Text(tr.adminNewInviteTitle),
           content: SizedBox(
             width: 340,
             child: SingleChildScrollView(
@@ -206,23 +234,23 @@ class _AdminTabState extends State<AdminTab> {
                     controller: uses,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Max uses',
-                      helperText: 'Leave empty for unlimited',
-                      prefixIcon: Icon(Icons.tag),
+                    decoration: InputDecoration(
+                      labelText: tr.adminMaxUses,
+                      helperText: tr.adminUnlimitedHelper,
+                      prefixIcon: const Icon(Icons.tag),
                     ),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int?>(
                     initialValue: department,
-                    decoration: const InputDecoration(
-                      labelText: 'Department',
-                      prefixIcon: Icon(Icons.apartment_outlined),
+                    decoration: InputDecoration(
+                      labelText: tr.adminDepartment,
+                      prefixIcon: const Icon(Icons.apartment_outlined),
                     ),
                     items: [
-                      const DropdownMenuItem<int?>(
+                      DropdownMenuItem<int?>(
                         value: null,
-                        child: Text('None'),
+                        child: Text(tr.adminNone),
                       ),
                       for (final d in departments)
                         DropdownMenuItem<int?>(
@@ -234,7 +262,7 @@ class _AdminTabState extends State<AdminTab> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Permissions for people who join with this code',
+                    tr.adminInvitePermsHeader,
                     style: Theme.of(ctx).textTheme.labelLarge,
                   ),
                   for (final code in permissionCodes)
@@ -243,7 +271,7 @@ class _AdminTabState extends State<AdminTab> {
                       dense: true,
                       title: Text(permissionLabel(code)),
                       subtitle: code == 'user'
-                          ? const Text('Always granted')
+                          ? Text(tr.adminAlwaysGranted)
                           : null,
                       value: code == 'user' || chosen.contains(code),
                       onChanged: code == 'user'
@@ -263,11 +291,11 @@ class _AdminTabState extends State<AdminTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: Text(tr.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Create'),
+              child: Text(tr.commonCreate),
             ),
           ],
         ),
@@ -292,11 +320,11 @@ class _AdminTabState extends State<AdminTab> {
         if (snap.hasError) {
           return EmptyState(
             icon: Icons.cloud_off_outlined,
-            title: 'Could not load admin data',
+            title: tr.adminLoadFailed,
             message: '${snap.error}',
             action: OutlinedButton(
               onPressed: _reload,
-              child: const Text('Retry'),
+              child: Text(tr.commonRetry),
             ),
           );
         }
@@ -325,6 +353,7 @@ class _AdminTabState extends State<AdminTab> {
                     ..._signupSection(data.company),
                     DepartmentsCard(api: widget.auth.api, onChanged: _reload),
                     ..._invitesSection(data.invites, data.permissionCodes),
+                    GuestsCard(api: _security),
                     ..._peopleSection(data),
                     const SizedBox(height: Tokens.gap),
                   ],
@@ -338,17 +367,17 @@ class _AdminTabState extends State<AdminTab> {
   }
 
   List<Widget> _signupSection(Map<String, dynamic> company) => [
-    const SectionHeader('Signup', subtitle: 'How new people can join'),
+    SectionHeader(tr.adminSignupSection, subtitle: tr.adminSignupSubtitle),
     AppCard(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         children: [
           SwitchListTile(
-            title: const Text('Company-email signup'),
+            title: Text(tr.adminDomainSignup),
             subtitle: Text(
               company['email_configured'] == true
-                  ? 'Domain: ${company['allowed_domain']}'
-                  : 'Needs email to be configured by the superuser',
+                  ? tr.adminDomainLabel('${company['allowed_domain']}')
+                  : tr.adminNeedsEmail,
             ),
             value: company['signup_domain_enabled'] as bool,
             onChanged: (v) =>
@@ -356,7 +385,7 @@ class _AdminTabState extends State<AdminTab> {
           ),
           const Divider(indent: 16, endIndent: 16),
           SwitchListTile(
-            title: const Text('Invitation-code signup'),
+            title: Text(tr.adminInviteSignup),
             value: company['signup_invite_enabled'] as bool,
             onChanged: (v) =>
                 _call('PATCH', '/manage/company', {'signup_invite_enabled': v}),
@@ -371,20 +400,20 @@ class _AdminTabState extends State<AdminTab> {
     List<String> permissionCodes,
   ) => [
     SectionHeader(
-      'Invitation codes',
+      tr.adminInvitesSection,
       trailing: FilledButton.tonalIcon(
         onPressed: () => _newInvite(permissionCodes),
         icon: const Icon(Icons.add),
-        label: const Text('New code'),
+        label: Text(tr.adminNewCode),
       ),
     ),
     if (invites.isEmpty)
-      const AppCard(child: Text('No codes yet'))
+      AppCard(child: Text(tr.adminNoCodes))
     else
       for (final i in invites) ...[
         _InviteCard(
           invite: i,
-          onCopy: () => _copy('${i['code']}', 'Code copied'),
+          onCopy: () => _copy('${i['code']}', tr.adminCodeCopied),
           onDeactivate: () =>
               _call('POST', '/manage/invites/${i['id']}/deactivate'),
         ),
@@ -393,13 +422,15 @@ class _AdminTabState extends State<AdminTab> {
   ];
 
   List<Widget> _peopleSection(_AdminData data) => [
-    const SectionHeader('People'),
+    SectionHeader(tr.adminPeopleSection),
     for (final u in data.users) ...[
       _PersonCard(
         user: u,
         onSelected: (action) => switch (action) {
           'perms' => _editPermissions(u, data.permissionCodes),
           'dept' => _setDepartment(u),
+          'access' => _openAccess(u),
+          'history' => _openHistory(u),
           'active' => _call('POST', '/manage/users/${u.id}/active', {
             'active': !u.isActive,
           }),
@@ -443,7 +474,13 @@ class _InviteCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${invite['uses']}/${invite['max_uses'] ?? '\u221e'} used',
+                  tr.adminInviteUses(
+                        '${invite['uses']}',
+                        '${invite['max_uses'] ?? '\u221e'}',
+                      ) +
+                      (invite['guest'] == true
+                          ? ' · ${AppLocalizations.of(context).secGuest}'
+                          : ''),
                   style: TextStyle(color: muted, fontSize: 12),
                 ),
                 if ((invite['codes'] as List?)?.isNotEmpty == true ||
@@ -461,16 +498,16 @@ class _InviteCard extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Copy code',
+            tooltip: tr.adminCopyCode,
             icon: const Icon(Icons.copy),
             onPressed: onCopy,
           ),
           if (active)
-            TextButton(onPressed: onDeactivate, child: const Text('Deactivate'))
+            TextButton(onPressed: onDeactivate, child: Text(tr.adminDeactivate))
           else
-            const Padding(
-              padding: EdgeInsets.only(right: 8),
-              child: StatusPill('Inactive'),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: StatusPill(tr.adminInactive),
             ),
         ],
       ),
@@ -515,10 +552,15 @@ class _PersonCard extends StatelessWidget {
                   runSpacing: 6,
                   children: [
                     if (user.isManager)
-                      const StatusPill('Manager', tone: Tone.info),
+                      StatusPill(tr.profileManager, tone: Tone.info),
+                    if (user.isGuest)
+                      StatusPill(
+                        AppLocalizations.of(context).secGuest,
+                        tone: Tone.warn,
+                      ),
                     if (user.department.isNotEmpty) StatusPill(user.department),
                     if (!user.isActive)
-                      const StatusPill('Deactivated', tone: Tone.error)
+                      StatusPill(tr.adminDeactivated, tone: Tone.error)
                     else
                       for (final p in user.permissions)
                         StatusPill(permissionLabel(p)),
@@ -528,18 +570,28 @@ class _PersonCard extends StatelessWidget {
             ),
           ),
           PopupMenuButton<String>(
-            tooltip: 'Actions',
+            tooltip: tr.adminActions,
             onSelected: onSelected,
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'perms', child: Text('Permissions')),
-              const PopupMenuItem(value: 'dept', child: Text('Department')),
+              PopupMenuItem(value: 'perms', child: Text(tr.adminPermissions)),
+              PopupMenuItem(value: 'dept', child: Text(tr.adminDepartment)),
+              PopupMenuItem(
+                value: 'access',
+                child: Text(AppLocalizations.of(context).secAccess),
+              ),
+              PopupMenuItem(
+                value: 'history',
+                child: Text(AppLocalizations.of(context).secLoginHistory),
+              ),
               PopupMenuItem(
                 value: 'active',
-                child: Text(user.isActive ? 'Deactivate' : 'Reactivate'),
+                child: Text(
+                  user.isActive ? tr.adminDeactivate : tr.adminReactivate,
+                ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'reset',
-                child: Text('Issue reset token'),
+                child: Text(tr.adminIssueResetToken),
               ),
             ],
           ),

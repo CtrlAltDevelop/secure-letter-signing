@@ -46,22 +46,22 @@ void main() {
     await t.pumpWidget(MaterialApp(home: SigningPinGate(auth: auth)));
     final fields = find.byType(TextFormField);
 
-    await t.tap(find.text('Save PIN'));
+    await t.tap(find.text('ذخیره رمز امضا'));
     await t.pumpAndSettle();
-    expect(find.text('Enter 6 digits'), findsWidgets);
-    expect(find.text('Enter your login password'), findsOneWidget);
+    expect(find.text('6 رقم وارد کنید'), findsWidgets);
+    expect(find.text('رمز عبور ورود را وارد کنید'), findsOneWidget);
     expect(put, isNull);
 
     await t.enterText(fields.at(0), '123456');
     await t.enterText(fields.at(1), '654321');
     await t.enterText(fields.at(2), 'secret-pass');
-    await t.tap(find.text('Save PIN'));
+    await t.tap(find.text('ذخیره رمز امضا'));
     await t.pumpAndSettle();
-    expect(find.text('The PINs do not match'), findsOneWidget);
+    expect(find.text('رمزهای امضا یکسان نیستند'), findsOneWidget);
     expect(put, isNull);
 
     await t.enterText(fields.at(1), '123456');
-    await t.tap(find.text('Save PIN'));
+    await t.tap(find.text('ذخیره رمز امضا'));
     await t.pumpAndSettle();
     expect(put, {'pin': '123456', 'password': 'secret-pass'});
   });

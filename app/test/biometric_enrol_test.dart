@@ -4,10 +4,11 @@ import 'package:letter_signing/screens/biometric_enrol.dart';
 import 'package:letter_signing/screens/sessions_tab.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'helpers.dart' show faMaterial;
 import 'letters/fakes.dart';
 import 'signing_pin_test.dart' show userJson;
 
-const _title = 'Use fingerprint / face on this device';
+const _title = 'استفاده از اثر انگشت / چهره در این دستگاه';
 
 class EnrolHarness {
   EnrolHarness(this.auth, this.bio, this.patches);
@@ -64,7 +65,7 @@ Future<void> pumpPrompt(WidgetTester t, AuthController auth) async {
 
 Future<void> enable(WidgetTester t, String pin) async {
   await t.enterText(find.byType(TextFormField), pin);
-  await t.tap(find.text('Enable'));
+  await t.tap(find.text('فعال‌سازی'));
   await t.pumpAndSettle();
 }
 
@@ -74,7 +75,7 @@ void main() {
     await pumpPrompt(t, h.auth);
     expect(find.text(_title), findsOneWidget);
     await enable(t, '123');
-    expect(find.text('Enter 6 digits'), findsOneWidget);
+    expect(find.text('6 رقم وارد کنید'), findsOneWidget);
     expect(h.bio.reasons, isEmpty);
     expect(h.patches, isEmpty);
   });
@@ -83,7 +84,7 @@ void main() {
     final h = await harness();
     await pumpPrompt(t, h.auth);
     await enable(t, '123456');
-    expect(h.bio.reasons, ['Enable fingerprint / face on this device']);
+    expect(h.bio.reasons, ['فعال‌سازی اثر انگشت / چهره در این دستگاه']);
     expect(h.patches, [
       {'biometric': true, 'pin': '123456'},
     ]);
@@ -125,7 +126,7 @@ void main() {
   ) async {
     final h = await harness();
     await pumpPrompt(t, h.auth);
-    await t.tap(find.text('Not now'));
+    await t.tap(find.text('فعلاً نه'));
     await t.pumpAndSettle();
     expect(find.text(_title), findsNothing);
     expect(h.auth.needsBiometricEnrolment, isFalse);
@@ -167,7 +168,7 @@ void main() {
       await useTallSurface(t);
       final h = await harness(available: available, flagged: flagged);
       await t.pumpWidget(
-        MaterialApp(
+        faMaterial(
           home: Scaffold(body: SessionsTab(auth: h.auth)),
         ),
       );
@@ -179,26 +180,26 @@ void main() {
       t,
     ) async {
       await pumpTab(t, available: true, flagged: false);
-      expect(find.text('Enable fingerprint / face'), findsOneWidget);
+      expect(find.text('فعال‌سازی اثر انگشت / چهره'), findsOneWidget);
     });
 
     testWidgets('hidden when flagged or unavailable', (t) async {
       await pumpTab(t, available: true, flagged: true);
-      expect(find.text('Enable fingerprint / face'), findsNothing);
+      expect(find.text('فعال‌سازی اثر انگشت / چهره'), findsNothing);
       await pumpTab(t, available: false, flagged: false);
-      expect(find.text('Enable fingerprint / face'), findsNothing);
+      expect(find.text('فعال‌سازی اثر انگشت / چهره'), findsNothing);
     });
 
     testWidgets('opens the dialog and refreshes after success', (t) async {
       final h = await harness();
       await useTallSurface(t);
       await t.pumpWidget(
-        MaterialApp(
+        faMaterial(
           home: Scaffold(body: SessionsTab(auth: h.auth)),
         ),
       );
       await t.pumpAndSettle();
-      await t.tap(find.text('Enable fingerprint / face'));
+      await t.tap(find.text('فعال‌سازی اثر انگشت / چهره'));
       await t.pumpAndSettle();
       expect(find.text(_title), findsOneWidget);
       await enable(t, '123456');

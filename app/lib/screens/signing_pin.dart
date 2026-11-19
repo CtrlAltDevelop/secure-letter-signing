@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
 import 'package:letter_signing/theme/widgets.dart';
@@ -35,7 +36,7 @@ class _SigningPinFormState extends State<SigningPinForm> {
   String? _validateRepeat(String? v) {
     final pinProblem = validatePin(v);
     if (pinProblem != null) return pinProblem;
-    return v == _pin.text ? null : 'The PINs do not match';
+    return v == _pin.text ? null : tr.pinMismatch;
   }
 
   Future<void> _submit() async {
@@ -64,29 +65,29 @@ class _SigningPinFormState extends State<SigningPinForm> {
       children: [
         PinField(
           controller: _pin,
-          label: 'New PIN (6 digits)',
+          label: tr.pinNewLabel,
           validator: validatePin,
           textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 14),
         PinField(
           controller: _repeat,
-          label: 'Repeat PIN',
+          label: tr.pinRepeatLabel,
           validator: _validateRepeat,
           textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 14),
         PasswordField(
           controller: _password,
-          label: 'Login password',
-          validator: requiredField('Enter your login password'),
+          label: tr.pinLoginPassword,
+          validator: requiredField(tr.pinEnterLoginPassword),
           autofillHints: const [AutofillHints.password],
           onSubmitted: _submit,
         ),
         const SizedBox(height: 16),
         Align(
           alignment: AlignmentDirectional.centerEnd,
-          child: BusyButton(label: 'Save PIN', busy: _busy, onPressed: _submit),
+          child: BusyButton(label: tr.pinSave, busy: _busy, onPressed: _submit),
         ),
       ],
     ),
@@ -100,9 +101,12 @@ class SigningPinGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AuthScaffold(
-    title: 'Set your signing PIN',
-    subtitle: 'You confirm every signature with this 6-digit PIN, on all your devices.',
-    footer: TextButton(onPressed: auth.logout, child: const Text('Sign out')),
+    title: tr.pinGateTitle,
+    subtitle: tr.pinGateSubtitle,
+    footer: TextButton(
+      onPressed: auth.logout,
+      child: Text(tr.sessionsSignOutAction),
+    ),
     children: [SigningPinForm(auth: auth)],
   );
 }

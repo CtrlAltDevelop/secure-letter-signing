@@ -2,7 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/api/auth_controller.dart';
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/screens/ui_bits.dart';
+import 'package:letter_signing/security/two_factor_login_screen.dart';
 import 'package:letter_signing/theme/widgets.dart';
 
 /// Runs [action], shows server errors in a snackbar. Returns true on success.
@@ -17,9 +19,7 @@ Future<bool> runGuarded(
   } on ApiException catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(e.message)));
   } on Exception {
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Cannot reach the server')),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(tr.authServerUnreachable)));
   }
   return false;
 }
@@ -34,9 +34,9 @@ TextFormField _emailField(
   textInputAction: action,
   validator: validateEmail,
   autovalidateMode: AutovalidateMode.onUserInteraction,
-  decoration: const InputDecoration(
-    labelText: 'Email',
-    prefixIcon: Icon(Icons.mail_outline),
+  decoration: InputDecoration(
+    labelText: tr.authEmail,
+    prefixIcon: const Icon(Icons.mail_outline),
   ),
 );
 
@@ -99,32 +99,34 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _busy = true;
     });
-    await runGuarded(
-      context,
-      () => widget.auth.login(
+    var signedIn = true;
+    final ok = await runGuarded(context, () async {
+      signedIn = await widget.auth.login(
         _email.text.trim(),
         _password.text,
         deviceName: Theme.of(context).platform.name,
         platform: Theme.of(context).platform.name,
-      ),
-    );
-    if (mounted) {
-      setState(() {
-        _busy = false;
-      });
+      );
+    });
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+    });
+    if (ok && !signedIn) {
+      _push(context, TwoFactorLoginScreen(auth: widget.auth));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
-      title: 'Welcome back',
-      subtitle: 'Sign in to continue',
+      title: tr.authWelcomeTitle,
+      subtitle: tr.authWelcomeSubtitle,
       footer: _linkRow([
-        const Text('New here?'),
+        Text(tr.authNewHere),
         TextButton(
           onPressed: () => _push(context, SignupScreen(auth: widget.auth)),
-          child: const Text('Create account'),
+          child: Text(tr.authCreateAccount),
         ),
       ]),
       children: [
@@ -138,18 +140,18 @@ class _LoginScreenState extends State<LoginScreen> {
               PasswordField(
                 controller: _password,
                 autofillHints: const [AutofillHints.password],
-                validator: requiredField('Enter your password'),
+                validator: requiredField(tr.authEnterPassword),
                 textInputAction: TextInputAction.done,
                 onSubmitted: _submit,
               ),
             ],
           ),
         ),
-        BusyButton(label: 'Sign in', busy: _busy, onPressed: _submit),
+        BusyButton(label: tr.authSignIn, busy: _busy, onPressed: _submit),
         Center(
           child: TextButton(
             onPressed: () => _push(context, ResetScreen(auth: widget.auth)),
-            child: const Text('Forgot password'),
+            child: Text(tr.authForgotPassword),
           ),
         ),
       ],
@@ -204,7 +206,7 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!ok) return;
     if (result == SignupResult.registered) {
       Navigator.pop(context);
-      _snack(context, 'Registered. Sign in now.');
+      _snack(context, tr.authRegistered);
     } else {
       setState(() {
         _awaitingVerification = true;
@@ -227,7 +229,7 @@ class _SignupScreenState extends State<SignupScreen> {
     });
     if (ok) {
       Navigator.pop(context);
-      _snack(context, 'Email verified. Sign in now.');
+      _snack(context, tr.authEmailVerified);
     }
   }
 
@@ -236,8 +238,8 @@ class _SignupScreenState extends State<SignupScreen> {
     final back = _backLink(context);
     if (_awaitingVerification) {
       return AuthScaffold(
-        title: 'Check your email',
-        subtitle: 'Paste the token we emailed you to verify your address.',
+        title: tr.authCheckEmailTitle,
+        subtitle: tr.authCheckEmailSubtitle,
         footer: back,
         children: [
           TextField(
@@ -245,13 +247,13 @@ class _SignupScreenState extends State<SignupScreen> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _verify(),
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              labelText: 'Verification token',
-              prefixIcon: Icon(Icons.key_outlined),
+            decoration: InputDecoration(
+              labelText: tr.authVerifyTokenLabel,
+              prefixIcon: const Icon(Icons.key_outlined),
             ),
           ),
           BusyButton(
-            label: 'Verify',
+            label: tr.authVerify,
             busy: _busy,
             onPressed: _token.text.trim().isEmpty ? null : _verify,
           ),
@@ -259,8 +261,8 @@ class _SignupScreenState extends State<SignupScreen> {
       );
     }
     return AuthScaffold(
-      title: 'Create account',
-      subtitle: 'Join your company workspace',
+      title: tr.authCreateAccount,
+      subtitle: tr.authSignupSubtitle,
       footer: back,
       children: [
         Form(
@@ -270,9 +272,9 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               _textField(
                 _name,
-                'Full name',
+                tr.authFullName,
                 Icons.person_outline,
-                validator: requiredField('Enter your full name'),
+                validator: requiredField(tr.authEnterFullName),
               ),
               const SizedBox(height: 14),
               _emailField(_email),
@@ -287,24 +289,24 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 14),
               _textField(
                 _invite,
-                'Invitation code (optional)',
+                tr.authInviteCodeOptional,
                 Icons.confirmation_number_outlined,
-                helper: 'Leave empty to sign up with your company email',
+                helper: tr.authInviteHelper,
                 action: TextInputAction.done,
               ),
             ],
           ),
         ),
-        BusyButton(label: 'Sign up', busy: _busy, onPressed: _signup),
+        BusyButton(label: tr.authSignUp, busy: _busy, onPressed: _signup),
       ],
     );
   }
 
   Widget _backLink(BuildContext context) => _linkRow([
-    const Text('Already have an account?'),
+    Text(tr.authHaveAccount),
     TextButton(
       onPressed: () => Navigator.pop(context),
-      child: const Text('Back to sign in'),
+      child: Text(tr.authBackToSignIn),
     ),
   ]);
 }
@@ -347,7 +349,7 @@ class _ResetScreenState extends State<ResetScreen> {
     setState(() {
       _requesting = false;
     });
-    if (ok) _snack(context, 'If the account exists, a token was emailed.');
+    if (ok) _snack(context, tr.authResetRequested);
   }
 
   Future<void> _confirm() async {
@@ -365,7 +367,7 @@ class _ResetScreenState extends State<ResetScreen> {
     });
     if (ok) {
       Navigator.pop(context);
-      _snack(context, 'Password changed. Sign in now.');
+      _snack(context, tr.authPasswordChangedSignIn);
     }
   }
 
@@ -373,13 +375,13 @@ class _ResetScreenState extends State<ResetScreen> {
   Widget build(BuildContext context) {
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return AuthScaffold(
-      title: 'Reset password',
-      subtitle: 'We email you a token, then you choose a new password.',
+      title: tr.authResetTitle,
+      subtitle: tr.authResetSubtitle,
       showBack: true,
       footer: _linkRow([
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Back to sign in'),
+          child: Text(tr.authBackToSignIn),
         ),
       ]),
       children: [
@@ -388,16 +390,13 @@ class _ResetScreenState extends State<ResetScreen> {
           child: _emailField(_email, action: TextInputAction.done),
         ),
         BusyButton(
-          label: 'Email me a token',
+          label: tr.authEmailMeToken,
           tonal: true,
           busy: _requesting,
           onPressed: _request,
         ),
         const Divider(height: 24),
-        Text(
-          'Have a token (emailed, or given by your manager)?',
-          style: TextStyle(color: muted),
-        ),
+        Text(tr.authHaveToken, style: TextStyle(color: muted)),
         Form(
           key: _confirmForm,
           child: Column(
@@ -405,14 +404,14 @@ class _ResetScreenState extends State<ResetScreen> {
             children: [
               _textField(
                 _token,
-                'Token',
+                tr.authToken,
                 Icons.key_outlined,
-                validator: requiredField('Enter the token'),
+                validator: requiredField(tr.authEnterToken),
               ),
               const SizedBox(height: 14),
               PasswordField(
                 controller: _password,
-                label: 'New password',
+                label: tr.authNewPassword,
                 helper: passwordHint,
                 validator: validateNewPassword,
                 autofillHints: const [AutofillHints.newPassword],
@@ -423,7 +422,7 @@ class _ResetScreenState extends State<ResetScreen> {
           ),
         ),
         BusyButton(
-          label: 'Set new password',
+          label: tr.authSetNewPassword,
           busy: _confirming,
           onPressed: _confirm,
         ),

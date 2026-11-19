@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/letters/letters_env.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/models.dart';
@@ -72,7 +73,7 @@ class _LettersAdminScreenState extends State<LettersAdminScreen> {
           const SizedBox(height: 48),
           EmptyState(
             icon: Icons.cloud_off_outlined,
-            title: 'Could not load letters',
+            title: tr.lettersAdminLoadFailed,
             message: '$_error',
             action: OutlinedButton.icon(
               onPressed: () {
@@ -80,7 +81,7 @@ class _LettersAdminScreenState extends State<LettersAdminScreen> {
                 unawaited(_load());
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(tr.commonRetry),
             ),
           ),
         ],
@@ -88,12 +89,12 @@ class _LettersAdminScreenState extends State<LettersAdminScreen> {
     }
     if (_rows.isEmpty) {
       return ListView(
-        children: const [
-          SizedBox(height: 48),
+        children: [
+          const SizedBox(height: 48),
           EmptyState(
             icon: Icons.mail_outline,
-            title: 'No letters yet',
-            message: 'Titles and participants of every letter show up here.',
+            title: tr.lettersAdminEmptyTitle,
+            message: tr.lettersAdminEmptyMessage,
           ),
         ],
       );
@@ -113,9 +114,7 @@ class _LettersAdminScreenState extends State<LettersAdminScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: widget.embedded
-        ? null
-        : AppBar(title: const Text('All letters (manager)')),
+    appBar: widget.embedded ? null : AppBar(title: Text(tr.lettersAdminTitle)),
     body: PageBody(
       child: RefreshIndicator(onRefresh: _load, child: _content()),
     ),
@@ -143,7 +142,7 @@ class _AdminCard extends StatelessWidget {
               StatusChip(b.status),
               if (b.unlisted) ...[
                 const SizedBox(width: 8),
-                const StatusPill('Unlisted'),
+                StatusPill(tr.lettersAdminUnlisted),
               ],
             ],
           ),
@@ -156,7 +155,7 @@ class _AdminCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'By ${letter.creatorEmail}  -  ${fmtDate(b.createdAt)}',
+            tr.lettersAdminBy(letter.creatorEmail, fmtDate(b.createdAt)),
             style: muted,
           ),
           if (letter.participants.isNotEmpty) ...[
@@ -169,7 +168,9 @@ class _AdminCard extends StatelessWidget {
                   Chip(
                     visualDensity: VisualDensity.compact,
                     avatar: PersonAvatar(p.displayName, size: 20),
-                    label: Text('${p.displayName} (${p.role})'),
+                    label: Text(
+                      '${p.displayName} (${p.role == 'signer' ? tr.lettersAdminRoleSigner : tr.lettersAdminRoleViewer})',
+                    ),
                   ),
               ],
             ),
@@ -185,7 +186,9 @@ class _AdminCard extends StatelessWidget {
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
                 ),
-                label: Text(b.unlisted ? 'Relist' : 'Unlist'),
+                label: Text(
+                  b.unlisted ? tr.lettersAdminRelist : tr.lettersAdminUnlist,
+                ),
               ),
             ),
           ],

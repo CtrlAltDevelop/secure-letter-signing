@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/jalali/jalali_format.dart';
 import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/workspace/widgets/bookmark_button.dart';
+import 'package:letter_signing/workspace/workspace_api.dart';
 import 'package:letter_signing/letters/create_letter_screen.dart';
 import 'package:letter_signing/letters/letter_card.dart';
 import 'package:letter_signing/letters/letter_certificate.dart';
@@ -247,6 +249,11 @@ class _LetterDetailScreenState extends State<LetterDetailScreen> {
       appBar: AppBar(
         title: Text(t.letterTitle(toPersianDigits(l.brief.no))),
         actions: [
+          BookmarkButton(
+            api: WorkspaceApi(env.api.client),
+            module: 'letters',
+            id: l.brief.id,
+          ),
           IconButton(
             tooltip: t.paperTooltip,
             icon: const Icon(Icons.description_outlined),

@@ -14,7 +14,11 @@ class CrmApi {
 
   final WorkspaceApi workspace;
 
-  Future<Customer> _customer(String method, String path, {Object? body}) async =>
+  Future<Customer> _customer(
+    String method,
+    String path, {
+    Object? body,
+  }) async =>
       Customer.fromJson(asMap(await workspace.call(method, path, body: body)));
 
   Future<List<Customer>> list(
@@ -30,15 +34,17 @@ class CrmApi {
   Future<Customer> get(String id) => _customer('GET', '/customers/$id');
 
   /// A 409 is [ConflictException] (the customer limit of the plan).
-  Future<Customer> create(CustomerDraft draft, {List<CustomerMember>? members}) =>
-      _customer(
-        'POST',
-        '/customers',
-        body: {
-          ...draft.toCreateJson(),
-          if (members != null) 'members': [for (final m in members) m.toJson()],
-        },
-      );
+  Future<Customer> create(
+    CustomerDraft draft, {
+    List<CustomerMember>? members,
+  }) => _customer(
+    'POST',
+    '/customers',
+    body: {
+      ...draft.toCreateJson(),
+      if (members != null) 'members': [for (final m in members) m.toJson()],
+    },
+  );
 
   Future<Customer> patch(String id, Map<String, dynamic> fields) =>
       _customer('PATCH', '/customers/$id', body: fields);
@@ -51,7 +57,9 @@ class CrmApi {
       );
 
   Future<List<HistoryEntry>> history(String id) async => [
-    for (final j in asMapList(await workspace.call('GET', '/customers/$id/history')))
+    for (final j in asMapList(
+      await workspace.call('GET', '/customers/$id/history'),
+    ))
       HistoryEntry.fromJson(j),
   ];
 
@@ -85,7 +93,9 @@ class CrmApi {
   );
 
   Future<List<CallReport>> calls(String id) async => [
-    for (final j in asMapList(await workspace.call('GET', '/customers/$id/calls')))
+    for (final j in asMapList(
+      await workspace.call('GET', '/customers/$id/calls'),
+    ))
       CallReport.fromJson(j),
   ];
 
@@ -132,7 +142,9 @@ class CrmApi {
   );
 
   Future<List<TaskBrief>> tasks(String id) async => [
-    for (final j in asMapList(await workspace.call('GET', '/customers/$id/tasks')))
+    for (final j in asMapList(
+      await workspace.call('GET', '/customers/$id/tasks'),
+    ))
       TaskBrief.fromJson(j),
   ];
 
@@ -144,7 +156,9 @@ class CrmApi {
   ];
 
   Future<List<LetterBrief>> letters(String id) async => [
-    for (final j in asMapList(await workspace.call('GET', '/customers/$id/letters')))
+    for (final j in asMapList(
+      await workspace.call('GET', '/customers/$id/letters'),
+    ))
       LetterBrief.fromJson(j),
   ];
 

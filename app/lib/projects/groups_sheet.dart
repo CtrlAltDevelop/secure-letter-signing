@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:letter_signing/l10n/app_localizations.dart';
+import 'package:letter_signing/monitor/group_access_sheet.dart';
+import 'package:letter_signing/monitor/monitor_api.dart';
 import 'package:letter_signing/projects/models.dart';
 import 'package:letter_signing/projects/project_ui.dart';
 import 'package:letter_signing/projects/projects_controller.dart';
@@ -169,6 +171,20 @@ class _GroupsSheetState extends State<GroupsSheet> {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (g.isOrg && widget.isManager)
+                  IconButton(
+                    key: ValueKey('group-access-${g.id}'),
+                    tooltip: AppLocalizations.of(context).monAccess,
+                    icon: const Icon(Icons.group_outlined),
+                    onPressed: () => unawaited(
+                      showGroupAccessSheet(
+                        context,
+                        api: MonitorApi(_c.env.api.workspace),
+                        groupId: g.id,
+                        directory: _c.env.directory,
+                      ),
+                    ),
+                  ),
                 IconButton(
                   key: ValueKey('group-rename-${g.id}'),
                   tooltip: l.groupRename,

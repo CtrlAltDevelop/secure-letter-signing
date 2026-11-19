@@ -25,10 +25,10 @@ void main() {
 
     test('relativeTime formats recent and old times', () {
       final now = DateTime.utc(2026, 1, 10, 12);
-      expect(relativeTime('2026-01-10T11:59:40Z', now: now), 'just now');
-      expect(relativeTime('2026-01-10T11:30:00Z', now: now), '30 min ago');
-      expect(relativeTime('2026-01-10T09:00:00Z', now: now), '3 h ago');
-      expect(relativeTime('2026-01-08T12:00:00Z', now: now), '2 d ago');
+      expect(relativeTime('2026-01-10T11:59:40Z', now: now), 'هم‌اکنون');
+      expect(relativeTime('2026-01-10T11:30:00Z', now: now), '30 دقیقه پیش');
+      expect(relativeTime('2026-01-10T09:00:00Z', now: now), '3 ساعت پیش');
+      expect(relativeTime('2026-01-08T12:00:00Z', now: now), '2 روز پیش');
     });
   });
 
@@ -39,11 +39,11 @@ void main() {
       ApiClient(baseUrl: 'http://x.test', store: MemoryTokenStore()),
     );
     await tester.pumpWidget(MaterialApp(home: LoginScreen(auth: auth)));
-    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.tap(find.widgetWithText(FilledButton, 'ورود'));
     await tester.pump();
-    expect(find.text('Enter a valid email address'), findsNothing);
-    expect(find.text('Enter your email'), findsOneWidget);
-    expect(find.text('Enter your password'), findsOneWidget);
-    expect(find.text('Create account'), findsOneWidget);
+    expect(find.text('نشانی ایمیل معتبر وارد کنید'), findsNothing);
+    expect(find.text('ایمیل را وارد کنید'), findsOneWidget);
+    expect(find.text('رمز عبور را وارد کنید'), findsOneWidget);
+    expect(find.text('ایجاد حساب'), findsOneWidget);
   });
 }

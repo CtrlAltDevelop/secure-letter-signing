@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'dart:convert';
 
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/api/api_client.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/screens/auth_screens.dart';
@@ -51,7 +52,7 @@ class _LetterheadCardState extends State<LetterheadCard> {
     final file = res.first;
     final bytes = await file.readAsBytes();
     if (bytes.length > _maxLogoBytes) {
-      setState(() => _error = 'Logo must be a PNG or JPEG under 200 KB');
+      setState(() => _error = tr.letterheadLogoInvalid);
       return;
     }
     final mime = file.name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
@@ -72,18 +73,18 @@ class _LetterheadCardState extends State<LetterheadCard> {
     );
     if (ok && mounted) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Letterhead saved')));
+          .showSnackBar(SnackBar(content: Text(tr.letterheadSaved)));
     }
   }
 
-  static const _labels = {
-    'name': 'Company name',
-    'tagline': 'Subtitle',
-    'address': 'Address',
-    'phone': 'Phone',
-    'email': 'Email',
-    'website': 'Website',
-    'footer': 'Address / phone (bottom of every page)',
+  Map<String, String> get _labels => {
+    'name': tr.letterheadCompanyName,
+    'tagline': tr.letterheadTagline,
+    'address': tr.letterheadAddress,
+    'phone': tr.letterheadPhone,
+    'email': tr.letterheadEmail,
+    'website': tr.letterheadWebsite,
+    'footer': tr.letterheadFooter,
   };
 
   @override
@@ -91,9 +92,12 @@ class _LetterheadCardState extends State<LetterheadCard> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Letterhead', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          tr.letterheadTitle,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 4),
-        const Text('Printed at the top and bottom of every letter.'),
+        Text(tr.letterheadHint),
         const SizedBox(height: 12),
         Wrap(
           spacing: 12,
@@ -103,12 +107,14 @@ class _LetterheadCardState extends State<LetterheadCard> {
             OutlinedButton.icon(
               onPressed: _pickLogo,
               icon: const Icon(Icons.image_outlined),
-              label: Text(_logo.isEmpty ? 'Add logo' : 'Change logo'),
+              label: Text(
+                _logo.isEmpty ? tr.letterheadAddLogo : tr.letterheadChangeLogo,
+              ),
             ),
             if (_logo.isNotEmpty)
               TextButton(
                 onPressed: () => setState(() => _logo = ''),
-                child: const Text('Remove logo'),
+                child: Text(tr.letterheadRemoveLogo),
               ),
           ],
         ),
@@ -136,7 +142,7 @@ class _LetterheadCardState extends State<LetterheadCard> {
           ErrorBanner(_error!),
         ],
         const SizedBox(height: 12),
-        FilledButton(onPressed: _save, child: const Text('Save letterhead')),
+        FilledButton(onPressed: _save, child: Text(tr.letterheadSave)),
       ],
     ),
   );

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:letter_signing/l10n/tr.dart';
 import 'package:letter_signing/letters/letter_widgets.dart';
 import 'package:letter_signing/letters/letterhead.dart';
 import 'package:letter_signing/letters/paper_preview.dart';
@@ -17,7 +18,12 @@ const _swatch = [
   Color(0xFFB3261E),
   Color(0xFF1F8F78),
 ];
-const _swatchNames = ['Ink', 'Blue', 'Red', 'Green'];
+List<String> get _swatchNames => [
+  tr.paperInk,
+  tr.paperBlue,
+  tr.paperRed,
+  tr.paperGreen,
+];
 
 /// Write the letter like the original HTML app: an edit pane and a live A4 preview.
 /// Wide screens show both side by side, phones switch with Edit / Preview tabs. Pops the text.
@@ -27,7 +33,7 @@ class PaperEditorScreen extends StatefulWidget {
     required this.head,
     required this.title,
     required this.initial,
-    this.number = '(new)',
+    this.number = '(جدید)',
     this.date = '',
   });
   final Letterhead head;
@@ -66,7 +72,7 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
     try {
       await _preview.currentState?.print();
     } on Object catch (e) {
-      if (mounted) setState(() => _error = 'Could not print: $e');
+      if (mounted) setState(() => _error = tr.paperPrintFailed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -103,8 +109,8 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
               maxLines: null,
               minLines: null,
               textAlignVertical: TextAlignVertical.top,
-              decoration: const InputDecoration(
-                hintText: 'Write the letter here...',
+              decoration: InputDecoration(
+                hintText: tr.paperHint,
                 alignLabelWithHint: true,
               ),
             ),
@@ -119,8 +125,12 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
   Widget _status(BuildContext context) {
     final pages = paginateRich(_text.doc, _font).length;
     return Text(
-      '${_text.doc.wordCount} words  |  ${_text.text.length} characters  |  '
-      '$pages A4 page${pages == 1 ? '' : 's'} at ${_font.round()} pt',
+      tr.paperStatus(
+        '${_text.doc.wordCount}',
+        '${_text.text.length}',
+        '$pages',
+        '${_font.round()}',
+      ),
       style: Theme.of(context).textTheme.bodySmall,
     );
   }
@@ -142,64 +152,64 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
     );
     return Wrap(
       children: [
-        tool(Icons.undo, 'Undo', _text.canUndo ? _text.undo : null),
-        tool(Icons.redo, 'Redo', _text.canRedo ? _text.redo : null),
+        tool(Icons.undo, tr.paperUndo, _text.canUndo ? _text.undo : null),
+        tool(Icons.redo, tr.paperRedo, _text.canRedo ? _text.redo : null),
         tool(
           Icons.format_bold,
-          'Bold',
+          tr.paperBold,
           () => _text.toggle(flagBold),
           on: flags & flagBold != 0,
         ),
         tool(
           Icons.format_italic,
-          'Italic',
+          tr.paperItalic,
           () => _text.toggle(flagItalic),
           on: flags & flagItalic != 0,
         ),
         tool(
           Icons.format_underlined,
-          'Underline',
+          tr.paperUnderline,
           () => _text.toggle(flagUnderline),
           on: flags & flagUnderline != 0,
         ),
         tool(
           Icons.title,
-          'Heading',
+          tr.paperHeading,
           () => _text.setKind(ParaKind.h1),
           on: para.kind == ParaKind.h1,
         ),
         tool(
           Icons.text_fields,
-          'Subheading',
+          tr.paperSubheading,
           () => _text.setKind(ParaKind.h2),
           on: para.kind == ParaKind.h2,
         ),
         tool(
           Icons.format_list_bulleted,
-          'Bullet list',
+          tr.paperBullets,
           () => _text.setKind(ParaKind.bullet),
           on: para.kind == ParaKind.bullet,
         ),
         tool(
           Icons.format_list_numbered,
-          'Numbered list',
+          tr.paperNumbered,
           () => _text.setKind(ParaKind.numbered),
           on: para.kind == ParaKind.numbered,
         ),
         tool(
           Icons.text_decrease,
-          'Smaller text',
+          tr.paperSmaller,
           () => _text.setBits(maskSize, flags & flagSmall != 0 ? 0 : flagSmall),
           on: flags & flagSmall != 0,
         ),
         tool(
           Icons.text_increase,
-          'Larger text',
+          tr.paperLarger,
           () => _text.setBits(maskSize, flags & flagLarge != 0 ? 0 : flagLarge),
           on: flags & flagLarge != 0,
         ),
         PopupMenuButton<int>(
-          tooltip: 'Text colour',
+          tooltip: tr.paperTextColor,
           icon: Icon(
             Icons.format_color_text,
             color: _swatch[colorIndex(flags)],
@@ -221,50 +231,41 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
         ),
         tool(
           Icons.format_align_left,
-          'Align to start',
+          tr.paperAlignStart,
           () => _text.setAlign(ParaAlign.start),
           on: para.align == ParaAlign.start,
         ),
         tool(
           Icons.format_align_center,
-          'Center',
+          tr.paperAlignCenter,
           () => _text.setAlign(ParaAlign.center),
           on: para.align == ParaAlign.center,
         ),
         tool(
           Icons.format_align_right,
-          'Align to end',
+          tr.paperAlignEnd,
           () => _text.setAlign(ParaAlign.end),
           on: para.align == ParaAlign.end,
         ),
         tool(
           Icons.format_align_justify,
-          'Justify',
+          tr.paperJustify,
           () => _text.setAlign(ParaAlign.justify),
           on: para.align == ParaAlign.justify,
         ),
         PopupMenuButton<ParaDir>(
-          tooltip: 'Direction of the whole letter',
+          tooltip: tr.paperDirAllTooltip,
           icon: const Icon(Icons.swap_horiz),
           onSelected: _text.setDirAll,
-          itemBuilder: (_) => const [
-            PopupMenuItem(
-              value: ParaDir.rtl,
-              child: Text('Whole letter right-to-left'),
-            ),
-            PopupMenuItem(
-              value: ParaDir.ltr,
-              child: Text('Whole letter left-to-right'),
-            ),
-            PopupMenuItem(
-              value: ParaDir.auto,
-              child: Text('Whole letter automatic'),
-            ),
+          itemBuilder: (_) => [
+            PopupMenuItem(value: ParaDir.rtl, child: Text(tr.paperDirAllRtl)),
+            PopupMenuItem(value: ParaDir.ltr, child: Text(tr.paperDirAllLtr)),
+            PopupMenuItem(value: ParaDir.auto, child: Text(tr.paperDirAllAuto)),
           ],
         ),
         tool(
           Icons.format_textdirection_l_to_r,
-          'Left-to-right paragraph',
+          tr.paperDirParaLtr,
           () => _text.setDir(
             para.dir == ParaDir.ltr ? ParaDir.auto : ParaDir.ltr,
           ),
@@ -272,7 +273,7 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
         ),
         tool(
           Icons.format_textdirection_r_to_l,
-          'Right-to-left paragraph',
+          tr.paperDirParaRtl,
           () => _text.setDir(
             para.dir == ParaDir.rtl ? ParaDir.auto : ParaDir.rtl,
           ),
@@ -295,13 +296,13 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Write on paper'),
+          title: Text(tr.paperTitle),
           actions: [
             if (wide || _showPreview)
               PrintButton(busy: _busy, onPressed: () => unawaited(_print())),
             TextButton(
               onPressed: () => Navigator.of(context).pop(_text.doc),
-              child: const Text('Done'),
+              child: Text(tr.paperDone),
             ),
           ],
         ),
@@ -311,9 +312,9 @@ class _PaperEditorScreenState extends State<PaperEditorScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                 child: SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(value: false, label: Text('Edit')),
-                    ButtonSegment(value: true, label: Text('Preview')),
+                  segments: [
+                    ButtonSegment(value: false, label: Text(tr.paperTabEdit)),
+                    ButtonSegment(value: true, label: Text(tr.paperTabPreview)),
                   ],
                   selected: {_showPreview},
                   onSelectionChanged: (v) =>

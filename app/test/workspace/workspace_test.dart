@@ -53,7 +53,11 @@ void main() {
   test('a 404 falls back to all modules enabled', () async {
     final e = env((_, _) => json({'detail': 'nope'}, 404));
     await e.loadModules();
-    expect(enabledModules(e).map((m) => m.code), appModules.map((m) => m.code));
+    // Finance and sales also need their permission, which this user lacks.
+    expect(enabledModules(e).map((m) => m.code), [
+      for (final m in appModules)
+        if (m.permission == null) m.code,
+    ]);
   });
 
   test('a network error falls back to all modules enabled', () async {
@@ -68,13 +72,23 @@ void main() {
     expect(e.enabledModules, containsAll(knownModuleCodes));
   });
 
-  test('registry order is tasks, projects, letters, meetings', () {
-    expect(appModules.map((m) => m.code), [
+  test('registry order starts with tasks, projects, letters, meetings', () {
+    expect(appModules.map((m) => m.code).take(4), [
       'tasks',
       'projects',
       'letters',
       'meetings',
     ]);
+    expect(appModules.map((m) => m.code), containsAll(['finance', 'sales']));
+  });
+
+  test('finance and sales need their permission as well as the module', () {
+    final e = env((_, _) => json({'detail': 'nope'}, 404));
+    final codes = enabledModules(e).map((m) => m.code);
+    expect(codes, isNot(contains('finance')));
+    expect(codes, isNot(contains('sales')));
+    final finance = appModules.firstWhere((m) => m.code == 'finance');
+    expect(finance.permission, 'finance.manage');
   });
 
   testWidgets('the meetings module builds the real Meetings screen', (t) async {

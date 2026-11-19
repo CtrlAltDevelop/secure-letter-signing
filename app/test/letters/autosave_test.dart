@@ -46,22 +46,22 @@ void main() {
       await t.pump(const Duration(milliseconds: 500));
       expect(saves(), isEmpty); // nothing to save yet
 
-      await t.enterText(find.widgetWithText(TextField, 'Title'), 'Budget');
-      await t.tap(find.text('Choose signers'));
+      await t.enterText(find.widgetWithText(TextField, 'عنوان'), 'Budget');
+      await t.tap(find.text('انتخاب امضاکنندگان'));
       await t.pumpAndSettle();
       await t.tap(find.byType(CheckboxListTile).first);
-      await t.tap(find.text('OK'));
+      await t.tap(find.text('تأیید'));
       await t.pumpAndSettle();
       await t.pump(const Duration(milliseconds: 500));
       await t.pumpAndSettle();
       expect(saves(), ['POST /api/letters']);
-      expect(find.textContaining('Draft auto-saved'), findsOneWidget);
+      expect(find.textContaining('پیش‌نویس به‌طور خودکار ذخیره شد'), findsOneWidget);
 
       await t.pump(
         const Duration(milliseconds: 600),
       ); // unchanged: no second save
       expect(saves(), hasLength(1));
-      await t.enterText(find.widgetWithText(TextField, 'Title'), 'Budget 2');
+      await t.enterText(find.widgetWithText(TextField, 'عنوان'), 'Budget 2');
       await t.pump(const Duration(milliseconds: 500));
       await t.pumpAndSettle();
       expect(saves().last, startsWith('PUT'));
