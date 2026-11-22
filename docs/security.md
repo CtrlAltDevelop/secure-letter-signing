@@ -51,11 +51,16 @@ The server app no longer uses client-side end-to-end encryption. See `docs/signi
 - **Attachments:** the sealed payload carries `attachments: [{id, size, sha256}]` (plaintext SHA-256, sorted by id),
   computed when the signature is made; signatures made before this change do not have the field.
 - **Abuse limits:** each user may upload `MAX_USER_UPLOAD_BYTES_PER_DAY` (default 500 MB, rolling 24h, workspace files
-  and letter attachments; backgrounds are capped at 2 MB each) then gets 429. The TLS proxy must set
-  `client_max_body_size 30m;` (nginx; attachments are capped at 25 MB) so oversized bodies are refused before Django.
+  and letter attachments; backgrounds are capped at 2 MB each) then gets 429. The shipped nginx proxy
+  (`deploy/nginx/nginx.conf`) sets `client_max_body_size 30m;` (attachments are capped at 25 MB) so oversized bodies are refused before Django.
 - **WebSocket token:** the live socket takes the access token in the query string. daphne runs with `-v 0` (no access log;
-  its default would log requests), and the proxy must not log the query string of `/ws` (nginx: `log_format` with
-  `$uri` instead of `$request`, or `access_log off;` in the `/ws` location).
+  its default would log requests), and the shipped proxy logs `$uri` (never `$request`/`$request_uri`), so the `?token=` never reaches a log.
+- **TLS proxy (optional compose profile `proxy`):** put `fullchain.pem` and `privkey.pem` in `deploy/certs/` (or set
+  `TLS_CERT_DIR`), set `DJANGO_HTTPS=1` and `NUM_PROXIES=1` in `brands/<brand>/.env`, then
+  `docker compose --profile proxy up`. Self-signed for testing:
+  `openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj "/CN=localhost" -keyout deploy/certs/privkey.pem -out deploy/certs/fullchain.pem`.
+  Config syntax-checked with `nginx -t` (nginx 1.27); not yet run end to end behind compose.
+- **Push notifications:** title-only FCM pushes (never content), see AGENTS.md; guests, inactive users and do-not-disturb get none.
 - **Audit head:** `manage.py verify_audit` prints `head: #id <hash>`; store it outside the database (cron to another
   host). `verify_audit --expect-head <hash>` then fails if that hash is no longer in an intact chain (deleted tail).
 - **Database role:** compose creates `letters_app` (no superuser/createdb/createrole, owns nothing) from

@@ -12,3 +12,6 @@ PRODUCT_BUNDLE_IDENTIFIER = com.letters.letterSigning
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.letters. All rights reserved.
+
+// Optional per-machine signing (git-ignored): keeps the Keychain trusting debug builds across rebuilds.
+#include? "Local.xcconfig"

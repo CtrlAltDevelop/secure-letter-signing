@@ -6,7 +6,7 @@ from django.utils import timezone
 
 import logging
 
-from . import mailer
+from . import mailer, push as push_module
 from .models import CompanySettings, Notification, User
 
 
@@ -74,6 +74,7 @@ def notify(users, kind: str, title: str, **data) -> None:
             if own and own.dnd_until and own.dnd_until > now:
                 continue
             push(user.id, {"type": "notification", "id": row.id, "kind": kind, "title": row.title, "data": data})
+            push_module.push_title(user, row.title)
             if not mailer.email_configured(cs):
                 continue
             mailer.send_later(user.email, row.title, BODY.format(row.title))

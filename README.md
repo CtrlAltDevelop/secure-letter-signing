@@ -32,3 +32,5 @@ npm test        # تست لایه رمزنگاری
 جزئیات و محدودیت‌ها: [docs/security.md](docs/security.md)
 
 فونت: Vazirmatn (مجوز SIL OFL) داخل هر فایل جاسازی شده و نیازی به اینترنت نیست.
+
+TLS proxy (optional): `docker compose --profile proxy up` with certs in `deploy/certs/`, `DJANGO_HTTPS=1`, `NUM_PROXIES=1`; see docs/security.md.

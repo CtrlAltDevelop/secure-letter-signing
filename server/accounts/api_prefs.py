@@ -12,7 +12,7 @@ from pydantic import Field
 from . import prefs, ratelimit
 from .api_auth import Detail
 from .auth import BearerAuth, user_of
-from .models import UserPrefs
+from .models import DeviceToken, UserPrefs
 
 router = Router(tags=["me"], auth=BearerAuth())
 EMAIL_REQUESTS_PER_WINDOW = 5
@@ -104,4 +104,27 @@ def get_background(request):
 @router.delete("/background", response={204: None, 404: Detail})
 def delete_background(request):
     prefs.clear_background(user_of(request))
+    return 204, None
+
+
+class PushTokenIn(Schema):
+    token: str = Field(min_length=1, max_length=500)
+    platform: str = Field(pattern="^(android|ios|web)$")
+
+
+@router.post("/push-token", response={204: None})
+def register_push_token(request, data: PushTokenIn):
+    from django.utils import timezone
+
+    DeviceToken.objects.update_or_create(
+        token=data.token, defaults={"user": user_of(request), "platform": data.platform, "last_seen": timezone.now()})
+    return 204, None
+
+
+@router.delete("/push-token", response={204: None})
+def delete_push_token(request, token: str | None = None):  # no token = every token of this user
+    rows = DeviceToken.objects.filter(user=user_of(request))
+    if token:
+        rows = rows.filter(token=token)
+    rows.delete()
     return 204, None

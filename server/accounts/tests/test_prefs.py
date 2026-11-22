@@ -124,7 +124,7 @@ def test_token_is_bound_to_the_address_and_the_user(me, make_user, api):
 
 def test_personal_email_validation_and_unconfigured_mail(me, settings):
     assert me.call("post", "/me/personal-email", {"email": "not-an-email"}).status_code == 422
-    settings.EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    settings.MAILERS = {"default": {"BACKEND": "django.core.mail.backends.smtp.EmailBackend"}}
     assert me.call("post", "/me/personal-email", {"email": "ok@home.test"}).status_code == 503
     assert UserPrefs.objects.filter(personal_email="ok@home.test").count() == 0
 

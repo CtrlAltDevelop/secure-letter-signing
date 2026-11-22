@@ -270,6 +270,16 @@ def verify_audit_chain() -> int | None:
     return None
 
 
+class DeviceToken(models.Model):
+    """FCM registration token of one app install; used for title-only pushes."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="device_tokens")
+    token = models.CharField(max_length=500, unique=True)
+    platform = models.CharField(max_length=10)
+    created_at = models.DateTimeField(default=timezone.now)
+    last_seen = models.DateTimeField(default=timezone.now)
+
+
 class Notification(models.Model):
     """In-app notification. Carries the letter title only, never content."""
 

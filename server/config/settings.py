@@ -142,10 +142,17 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = "accounts.User"
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "http://localhost:8000")
-EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
-)
+# Django 6.1 MAILERS. The real SMTP host/credentials are per-company rows (accounts/mailer.py builds that connection);
+# BACKEND "smtp" here means "use CompanySettings", anything else (console, locmem) is used as is.
+MAILERS = {
+    "default": {
+        "BACKEND": os.environ.get(
+            "MAILER_BACKEND",
+            "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+        ),
+        "OPTIONS": {},
+    },
+}
 
 LANGUAGE_CODE = "en"
 TIME_ZONE = "UTC"

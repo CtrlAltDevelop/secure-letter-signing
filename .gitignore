@@ -11,3 +11,5 @@ server/attachments/
 backups/
 
 .vscode/
+app/macos/Runner/Configs/Local.xcconfig
+deploy/certs/

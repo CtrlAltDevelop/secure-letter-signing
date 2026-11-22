@@ -133,7 +133,7 @@ def test_domain_signup_rejects_other_domains(api, company):
 
 
 def test_domain_signup_without_email_setup_is_unavailable(api, company, settings):
-    settings.EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    settings.MAILERS = {"default": {"BACKEND": "django.core.mail.backends.smtp.EmailBackend"}}
     company.signup_domain_enabled = True
     company.allowed_domain = "corp.test"
     company.save()

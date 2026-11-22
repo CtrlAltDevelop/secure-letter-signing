@@ -58,6 +58,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       DJANGO_HTTPS: ${DJANGO_HTTPS:-0}  # set 1 (and NUM_PROXIES=1) behind a TLS-terminating proxy
       NUM_PROXIES: ${NUM_PROXIES:-0}
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-}  # push: also mount the service-account JSON and set FCM_SERVICE_ACCOUNT_FILE
+      FCM_SERVICE_ACCOUNT_FILE: ${FCM_SERVICE_ACCOUNT_FILE:-}
       LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
@@ -66,10 +68,23 @@ services:
     volumes:
       - ./brands:/brands:ro
       - attachments:/app/attachments
-    # No TLS proxy ships here. Put one in front (see docs/security.md): set client_max_body_size to ~30m (attachments are
-    # capped at 25 MB) and keep the /ws query string out of its access log. daphne runs with -v 0 (no access log).
+    # Plain HTTP by default; the optional `nginx` service (profile `proxy`) adds TLS, the 30m body cap and /ws log scrubbing.
+    # daphne runs with -v 0 (no access log).
     ports:
       - "${SERVER_PORT:-8000}:8000"
+
+  # TLS proxy (optional): `docker compose --profile proxy up`; set DJANGO_HTTPS=1 and NUM_PROXIES=1 in brands/<brand>/.env.
+  # Needs ${TLS_CERT_DIR}/fullchain.pem and privkey.pem (see docs/security.md for a self-signed command).
+  nginx:
+    image: nginx:1.27-alpine
+    profiles: ["proxy"]
+    depends_on: [server]
+    ports:
+      - "${PROXY_HTTP_PORT:-80}:80"
+      - "${PROXY_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${TLS_CERT_DIR:-./deploy/certs}:/certs:ro
 
 volumes:
   dbdata:
