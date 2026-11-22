@@ -2178,6 +2178,7 @@
   "gnNoDependencies": "پیش‌نیازی ندارد",
   "gnAddDependency": "افزودن پیش‌نیاز",
   "gnRemoveDependency": "حذف وابستگی",
+  "gnCritical": "مسیر بحرانی (نوار پررنگ)",
   "gnConflict": "تداخل: این وظیفه زودتر از پایان پیش‌نیاز شروع می‌شود",
   "gnTaskReady": "آماده شروع: {title}",
   "@gnTaskReady": {

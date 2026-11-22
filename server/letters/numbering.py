@@ -2,12 +2,13 @@
 from datetime import datetime
 
 from django.db import transaction
+from django.db.models import Max
 from django.utils import timezone
 
 from workspace.jalali import to_jalali
 from workspace.recurrence import TEHRAN
 
-from .models import NumberSequence
+from .models import Letter, NumberSequence
 
 
 def _now() -> datetime:
@@ -31,3 +32,13 @@ def next_number(kind: str, year: int | None = None) -> tuple[int, int, str]:
     row.last += 1
     row.save(update_fields=["last"])
     return year, row.last, format_number(year, row.last)
+
+
+@transaction.atomic
+def next_letter_no() -> int:
+    """Global `Letter.no`: a locked counter row (year 0), never below the current max, so concurrent creates cannot collide."""
+    NumberSequence.objects.get_or_create(kind="letterno", jalali_year=0)
+    row = NumberSequence.objects.select_for_update().get(kind="letterno", jalali_year=0)
+    row.last = max(row.last, Letter.objects.aggregate(m=Max("no"))["m"] or 0) + 1
+    row.save(update_fields=["last"])
+    return row.last

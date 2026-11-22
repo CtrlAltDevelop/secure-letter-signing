@@ -8680,6 +8680,12 @@ abstract class AppLocalizations {
   /// **'حذف وابستگی'**
   String get gnRemoveDependency;
 
+  /// No description provided for @gnCritical.
+  ///
+  /// In fa, this message translates to:
+  /// **'مسیر بحرانی (نوار پررنگ)'**
+  String get gnCritical;
+
   /// No description provided for @gnConflict.
   ///
   /// In fa, this message translates to:

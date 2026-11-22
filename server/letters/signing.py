@@ -1,4 +1,5 @@
 """Signing rules shared by the PIN, biometric and remote-approval paths, plus the seal and what follows a decision."""
+import hashlib
 import uuid
 
 from django.contrib.auth.hashers import check_password
@@ -9,7 +10,7 @@ from ninja.errors import HttpError
 from accounts import ratelimit
 from accounts.models import Session, User, audit
 from accounts.notify import notify
-from core import cryptoutil
+from core import cryptoutil, filestore
 
 from . import events, rules
 from .models import Letter, Participant, Signature
@@ -60,11 +61,18 @@ def check_pin(user: User, pin: str, session: Session) -> None:
 # --- seal ----------------------------------------------------------------------------------------------------
 
 
+def attachment_digests(letter: Letter) -> list[dict]:
+    """Id, plaintext size and plaintext SHA-256 of each attachment, ordered by id so the seal is deterministic."""
+    return [{"id": str(a.id), "size": a.size, "sha256": hashlib.sha256(filestore.read_decrypted(a.file)).hexdigest()}
+            for a in letter.attachments.order_by("id")]
+
+
 def build_payload(letter: Letter, user: User, session: Session, *, decision: str, note: str, method: str) -> dict:
     return {
         "v": PAYLOAD_VERSION, "letterId": str(letter.id), "title": letter.title, "decision": decision, "note": note,
         "contentHash": cryptoutil.content_hash(cryptoutil.decrypt_body(letter.body)),
         "parentId": str(letter.parent_id) if letter.parent_id else None,
+        "attachments": attachment_digests(letter),  # sent letters are immutable, so these are what the signer saw
         "signer": {"userId": user.id, "email": user.email, "name": user.full_name},
         "method": method, "sessionId": str(session.id), "deviceName": session.device_name,
         "signedAt": timezone.now().isoformat(), "nonce": uuid.uuid4().hex,

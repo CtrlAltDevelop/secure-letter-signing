@@ -81,6 +81,7 @@ class GanttItem {
     this.start,
     this.end,
     this.owners = const [],
+    this.critical = false,
   });
 
   final String taskId;
@@ -101,6 +102,9 @@ class GanttItem {
   final DateTime? start;
   final DateTime? end;
   final List<String> owners;
+
+  /// On the longest finish-to-start chain (older servers omit it: false).
+  final bool critical;
 
   bool get hasBar => start != null && end != null;
 
@@ -126,6 +130,7 @@ class GanttItem {
             ? asString(o['full_name'])
             : asString(o['email']),
     ],
+    critical: j['critical'] == true,
   );
 }
 
@@ -245,6 +250,7 @@ class GanttRow {
   DateTime? get start => phase?.start ?? item?.start;
   DateTime? get end => phase?.end ?? item?.end;
   int get level => isPhase ? 1 : item!.level;
+  bool get critical => item?.critical ?? false;
   String get key => isPhase ? 'p${phase!.id}' : item!.taskId;
 }
 
@@ -294,6 +300,7 @@ class GanttPrintRow {
     this.start,
     this.end,
     this.owners = const [],
+    this.critical = false,
   });
 
   final String kind;
@@ -304,6 +311,7 @@ class GanttPrintRow {
   final DateTime? start;
   final DateTime? end;
   final List<String> owners;
+  final bool critical;
 
   bool get isPhase => kind == 'phase';
 
@@ -316,6 +324,7 @@ class GanttPrintRow {
     start: parseDay(j['start']),
     end: parseDay(j['end']),
     owners: [for (final o in (j['owners'] as List? ?? const [])) '$o'],
+    critical: j['critical'] == true,
   );
 }
 

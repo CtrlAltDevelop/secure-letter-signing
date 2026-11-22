@@ -4567,6 +4567,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get gnRemoveDependency => 'حذف وابستگی';
 
   @override
+  String get gnCritical => 'مسیر بحرانی (نوار پررنگ)';
+
+  @override
   String get gnConflict =>
       'تداخل: این وظیفه زودتر از پایان پیش‌نیاز شروع می‌شود';
 

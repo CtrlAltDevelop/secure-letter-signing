@@ -7,8 +7,10 @@ services:
       POSTGRES_DB: letters
       POSTGRES_USER: letters
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in brands/<brand>/.env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in brands/<brand>/.env}
     volumes:
       - dbdata:/var/lib/postgresql/data
+      - ./scripts/db:/docker-entrypoint-initdb.d:ro  # creates the non-owner role `letters_app` (first start only)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U letters"]
       interval: 5s
@@ -50,16 +52,22 @@ services:
       DJANGO_SEAL_SEED: ${DJANGO_SEAL_SEED:?set DJANGO_SEAL_SEED in brands/<brand>/.env}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
       POSTGRES_HOST: db
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: letters_app  # non-owner role: cannot alter schema or drop the immutability triggers
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD}
+      OWNER_DB_PASSWORD: ${POSTGRES_PASSWORD}  # used only by `migrate` below
       REDIS_URL: redis://redis:6379/0
       DJANGO_HTTPS: ${DJANGO_HTTPS:-0}  # set 1 (and NUM_PROXIES=1) behind a TLS-terminating proxy
       NUM_PROXIES: ${NUM_PROXIES:-0}
       LIVEKIT_URL: ${LIVEKIT_PUBLIC_URL:-}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+    # Migrations need the owner role; the server process itself runs as letters_app.
+    command: ["sh", "-c", "POSTGRES_USER=letters POSTGRES_PASSWORD=$$OWNER_DB_PASSWORD python manage.py migrate --noinput && exec daphne -v 0 -b 0.0.0.0 -p 8000 config.asgi:application"]
     volumes:
       - ./brands:/brands:ro
       - attachments:/app/attachments
+    # No TLS proxy ships here. Put one in front (see docs/security.md): set client_max_body_size to ~30m (attachments are
+    # capped at 25 MB) and keep the /ws query string out of its access log. daphne runs with -v 0 (no access log).
     ports:
       - "${SERVER_PORT:-8000}:8000"
 

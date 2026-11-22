@@ -11,6 +11,8 @@ from django.db import IntegrityError, models, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from core.fields import EncryptedTextField
+
 BASE_PERMISSION = "user"
 # Granted to every new user (signup, invite, CSV import); existing users got the extras in a workspace migration.
 DEFAULT_GRANTS = (BASE_PERMISSION, "task.create", "project.create", "customer.create", "chat.create_group")
@@ -164,7 +166,7 @@ class CompanySettings(models.Model):
     smtp_host = models.CharField(max_length=200, blank=True)
     smtp_port = models.PositiveIntegerField(default=587)
     smtp_user = models.CharField(max_length=200, blank=True)
-    smtp_password = models.CharField(max_length=200, blank=True)
+    smtp_password = EncryptedTextField(blank=True)  # encrypted at rest
     smtp_use_tls = models.BooleanField(default=True)
     from_email = models.EmailField(blank=True)
 

@@ -76,9 +76,9 @@ def notify(users, kind: str, title: str, **data) -> None:
             push(user.id, {"type": "notification", "id": row.id, "kind": kind, "title": row.title, "data": data})
             if not mailer.email_configured(cs):
                 continue
-            mailer.send(user.email, row.title, BODY.format(row.title))
+            mailer.send_later(user.email, row.title, BODY.format(row.title))
             if own and own.personal_email_verified and own.personal_email and kind in IMPORTANT_KINDS:
-                mailer.send(own.personal_email, row.title, BODY.format(row.title))
+                mailer.send_later(own.personal_email, row.title, BODY.format(row.title))
 
     transaction.on_commit(deliver)
 

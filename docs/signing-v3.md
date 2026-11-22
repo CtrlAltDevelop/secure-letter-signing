@@ -107,3 +107,9 @@ Existing `letter` and `notification` frames are unchanged. Audit actions: `signi
 - Devices tab shows a biometric chip per session. Letter detail/create need no decrypt/wrap/rewrap/company key code.
 - Delete: `lib/crypto/*`, key vault/store/transfer/approvals/setup/my-keys screens, company key card, rewrap service, and
   their tests; drop unused dependencies (qr_flutter, mobile_scanner, pointycastle if nothing else uses them).
+
+## Attachment binding
+The server seal payload includes `attachments: [{id, size, sha256}]` (plaintext SHA-256, sorted by id), computed when a
+signature is made. Sent letters are immutable, so it equals what the signer saw. The Dart app treats the payload as
+opaque, so no app or test-vector change was needed. Signatures sealed earlier lack the field. Not done: putting the
+hashes inside the encrypted body as well (the seal already binds them).

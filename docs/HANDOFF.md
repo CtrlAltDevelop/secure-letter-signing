@@ -41,7 +41,7 @@ pass over old screens (~260 keys, `lib/l10n/tr.dart`).
 - Monitor: sales/finance chart keys guessed (`won_by_month`, bucket `net`); raw status keys in meetings/customers chips;
   presets are rolling windows not Jalali-aligned.
 - Task inbox has no customer filter UI; CRM letters tab has no link/unlink.
-- Gantt: no critical path, only finish-to-start; `gantt.task_ready` not in `IMPORTANT_KINDS`; delete-guard not tested.
+- Gantt: only finish-to-start links (critical path done; `gantt.task_ready` is important; delete-guard tested).
 - Not started: online video meeting (marked experimental), iOS push/PWA.
 - `accounts` dev `db.sqlite3` has an inconsistent migration history (don't run makemigrations against it).
 - Nothing was run on a device/simulator or against the real server from the app.

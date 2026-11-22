@@ -7,7 +7,7 @@ from projects.models import Project
 from tasks.models import Task, TaskPerson
 from workspace.schemas import user_ref
 
-from . import rules
+from . import critical, rules
 from .models import GanttItem, GanttLink, GanttPhase
 from .schemas import ChartOut, ItemOut, LinkOut, PhaseOut, UnplannedOut
 
@@ -101,10 +101,20 @@ def build(user: User, project: Project) -> ChartOut:
                      conflict=_conflict(by_task, lk))
              for lk in GanttLink.objects.filter(project=project, active=True).order_by("id")
              if lk.predecessor_id in by_task and lk.successor_id in by_task]
+    _mark_critical(out_items, links)
     start, end = _span([(p.start, p.end) for p in phase_outs] + [(i.start, i.end) for i in out_items])
     return ChartOut(project_id=project.pk, name=project.name, role=role, can_edit=rules.can_edit(user, project),
                     start=start, end=end, phases=phase_outs, items=out_items, links=links,
                     unplanned=_unplanned(project, by_task, include_hidden))
+
+
+def _mark_critical(items: list[ItemOut], links: list[LinkOut]) -> None:
+    """Durations are inclusive days between the effective dates (1 when undated)."""
+    days = {i.task_id: (i.end - i.start).days + 1 if i.start and i.end and i.end >= i.start else 1 for i in items}
+    spare = critical.slack(days, [(lk.predecessor_task_id, lk.successor_task_id) for lk in links])
+    for i in items:
+        if i.task_id in spare:
+            i.slack, i.critical = spare[i.task_id], spare[i.task_id] == 0
 
 
 def _conflict(by_task: dict, link: GanttLink) -> bool:

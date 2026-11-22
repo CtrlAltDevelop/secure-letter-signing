@@ -137,8 +137,7 @@ def signup(request, data: SignupIn):
         raise HttpError(503, "Email is not configured; ask the manager for an invitation code")
     user = _create_or_409(email, data, active=False)
     token = signing.dumps({"u": user.id}, salt="verify-email")
-    if not mailer.send(email, "Verify your email", f"Your verification token:\n\n{token}\n"):
-        raise HttpError(503, "Could not send the verification email")  # rolls the signup back
+    mailer.send_later(email, "Verify your email", f"Your verification token:\n\n{token}\n")
     audit(user, "signup_domain", email)
     return Status(202, {"detail": "Check your email to verify the account"})
 
@@ -304,7 +303,7 @@ def password_reset_request(request, data: ResetRequestIn):
     user = User.objects.filter(email=email, is_active=True).first()
     if user:
         token = signing.dumps({"u": user.id, "p": user.password[-16:]}, salt="password-reset")
-        mailer.send(user.email, "Reset your password", f"Your password reset token:\n\n{token}\n")
+        mailer.send_later(user.email, "Reset your password", f"Your password reset token:\n\n{token}\n")
     return {"detail": "If the account exists, an email was sent"}
 
 

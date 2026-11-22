@@ -220,9 +220,15 @@ class CompanySettingsForm(forms.ModelForm):
     class Meta:
         model = CompanySettings
         exclude = ("letterhead",)
+        # Never render the stored password; a blank submit keeps it (see clean_smtp_password).
+        widgets = {"smtp_password": forms.PasswordInput(render_value=False)}
+
+    def clean_smtp_password(self):
+        return self.cleaned_data["smtp_password"] or self.instance.smtp_password
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["smtp_password"].required = False
         head = self.instance.letterhead or {}
         self.fields["lh_logo"].widget.current = head.get("logo", "")
         for key in LETTERHEAD_TEXT_FIELDS:

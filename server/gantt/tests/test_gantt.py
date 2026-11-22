@@ -180,3 +180,31 @@ def test_changes_are_logged_with_ids_only(crew, project, three):
     assert AuditEvent.objects.filter(action="gantt_phase_created").exists()
     assert all("Secret phase" not in str(e.data) for e in AuditEvent.objects.all())
     assert Event.objects.filter(module="gantt", kind="gantt.updated").exists()
+
+
+def test_critical_path_marks_the_longest_chain_with_slack(crew, project, three):
+    a, b, c = three
+    put_item(crew.pam_d, project, a, start_at="2026-01-01", end_at="2026-01-05")  # 5 days
+    put_item(crew.pam_d, project, b, start_at="2026-01-06", end_at="2026-01-15")  # 10 days
+    put_item(crew.pam_d, project, c, start_at="2026-01-06", end_at="2026-01-07")  # 2 days
+    for x, y in ((a, b), (a, c)):
+        crew.pam_d.call("post", g(project, "/links"), {"predecessor_task_id": x["id"], "successor_task_id": y["id"]})
+    items = {i["title"]: i for i in crew.vic_d.call("get", g(project)).data["items"]}
+    assert [(items[t]["critical"], items[t]["slack"]) for t in ("Design", "Build", "Ship")] == [(True, 0), (True, 0), (False, 8)]
+    rows = {r["title"]: r["critical"] for r in crew.vic_d.call("get", g(project, "/print")).data["rows"] if r["kind"] == "task"}
+    assert rows == {"Design": True, "Build": True, "Ship": False}
+
+
+def test_critical_path_ignores_unlinked_items_and_cycles():
+    from gantt.critical import slack
+    assert slack({"x": 3}, []) == {}
+    assert slack({"p": 1, "q": 1}, [("p", "q"), ("q", "p")]) == {}
+
+
+def test_gantt_tables_refuse_delete(db, crew, project, three):
+    from django.db import DatabaseError, connection
+    from gantt.models import GanttPhase
+    crew.pam_d.call("post", g(project, "/phases"), {"title": "Plan"})
+    with pytest.raises(DatabaseError), connection.cursor() as cur:
+        cur.execute(f"DELETE FROM {GanttPhase._meta.db_table}")
+    assert GanttPhase.objects.count() == 1

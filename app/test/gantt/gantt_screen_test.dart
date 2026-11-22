@@ -47,6 +47,28 @@ Future<void> _menu(WidgetTester t, String key, String item) async {
 }
 
 void main() {
+  testWidgets('critical items show the legend; older servers show none', (
+    t,
+  ) async {
+    await useTallSurface(t, const Size(1000, 900));
+    final f = ganttFixture();
+    expect(GanttItem.fromJson(itemJson('a', '1', 'A')).critical, isFalse);
+    (f.server.chart['items'] as List<Map<String, dynamic>>)[0]['critical'] =
+        true;
+    final c = GanttController(f.api, 'p1');
+    addTearDown(c.dispose);
+    await t.pumpWidget(
+      faMaterial(
+        home: Scaffold(
+          body: GanttTab(env: f.env, projectId: 'p1', controller: c),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('gantt-critical-legend')), findsOneWidget);
+    expect(c.chart!.item('t1')!.critical, isTrue);
+  });
+
   testWidgets('shows the WBS tree with codes, phases first and nested tasks', (
     t,
   ) async {

@@ -14,7 +14,7 @@ def build(user: User, project: Project) -> PrintOut:
     rows = [PrintRow(kind="phase", wbs=p.wbs, level=1, title=p.title, status="", progress=p.progress, start=p.start,
                      end=p.end, owners=[]) for p in chart.phases]
     rows += [PrintRow(kind="task", wbs=i.wbs, level=i.level, title=i.title, status=i.status, progress=i.progress,
-                      start=i.start, end=i.end, owners=[o.full_name or o.email for o in i.owners])
+                      start=i.start, end=i.end, owners=[o.full_name or o.email for o in i.owners], critical=i.critical)
              for i in chart.items]
     rows.sort(key=lambda r: [int(n) for n in r.wbs.split(".")])
     wbs = {i.task_id: i.wbs for i in chart.items}

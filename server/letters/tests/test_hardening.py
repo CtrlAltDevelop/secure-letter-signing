@@ -63,3 +63,35 @@ def test_a_draft_body_can_still_be_edited(world):
     edited = world.body() | {"body": BODY | {"text": "second version"}}
     assert world.alice_d.call("put", f"/letters/{lid}", edited).status_code == 200
     assert world.alice_d.call("get", f"/letters/{lid}").data["body"]["text"] == "second version"
+
+
+def test_letter_no_continues_from_max_and_never_repeats(world):
+    first = world.create(send=False)
+    second = world.create(send=False)
+    assert second["no"] == first["no"] + 1
+    Letter.objects.filter(pk=second["id"]).update(no=500)  # the counter must never fall below the stored max
+    assert world.create(send=False)["no"] == 501
+
+
+def test_attachment_digest_is_sealed_and_upload_quota_is_enforced(world, settings, tmp_path):
+    import hashlib
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    settings.MEDIA_ROOT = tmp_path
+    lid = world.create(send=False)["id"]
+    d = world.alice_d
+    data = b"%PDF-1.4 sealed"
+
+    def up(content):
+        return d.api.client.post(f"/api/letters/{lid}/attachments", {
+            "content_type": "application/pdf", "file": SimpleUploadedFile("x.pdf", content)},
+            HTTP_AUTHORIZATION=f"Bearer {d.token}")
+
+    aid = up(data).json()["id"]
+    settings.MAX_USER_UPLOAD_BYTES_PER_DAY = len(data) + 1
+    assert up(data).status_code == 429
+    d.call("post", f"/letters/{lid}/send")
+    assert world.sign(world.signers[0], lid).status_code == 200
+    payload = d.call("get", f"/letters/{lid}").data["signatures"][0]["payload"]
+    assert payload["attachments"] == [{"id": aid, "size": len(data), "sha256": hashlib.sha256(data).hexdigest()}]

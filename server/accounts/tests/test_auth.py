@@ -112,11 +112,12 @@ def test_expired_or_inactive_invite_is_refused(api, manager, company):
         assert resp.status_code == 403
 
 
-def test_domain_signup_needs_email_verification(api, company):
+def test_domain_signup_needs_email_verification(api, company, django_capture_on_commit_callbacks):
     company.signup_domain_enabled = True
     company.allowed_domain = "corp.test"
     company.save()
-    resp = api.call("post", "/auth/signup", {"email": "Eve@Corp.test", "password": PASSWORD})
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = api.call("post", "/auth/signup", {"email": "Eve@Corp.test", "password": PASSWORD})
     assert resp.status_code == 202
     assert api.call("post", "/auth/login", {"email": "eve@corp.test", "password": PASSWORD}).status_code == 401
     token = mail.outbox[0].body.strip().splitlines()[-1]
@@ -151,10 +152,11 @@ def test_weak_password_and_duplicate_email_are_rejected(api, manager, company):
     assert dup.status_code == 409
 
 
-def test_password_reset_is_single_use_and_revokes_sessions(api, make_user):
+def test_password_reset_is_single_use_and_revokes_sessions(api, make_user, django_capture_on_commit_callbacks):
     make_user("a@corp.test")
     body = api.login("a@corp.test")
-    api.call("post", "/auth/password-reset/request", {"email": "a@corp.test"})
+    with django_capture_on_commit_callbacks(execute=True):
+        api.call("post", "/auth/password-reset/request", {"email": "a@corp.test"})
     token = mail.outbox[0].body.strip().splitlines()[-1]
     new_password = "An0ther-Str0ng-Pass!"
     assert api.call("post", "/auth/password-reset/confirm", {"token": token, "new_password": new_password}).status_code == 200
@@ -213,3 +215,12 @@ def test_invite_gives_chosen_grants_and_department_at_signup(api, manager, compa
     api.call("post", "/auth/signup", {"email": "n@gmail.test", "password": PASSWORD, "invite_code": invite.code})
     user = api.login("n@gmail.test")["user"]
     assert user["permissions"] == ["chat.create_group", "customer.create", "letter.create", "project.create", "task.create", "user"] and user["department"] == "Legal"
+
+
+def test_reset_mail_waits_for_commit(api, make_user, django_capture_on_commit_callbacks):
+    make_user("a@corp.test")
+    with django_capture_on_commit_callbacks(execute=False) as callbacks:
+        api.call("post", "/auth/password-reset/request", {"email": "a@corp.test"})
+    assert mail.outbox == [] and len(callbacks) == 1
+    callbacks[0]()
+    assert len(mail.outbox) == 1

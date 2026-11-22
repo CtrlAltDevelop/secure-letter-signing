@@ -189,7 +189,8 @@ class GanttPrintPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final footer = toPersianDigits(
-      '${formatJalaliDate(DateTime.now())}  ·  ${index + 1}/$count',
+      '${formatJalaliDate(DateTime.now())}  ·  ${index + 1}/$count'
+      '${data.rows.any((r) => r.critical) ? '  ·  ${l.gnCritical}' : ''}',
     );
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -357,7 +358,7 @@ class _PrintPainter extends CustomPainter {
         r.title,
         Offset(tableRight - 270, y + 5),
         width: 226 - indent,
-        bold: r.isPhase,
+        bold: r.isPhase || r.critical,
       );
       final dates = r.start == null || r.end == null
           ? ''
@@ -386,6 +387,15 @@ class _PrintPainter extends CustomPainter {
           );
         } else {
           canvas.drawRect(bar, Paint()..color = const Color(0x55000000));
+          if (r.critical) {
+            canvas.drawRect(
+              bar,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 2
+                ..color = _ink,
+            );
+          }
           canvas.drawRect(
             Rect.fromLTWH(
               bar.left,

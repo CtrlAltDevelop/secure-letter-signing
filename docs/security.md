@@ -48,6 +48,20 @@ The server app no longer uses client-side end-to-end encryption. See `docs/signi
   published at `GET /api/letters/seal-key`. The certificate endpoint re-verifies each seal and that the signed
   `contentHash` still matches the decrypted body. Rows in `letters_signature` are immutable (database trigger) and every
   signature is recorded in the HMAC-chained audit log (`letter_signed` with its method).
+- **Attachments:** the sealed payload carries `attachments: [{id, size, sha256}]` (plaintext SHA-256, sorted by id),
+  computed when the signature is made; signatures made before this change do not have the field.
+- **Abuse limits:** each user may upload `MAX_USER_UPLOAD_BYTES_PER_DAY` (default 500 MB, rolling 24h, workspace files
+  and letter attachments; backgrounds are capped at 2 MB each) then gets 429. The TLS proxy must set
+  `client_max_body_size 30m;` (nginx; attachments are capped at 25 MB) so oversized bodies are refused before Django.
+- **WebSocket token:** the live socket takes the access token in the query string. daphne runs with `-v 0` (no access log;
+  its default would log requests), and the proxy must not log the query string of `/ws` (nginx: `log_format` with
+  `$uri` instead of `$request`, or `access_log off;` in the `/ws` location).
+- **Audit head:** `manage.py verify_audit` prints `head: #id <hash>`; store it outside the database (cron to another
+  host). `verify_audit --expect-head <hash>` then fails if that hash is no longer in an intact chain (deleted tail).
+- **Database role:** compose creates `letters_app` (no superuser/createdb/createrole, owns nothing) from
+  `scripts/db/10-app-role.sh`; the server process uses it, while `migrate` runs as the owner `letters` in the start
+  command. A compromised app therefore cannot alter tables or drop the immutability triggers. Needs `APP_DB_PASSWORD`
+  in `brands/<brand>/.env`; for an existing database run the script's SQL once by hand.
 - **Limitations:** the server cannot verify that a biometric check really happened (no device-bound key); it trusts the
   `biometric` flag of the session. The flag cannot come from login (ignored); enabling it needs the signing PIN (same
   rate limit as signing), so a stolen token or phished password alone cannot make a session an approver. Anyone who controls the server and both secrets can forge seals; the audit chain is

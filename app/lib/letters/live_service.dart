@@ -1,7 +1,8 @@
+
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:letter_signing/api/secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:letter_signing/api/api_client.dart';
@@ -60,25 +61,27 @@ class MemoryCursorStore implements CursorStore {
   Future<void> writeWorkspace(int id) async => _workspaceId = id;
 }
 
+/// Cursors are not secret, so they live in shared_preferences: one less Keychain item (each one is a separate
+/// password prompt on unsigned macOS debug builds).
 class SecureCursorStore implements CursorStore {
   const SecureCursorStore(this.userId);
   final int userId;
-  static const _storage = appSecureStorage;
   String get _key => 'live_cursor_$userId';
   String get _workspaceKey => 'live_cursor_w_$userId';
 
   Future<int> _get(String key) async =>
-      int.tryParse(await _storage.read(key: key) ?? '') ?? 0;
+      (await SharedPreferences.getInstance()).getInt(key) ?? 0;
+  Future<void> _set(String key, int id) async =>
+      (await SharedPreferences.getInstance()).setInt(key, id);
 
   @override
   Future<int> read() => _get(_key);
   @override
-  Future<void> write(int id) => _storage.write(key: _key, value: '$id');
+  Future<void> write(int id) => _set(_key, id);
   @override
   Future<int> readWorkspace() => _get(_workspaceKey);
   @override
-  Future<void> writeWorkspace(int id) =>
-      _storage.write(key: _workspaceKey, value: '$id');
+  Future<void> writeWorkspace(int id) => _set(_workspaceKey, id);
 }
 
 /// Live letter events and notifications over `ws(s)://<apiUrl>/ws/?token=...`.

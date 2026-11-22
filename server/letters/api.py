@@ -4,7 +4,6 @@ from uuid import UUID
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Max
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -18,8 +17,10 @@ from accounts.auth import BearerAuth, require_manager, user_of
 from accounts.models import User, audit
 from core import cryptoutil, filestore
 
+from workspace.files import check_upload_quota
 from workspace.models import Subject
 
+from .numbering import next_letter_no
 from . import access, briefs, inbox, events, paraphs, rules, secretariat, signing, task_links
 from .models import Attachment, Letter, LetterEvent, Participant
 from .schemas import (AdminLetterOut, AttachmentOut, LetterBrief, LetterIn, LetterOut, ParticipantOut, SignatureOut,
@@ -100,7 +101,7 @@ def create_letter(request, data: LetterIn):
     user = user_of(request)
     _require(user, rules.CREATE)
     subject = Subject.objects.create(module="letters", kind="letter")
-    letter = Letter(creator=user, subject=subject, no=(Letter.objects.aggregate(m=Max("no"))["m"] or 0) + 1, body={},
+    letter = Letter(creator=user, subject=subject, no=next_letter_no(), body={},
                     title=data.title, visibility=data.visibility, publish_mode=data.publish_mode, order=data.order)
     letter.save()
     _apply(letter, user, data)
@@ -354,6 +355,7 @@ def add_attachment(request, letter_id: UUID, content_type: Form[str], label: For
         raise HttpError(422, "Only PDF and images are allowed")
     if file.size > settings.MAX_ATTACHMENT_BYTES:
         raise HttpError(413, "Attachment is larger than 25 MB")
+    check_upload_quota(user, file.size)
     att = Attachment(letter=letter, content_type=content_type, label=label[:100], size=file.size)
     filestore.save_encrypted(att.file, file.read())
     att.save()

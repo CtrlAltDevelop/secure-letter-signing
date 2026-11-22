@@ -116,6 +116,9 @@ else:
     CELERY_BROKER_URL = "memory://"
     CELERY_TASK_ALWAYS_EAGER = True  # run tasks inline in dev and tests
 
+# Mail is sent in a background thread after the request's transaction commits; tests and DEBUG send inline.
+MAIL_ASYNC = os.environ.get("MAIL_ASYNC", "0" if DEBUG else "1") == "1"
+
 # Number of reverse proxies in front of the server. 0 = trust REMOTE_ADDR only (X-Forwarded-For ignored).
 NINJA_NUM_PROXIES = int(os.environ.get("NUM_PROXIES", "0"))
 
@@ -125,6 +128,8 @@ if not DEBUG and os.environ.get("DJANGO_HTTPS", "1") == "1":
         SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("DJANGO_HSTS_SUBDOMAINS", "1") == "1"
+    SECURE_HSTS_PRELOAD = os.environ.get("DJANGO_HSTS_PRELOAD", "0") == "1"  # irreversible once listed: opt-in
     SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
     CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]
 
@@ -149,6 +154,7 @@ USE_TZ = True
 
 MEDIA_ROOT = Path(os.environ.get("ATTACHMENTS_DIR", BASE_DIR / "attachments"))
 MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+MAX_USER_UPLOAD_BYTES_PER_DAY = int(os.environ.get("MAX_USER_UPLOAD_BYTES_PER_DAY", str(500 * 1024 * 1024)))  # per user, rolling 24h
 CUSTOMER_LIMIT = int(os.environ.get("CUSTOMER_LIMIT", "10000"))  # customer files (all statuses) per deployment
 SALES_SHARED_VISIBILITY = os.environ.get("SALES_SHARED_VISIBILITY", "1") not in ("0", "false", "False")  # sales.manage holders see every lead
 SMS_BACKEND = os.environ.get("SMS_BACKEND", "core.sms.ConsoleSmsBackend")  # dotted path, see core/sms.py

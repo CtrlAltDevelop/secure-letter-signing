@@ -281,6 +281,7 @@ class _GanttTabState extends State<GanttTab> {
         children: [
           if (!chart.canEdit) _banner(context, l.gnReadOnly),
           _toolbar(context, chart),
+          if (chart.items.any((i) => i.critical)) _criticalLegend(context),
           if (_c.busy) const LinearProgressIndicator(minHeight: 2),
           Expanded(
             child: _c.rows.isEmpty
@@ -319,6 +320,24 @@ class _GanttTabState extends State<GanttTab> {
                 fontSize: 13,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _criticalLegend(BuildContext context) {
+    final color = Theme.of(context).colorScheme.error;
+    return Padding(
+      key: const ValueKey('gantt-critical-legend'),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Container(width: 14, height: 8, color: color),
+          const SizedBox(width: 6),
+          Text(
+            AppLocalizations.of(context).gnCritical,
+            style: TextStyle(color: color, fontSize: 12),
           ),
         ],
       ),

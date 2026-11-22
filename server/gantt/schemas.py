@@ -81,6 +81,8 @@ class ItemOut(Schema):
     start: date | None  # effective: plan date, else the task's start / due date
     end: date | None
     owners: list[UserRef]
+    critical: bool = False  # on the longest finish-to-start chain
+    slack: int | None = None  # days it may slip without moving the end; None = no links
 
 
 class LinkOut(Schema):
@@ -123,6 +125,7 @@ class PrintRow(Schema):
     start: date | None
     end: date | None
     owners: list[str]  # names
+    critical: bool = False
 
 
 class PrintLink(Schema):

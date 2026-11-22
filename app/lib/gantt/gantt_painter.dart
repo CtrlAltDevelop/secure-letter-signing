@@ -225,7 +225,7 @@ class GanttTimelinePainter extends CustomPainter {
       }
       return;
     }
-    final base = scheme.primary;
+    final base = row.critical ? scheme.error : scheme.primary;
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(4));
     canvas.drawRRect(rrect, Paint()..color = base.withValues(alpha: 0.25));
     final done = (row.progress.clamp(0, 100)) / 100;

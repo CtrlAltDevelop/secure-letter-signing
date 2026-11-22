@@ -4,7 +4,11 @@ import re
 from pathlib import PurePosixPath, PureWindowsPath
 
 from django.conf import settings
+from datetime import timedelta
+
 from django.db import transaction
+from django.db.models import Sum
+from django.utils import timezone
 from django.http import HttpResponse
 from django.utils.http import content_disposition_header
 from ninja.errors import HttpError
@@ -28,6 +32,17 @@ def safe_name(raw: str) -> str:
     """Last path component without control characters, at most 200 chars; never empty."""
     base = PurePosixPath(PureWindowsPath(raw).as_posix()).name
     return _CONTROL.sub("", base).strip()[:MAX_NAME] or "file"
+
+
+def check_upload_quota(user: User, size: int) -> None:
+    """429 when `user` would exceed MAX_USER_UPLOAD_BYTES_PER_DAY across workspace files and letter attachments (rolling 24h)."""
+    from letters.models import Attachment  # late: letters imports workspace
+
+    since = timezone.now() - timedelta(hours=24)
+    used = (File.objects.filter(uploaded_by=user, created_at__gte=since).aggregate(t=Sum("size"))["t"] or 0) + (
+        Attachment.objects.filter(letter__creator=user, created_at__gte=since).aggregate(t=Sum("size"))["t"] or 0)
+    if used + size > settings.MAX_USER_UPLOAD_BYTES_PER_DAY:
+        raise HttpError(429, "Daily upload limit reached; try again later")
 
 
 def file_out(f: File) -> FileOut:
@@ -54,6 +69,7 @@ def upload(user: User, acc: Access, upload_file: UploadedFile, content_type: str
         raise HttpError(413, "File is larger than 25 MB")
     if upload_file.size == 0:
         raise HttpError(422, "File is empty")
+    check_upload_quota(user, upload_file.size)
     data = upload_file.read()
     row = File(subject=acc.subject, uploaded_by=user, name=safe_name(name or upload_file.name or ""),
                content_type=content_type, size=len(data), sha256_plain=hashlib.sha256(data).hexdigest())
