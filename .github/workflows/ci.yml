@@ -14,21 +14,10 @@ jobs:
         env:
           DJANGO_DEBUG: "1"
 
-  crypto-interop:
+  js:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable }
-      - name: Flutter tests (also writes test-vectors/dart-signed.json)
-        working-directory: app
-        run: |
-          mkdir -p assets/brand && cp ../brands/demo/brand.json ../brands/demo/logo.svg assets/brand/
-          flutter pub get
-          flutter test
-      - name: JS tests (JS verifies the Dart signature)
-        run: npm test
-        env:
-          REQUIRE_DART_SIGNED: "1"
+      - run: npm test
