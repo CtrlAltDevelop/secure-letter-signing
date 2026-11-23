@@ -131,7 +131,8 @@ cp brands/.env.example brands/&lt;brand&gt;/.env
 var h=document.documentElement,b=document.getElementById('lang'),k='sls-lang';
 function set(l){h.lang=l;h.dir=l==='fa'?'rtl':'ltr';b.textContent=l==='fa'?'EN':'فا';try{localStorage.setItem(k,l)}catch(e){}}
 var s;try{s=localStorage.getItem(k)}catch(e){}
-set(s||(navigator.language||'').slice(0,2)==='en'&&'en'||'fa');
+var q=new URLSearchParams(location.search).get('lang');
+set(q==='en'||q==='fa'?q:s||(navigator.language||'').slice(0,2)==='en'&&'en'||'fa');
 b.onclick=function(){set(h.lang==='fa'?'en':'fa')};
 })();
 </script>
