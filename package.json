@@ -1,5 +1,5 @@
 {
   "name": "secure-letter-signing",
   "private": true,
-  "scripts": { "build": "node build.mjs", "test": "node --test test/" }
+  "scripts": { "build": "node build.mjs", "test": "node --test" }
 }
