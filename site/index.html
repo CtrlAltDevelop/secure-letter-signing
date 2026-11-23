@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Secure Letter Signing</title>
+<meta name="description" content="Self-hosted workspace for signed, confidential company letters, tasks, projects, meetings and chat. امضای امن نامه و فضای کاری سازمانی.">
+<meta property="og:title" content="Secure Letter Signing">
+<meta property="og:description" content="Signed, confidential letters and a self-hosted company workspace.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23081528'/%3E%3Cpath d='M8 21c4-9 6-9 8-2 1 3 3 2 8-6' stroke='%23FBD57F' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+@font-face{font-family:Vazirmatn;src:url(fonts/Vazirmatn-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:Vazirmatn;src:url(fonts/Vazirmatn-Bold.woff2) format("woff2");font-weight:700;font-display:swap}
+:root{--bg:#f6f8fc;--fg:#081528;--card:#fff;--mut:#32568A;--line:#dbe3f1;--act:#165EF6;--gold:#BFA46F;--ok:#1f9d84;--hero:#081528;--hero2:#0F203A}
+@media(prefers-color-scheme:dark){:root{--bg:#081528;--fg:#e8eefb;--card:#0F203A;--mut:#A4B9E4;--line:#1c3358;--act:#5b8cff;--gold:#FBD57F;--ok:#4CD8B9}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.8 Vazirmatn,system-ui,sans-serif}
+[dir=ltr] body,html[lang=en] body{font-family:Vazirmatn,system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--act)}
+.w{max-width:1040px;margin:0 auto;padding:0 16px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.logo{font-weight:700;color:#fff;text-decoration:none;display:flex;gap:8px;align-items:center}
+.logo i{width:26px;height:26px;border-radius:7px;background:var(--hero2);display:grid;place-items:center;color:#FBD57F;font-style:normal}
+nav div{display:flex;gap:8px}
+button,.btn{font:inherit;cursor:pointer;border-radius:10px;padding:8px 16px;border:1px solid #ffffff44;background:transparent;color:#fff;text-decoration:none;display:inline-block}
+.btn.p{background:var(--act);border-color:var(--act)}
+.btn.g{border-color:#ffffff66}
+header{background:linear-gradient(160deg,var(--hero),var(--hero2));color:#fff;padding-bottom:64px}
+h1{font-size:clamp(28px,6vw,48px);line-height:1.3;margin:48px 0 12px}
+h1 b{color:#FBD57F}
+header p{max-width:620px;color:#A4B9E4;font-size:18px;margin:0 0 28px}
+.cta{display:flex;gap:10px;flex-wrap:wrap}
+section{padding:56px 0 0}
+h2{font-size:26px;margin:0 0 20px}
+.g3{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.c h3{margin:0 0 6px;font-size:17px}
+.c p{margin:0;color:var(--mut);font-size:15px;line-height:1.7}
+.steps{counter-reset:s;display:grid;gap:12px}
+.steps .c{display:flex;gap:14px;align-items:flex-start}
+.steps .c:before{counter-increment:s;content:counter(s);flex:none;width:30px;height:30px;border-radius:50%;background:var(--act);color:#fff;display:grid;place-items:center;font-weight:700}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tags span{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:3px 14px;font-size:14px;color:var(--mut)}
+pre{direction:ltr;text-align:left;background:var(--hero);color:#cfe0ff;border-radius:14px;padding:16px;overflow:auto;font-size:14px;line-height:1.6}
+footer{margin-top:64px;border-top:1px solid var(--line);padding:24px 0 40px;color:var(--mut);font-size:14px}
+[data-l]{display:none}
+html[lang=fa] [data-l=fa],html[lang=en] [data-l=en]{display:revert}
+html[lang=fa] span[data-l=fa],html[lang=en] span[data-l=en]{display:inline}
+</style>
+</head>
+<body>
+<header>
+<div class="w">
+<nav>
+<a class="logo" href="#"><i>✍</i>Secure Letter Signing</a>
+<div>
+<button id="lang" type="button" aria-label="Language">EN</button>
+<a class="btn g" href="https://github.com/CtrlAltDevelop/secure-letter-signing">GitHub</a>
+</div>
+</nav>
+<h1 data-l="fa">نامه‌های <b>امضاشده</b> و محرمانه،<br>در فضای کاری خودِ شما</h1>
+<h1 data-l="en"><b>Signed</b>, confidential letters<br>in a workspace you host</h1>
+<p data-l="fa">نامه بنویسید، برای مدیر بفرستید، تأیید یا اصلاح بگیرید و پاسخ امضاشده‌ی غیرقابل‌دستکاری دریافت کنید. کنار آن: وظیفه، پروژه و گانت، جلسه، گفتگو، نظرسنجی، CRM، مالی و فروش.</p>
+<p data-l="en">Write a letter, send it to the manager, get an approval or a revision request, and receive a tamper-evident signed reply. Plus tasks, projects with Gantt, meetings, chat, polls, CRM, finance and sales.</p>
+<div class="cta">
+<a class="btn p" href="https://github.com/CtrlAltDevelop/secure-letter-signing#quick-start"><span data-l="fa">شروع سریع</span><span data-l="en">Quick start</span></a>
+<a class="btn g" href="https://github.com/CtrlAltDevelop/secure-letter-signing/blob/main/docs/security.md"><span data-l="fa">مدل امنیتی</span><span data-l="en">Security model</span></a>
+</div>
+</div>
+</header>
+
+<main class="w">
+<section>
+<h2 data-l="fa">چرا؟</h2><h2 data-l="en">Why</h2>
+<div class="g3">
+<div class="c"><h3 data-l="fa">امضای قابل‌راستی‌آزمایی</h3><h3 data-l="en">Verifiable signatures</h3>
+<p data-l="fa">تغییر یک حرف، امضا را نامعتبر می‌کند. هر امضا روی کل محتوا و سربرگ بسته می‌شود.</p>
+<p data-l="en">Change one character and the signature fails. Every seal covers the whole content and letterhead.</p></div>
+<div class="c"><h3 data-l="fa">رمزگذاری در سرور</h3><h3 data-l="en">Encrypted at rest</h3>
+<p data-l="fa">متن نامه‌ها رمزشده ذخیره می‌شود؛ زنجیره‌ی هش برای ممیزی؛ هیچ‌چیز حذف نمی‌شود.</p>
+<p data-l="en">Letter bodies are stored encrypted, the audit log is a hash chain, and nothing is ever deleted.</p></div>
+<div class="c"><h3 data-l="fa">میزبانی شخصی</h3><h3 data-l="en">Self-hosted</h3>
+<p data-l="fa">هر شرکت یک استقرار جدا با پایگاه‌داده، Redis و کلیدهای خودش؛ با Docker در چند دقیقه.</p>
+<p data-l="en">One company per deployment, with its own database, Redis and keys. Docker up in minutes.</p></div>
+<div class="c"><h3 data-l="fa">امضا با PIN یا بیومتریک</h3><h3 data-l="en">PIN or biometric signing</h3>
+<p data-l="fa">اپ Flutter برای اندروید، iOS، macOS و ویندوز؛ درخواست امضا از دستگاه دیگر.</p>
+<p data-l="en">Flutter app for Android, iOS, macOS and Windows, with sign requests approved from another device.</p></div>
+<div class="c"><h3 data-l="fa">نسخه‌ی کاملاً آفلاین</h3><h3 data-l="en">A fully offline edition</h3>
+<p data-l="fa">سه فایل HTML مستقل با ECDSA و AES-GCM، بدون هیچ درخواست شبکه.</p>
+<p data-l="en">Three self-contained HTML files using ECDSA and AES-GCM, with zero network requests.</p></div>
+<div class="c"><h3 data-l="fa">فارسی و راست‌به‌چپ</h3><h3 data-l="en">Persian, RTL-first</h3>
+<p data-l="fa">رابط فارسی، تقویم جلالی و فونت وزیرمتن.</p>
+<p data-l="en">Persian UI, Jalali calendar and the Vazirmatn font.</p></div>
+</div>
+</section>
+
+<section>
+<h2 data-l="fa">جریان کار</h2><h2 data-l="en">How it works</h2>
+<div class="steps">
+<div class="c"><div><h3 data-l="fa">کارمند می‌نویسد</h3><h3 data-l="en">Employee drafts</h3><p data-l="fa">موضوع و متن با سربرگ شرکت، پیش‌نمایش و ارسال.</p><p data-l="en">Subject and body on the company letterhead, preview, send.</p></div></div>
+<div class="c"><div><h3 data-l="fa">مدیر تصمیم می‌گیرد</h3><h3 data-l="en">Manager decides</h3><p data-l="fa">تأیید، نیاز به اصلاح (با توضیح) یا رد.</p><p data-l="en">Approve, request a revision (with a note) or reject.</p></div></div>
+<div class="c"><div><h3 data-l="fa">امضا و بازگشت</h3><h3 data-l="en">Signed reply</h3><p data-l="fa">پاسخ مهرشده برمی‌گردد؛ نسخه‌های اصلاحی زنجیره‌ی قابل‌بررسی می‌سازند.</p><p data-l="en">A sealed reply comes back; revisions form a verifiable chain.</p></div></div>
+</div>
+</section>
+
+<section>
+<h2 data-l="fa">ماژول‌ها</h2><h2 data-l="en">Modules</h2>
+<div class="tags"><span data-l="fa">نامه‌ها</span><span data-l="en">Letters</span><span data-l="fa">وظایف</span><span data-l="en">Tasks</span><span data-l="fa">پروژه و گانت</span><span data-l="en">Projects &amp; Gantt</span><span data-l="fa">جلسات (LiveKit)</span><span data-l="en">Meetings (LiveKit)</span><span data-l="fa">گفتگو</span><span data-l="en">Chat</span><span data-l="fa">نظرسنجی</span><span data-l="en">Polls</span><span data-l="fa">یادداشت</span><span data-l="en">Notes</span><span>CRM</span><span data-l="fa">مالی</span><span data-l="en">Finance</span><span data-l="fa">فروش</span><span data-l="en">Sales</span></div>
+</section>
+
+<section>
+<h2 data-l="fa">اجرا</h2><h2 data-l="en">Run it</h2>
+<pre>git clone https://github.com/CtrlAltDevelop/secure-letter-signing
+cd secure-letter-signing
+make dev        # backend on http://localhost:8090, no Docker
+
+# production, one brand per company
+cp brands/.env.example brands/&lt;brand&gt;/.env
+./build.sh &lt;brand&gt; up</pre>
+</section>
+</main>
+
+<footer><div class="w">
+<span data-l="fa">مجوز MIT · </span><span data-l="en">MIT licensed · </span>
+<a href="https://github.com/CtrlAltDevelop/secure-letter-signing">GitHub</a> ·
+<a href="https://github.com/CtrlAltDevelop/secure-letter-signing/blob/main/SECURITY.md"><span data-l="fa">گزارش آسیب‌پذیری</span><span data-l="en">Report a vulnerability</span></a>
+</div></footer>
+
+<script>
+(function(){
+var h=document.documentElement,b=document.getElementById('lang'),k='sls-lang';
+function set(l){h.lang=l;h.dir=l==='fa'?'rtl':'ltr';b.textContent=l==='fa'?'EN':'فا';try{localStorage.setItem(k,l)}catch(e){}}
+var s;try{s=localStorage.getItem(k)}catch(e){}
+set(s||(navigator.language||'').slice(0,2)==='en'&&'en'||'fa');
+b.onclick=function(){set(h.lang==='fa'?'en':'fa')};
+})();
+</script>
+</body>
+</html>

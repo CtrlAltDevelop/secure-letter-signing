@@ -1,5 +1,43 @@
-# امضای امن نامه (آفلاین)
+# Secure Letter Signing
 
+[![CI](https://github.com/CtrlAltDevelop/secure-letter-signing/actions/workflows/ci.yml/badge.svg)](https://github.com/CtrlAltDevelop/secure-letter-signing/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+Self-hosted company workspace built around **signed, confidential letters**: write a letter, send it to the manager,
+approve / request revision / reject, and get a tamper-evident signed reply. Around it: tasks, projects with Gantt,
+meetings, chat, polls, notes, CRM, finance and sales. Persian (RTL) UI. One company per deployment.
+
+- **Server** (`server/`): Django 6, django-ninja API, Unfold admin, Channels (live), PostgreSQL + Redis. Letters are
+  encrypted at rest; signatures are sealed server-side (Ed25519); audit log is a hash chain; no deletion anywhere.
+- **App** (`app/`): Flutter for Android, iOS, macOS and Windows. PIN or biometric signing.
+- **Offline app** (`src/`, `dist/`): three self-contained HTML files with end-to-end ECDSA/AES-GCM, no network.
+- **Landing page** (`site/`): static page, published with GitHub Pages.
+
+## Quick start
+
+```bash
+make dev                                  # backend on http://localhost:8090 (SQLite, no Docker)
+cd server && DJANGO_DEBUG=1 uv run pytest # server tests
+make macos                                # Flutter app against the dev server (copy brands/demo first, see Makefile)
+```
+
+Production (Docker, one brand per company):
+
+```bash
+cp brands/.env.example brands/<brand>/.env   # fill in secrets, never commit it
+./build.sh <brand> up
+```
+
+See [docs/RELEASE.md](docs/RELEASE.md) (deploy, backup, restore), [AGENTS.md](AGENTS.md) (architecture and gotchas),
+[docs/security.md](docs/security.md) and [docs/signing-v3.md](docs/signing-v3.md) (trust model).
+
+## Contributing, security, license
+
+[CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) (report privately) · [MIT](LICENSE)
+
+---
+
+## نسخه‌ی آفلاین (HTML)
 سه فایل HTML مستقل و آفلاین در `dist/`:
 - `keygen.html` — ساخت کلید (یک بار): خروجی `manager.private` و `manager.pub`
 - `manager.html` — پنل مدیر
@@ -33,4 +71,4 @@ npm test        # تست لایه رمزنگاری
 
 فونت: Vazirmatn (مجوز SIL OFL) داخل هر فایل جاسازی شده و نیازی به اینترنت نیست.
 
-TLS proxy (optional): `docker compose --profile proxy up` with certs in `deploy/certs/`, `DJANGO_HTTPS=1`, `NUM_PROXIES=1`; see docs/security.md.
+

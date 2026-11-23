@@ -14,6 +14,7 @@ revision / rejects, signs) and `keygen.html` (makes `.private` + `.pub`). UI is 
 - `src/employee.js`, `src/manager.js`, `src/keygen.js` — per-page logic. `src/layout.html` + `src/pages/*.html` + `src/style.css` — markup/CSS; markers `{{TITLE}} {{BODY}} /*STYLE*/ /*CRYPTO*/ /*SHARED*/ /*APP*/`.
 - `build.mjs` — inlines everything into `dist/{keygen,manager,employee}.html` (the deliverables, no external deps).
 - `test/crypto.test.mjs` — Node tests for the crypto layer.
+- `site/` — static bilingual landing page (no build step), published by `.github/workflows/pages.yml` on push to `main`.
 - `docs/security.md` — threat model, file formats, revision flow. Update it when formats change.
 
 ## Commands
