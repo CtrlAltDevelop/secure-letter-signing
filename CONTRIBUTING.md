@@ -16,4 +16,4 @@ cd app && flutter pub get && flutter test  # copy brands/demo/* to app/assets/br
 - Never add network calls to the offline HTML app (`src/`, `dist/`). Never commit secrets or `.env` files.
 - UI strings are Persian (RTL); keep them in the l10n files, not inline.
 
-By contributing you agree your work is released under the [MIT license](LICENSE).
+By contributing you agree your work is released under the [AGPL-3.0 license](LICENSE).

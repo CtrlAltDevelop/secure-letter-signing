@@ -1,7 +1,7 @@
 # Secure Letter Signing
 
 [![CI](https://github.com/CtrlAltDevelop/secure-letter-signing/actions/workflows/ci.yml/badge.svg)](https://github.com/CtrlAltDevelop/secure-letter-signing/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 Self-hosted company workspace built around **signed, confidential letters**: write a letter, send it to the manager,
 approve / request revision / reject, and get a tamper-evident signed reply. Around it: tasks, projects with Gantt,
@@ -33,7 +33,7 @@ See [docs/RELEASE.md](docs/RELEASE.md) (deploy, backup, restore), [AGENTS.md](AG
 
 ## Contributing, security, license
 
-[CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) (report privately) · [MIT](LICENSE)
+[CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) (report privately) · [AGPL-3.0](LICENSE)
 
 ---
 
