@@ -1,23 +1,36 @@
 name: ci
+
+# Runs only for pull requests into main.
 on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
 jobs:
   server:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --frozen
-        working-directory: server
-      - run: uv run pytest -q
-        working-directory: server
-        env:
-          DJANGO_DEBUG: "1"
+    name: Server
+    uses: CtrlAltDevelop/ci-workflows/.github/workflows/python-test.yml@v1.2.0
+    permissions:
+      contents: read
+    with:
+      working-directory: server
+      python-version: "3.13"
+      install: uv sync --frozen
+      test-command: uv run --no-sync pytest -q
+      env: |
+        DJANGO_DEBUG=1
 
+  # No shared Node workflow exists: this is the only caller, so it stays inline.
   js:
+    name: JS
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
