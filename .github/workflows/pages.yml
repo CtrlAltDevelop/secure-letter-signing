@@ -1,17 +1,19 @@
 name: pages
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches: [main]
     paths: [site/**]
-  workflow_dispatch:
 permissions: { contents: read, pages: write, id-token: write }
 concurrency: { group: pages, cancel-in-progress: true }
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     environment: { name: github-pages, url: "${{ steps.d.outputs.page_url }}" }
     steps:
       - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.pull_request.merge_commit_sha }}" }
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }

@@ -33,6 +33,6 @@ First public release.
 - `SECURITY.md`, `CONTRIBUTING.md`, MIT license and release notes in `docs/RELEASE.md`.
 
 ### Changed
-- CI runs tests only on pull requests into `main`; Pages publishes when `site/` changes on `main`.
+- CI tests and the Pages publish run only for pull requests into `main` (publish after a merged PR that changes `site/`).
 
 [1.0.0]: https://github.com/CtrlAltDevelop/secure-letter-signing/releases/tag/v1.0.0
