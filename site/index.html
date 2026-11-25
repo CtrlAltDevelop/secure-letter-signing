@@ -7,108 +7,165 @@
 <meta name="description" content="Self-hosted workspace for signed, confidential company letters, tasks, projects, meetings and chat. امضای امن نامه و فضای کاری سازمانی.">
 <meta property="og:title" content="Secure Letter Signing">
 <meta property="og:description" content="Signed, confidential letters and a self-hosted company workspace.">
+<meta property="og:image" content="img/employee-desktop.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23081528'/%3E%3Cpath d='M8 21c4-9 6-9 8-2 1 3 3 2 8-6' stroke='%23FBD57F' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
 @font-face{font-family:Vazirmatn;src:url(fonts/Vazirmatn-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:Vazirmatn;src:url(fonts/Vazirmatn-Bold.woff2) format("woff2");font-weight:700;font-display:swap}
-:root{--bg:#f6f8fc;--fg:#081528;--card:#fff;--mut:#32568A;--line:#dbe3f1;--act:#165EF6;--gold:#BFA46F;--ok:#1f9d84;--hero:#081528;--hero2:#0F203A}
-@media(prefers-color-scheme:dark){:root{--bg:#081528;--fg:#e8eefb;--card:#0F203A;--mut:#A4B9E4;--line:#1c3358;--act:#5b8cff;--gold:#FBD57F;--ok:#4CD8B9}}
+:root{--bg:#081528;--bg2:#0F203A;--fg:#e8eefb;--mut:#A4B9E4;--mid:#32568A;--line:#ffffff1f;--act:#165EF6;--gold:#FBD57F;--gold2:#BFA46F;--ok:#4CD8B9;--glass:#ffffff0d}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.8 Vazirmatn,system-ui,sans-serif}
-[dir=ltr] body,html[lang=en] body{font-family:Vazirmatn,system-ui,-apple-system,"Segoe UI",sans-serif}
-a{color:var(--act)}
-.w{max-width:1040px;margin:0 auto;padding:0 16px}
-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
-.logo{font-weight:700;color:#fff;text-decoration:none;display:flex;gap:8px;align-items:center}
-.logo i{width:26px;height:26px;border-radius:7px;background:var(--hero2);display:grid;place-items:center;color:#FBD57F;font-style:normal}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.8 Vazirmatn,system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}
+a{color:var(--gold)}
+.w{max-width:1120px;margin:0 auto;padding:0 16px}
+/* hero */
+header{position:relative;min-height:100svh;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(120% 80% at 70% 20%,#12305e 0%,var(--bg) 60%)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+header .w{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;width:100%;pointer-events:none}
+header .w>*{pointer-events:auto}
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+.logo{font-weight:700;color:#fff;text-decoration:none;display:flex;gap:10px;align-items:center}
+.logo i{width:30px;height:30px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);display:grid;place-items:center;color:var(--gold);font-style:normal}
 nav div{display:flex;gap:8px}
-button,.btn{font:inherit;cursor:pointer;border-radius:10px;padding:8px 16px;border:1px solid #ffffff44;background:transparent;color:#fff;text-decoration:none;display:inline-block}
-.btn.p{background:var(--act);border-color:var(--act)}
-.btn.g{border-color:#ffffff66}
-header{background:linear-gradient(160deg,var(--hero),var(--hero2));color:#fff;padding-bottom:64px}
-h1{font-size:clamp(28px,6vw,48px);line-height:1.3;margin:48px 0 12px}
-h1 b{color:#FBD57F}
-header p{max-width:620px;color:#A4B9E4;font-size:18px;margin:0 0 28px}
+button,.btn{font:inherit;cursor:pointer;border-radius:12px;padding:9px 18px;border:1px solid var(--line);background:var(--glass);color:#fff;text-decoration:none;display:inline-block;backdrop-filter:blur(10px);transition:transform .2s,background .2s}
+.btn:hover,button:hover{transform:translateY(-2px);background:#ffffff1a}
+.btn.p{background:var(--act);border-color:var(--act);box-shadow:0 8px 30px #165EF666}
+.hero{margin:auto 0;padding:32px 0 96px;max-width:560px}
+.hero h1{font-size:clamp(32px,6.4vw,60px);line-height:1.25;margin:0 0 16px}
+.hero h1 b{background:linear-gradient(90deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--mut);font-size:18px;margin:0 0 28px}
 .cta{display:flex;gap:10px;flex-wrap:wrap}
-section{padding:56px 0 0}
-h2{font-size:26px;margin:0 0 20px}
-.g3{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.scroll{position:absolute;bottom:20px;left:50%;translate:-50% 0;z-index:1;color:var(--mut);font-size:13px;animation:bob 2s ease-in-out infinite}
+@keyframes bob{50%{translate:-50% 6px}}
+@media(max-width:720px){.hero{padding-bottom:320px}header{background:radial-gradient(120% 70% at 50% 85%,#12305e 0%,var(--bg) 65%)}}
+/* sections */
+section{padding:88px 0 0}
+h2{font-size:clamp(24px,4vw,34px);margin:0 0 8px}
+.lead{color:var(--mut);margin:0 0 32px;max-width:640px}
+.rev{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
+.rev.in{opacity:1;transform:none}
+/* showcase */
+.stage{display:grid;gap:28px;align-items:center;grid-template-columns:1fr;perspective:1400px}
+@media(min-width:900px){.stage{grid-template-columns:1.9fr 1fr}}
+.tilt{transform-style:preserve-3d;transition:transform .25s ease-out;will-change:transform}
+.dev{border-radius:18px;padding:10px;background:linear-gradient(145deg,#1b3560,#0b1a31);border:1px solid var(--line);box-shadow:0 40px 80px #0009,0 0 0 1px #000 inset}
+.dev img{display:block;width:100%;border-radius:10px}
+.laptop .dev img{aspect-ratio:1440/1000;object-fit:cover;object-position:top}
+.phones{display:flex;gap:18px;justify-content:center}
+.phone{width:min(44%,210px)}
+.phone .dev{border-radius:30px;padding:7px}
+.phone .dev img{border-radius:24px;aspect-ratio:390/800;object-fit:cover;object-position:top}
+.phone:nth-child(2){margin-top:40px}
+.cap{color:var(--mut);font-size:14px;text-align:center;margin-top:12px}
+.shots2{display:grid;gap:28px;grid-template-columns:1fr;margin-top:36px;perspective:1400px}
+@media(min-width:900px){.shots2{grid-template-columns:1fr 1fr}}
+.shots2 .dev img{aspect-ratio:1440/900;object-fit:cover;object-position:top}
+/* cards */
+.g3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.c{position:relative;background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:22px;backdrop-filter:blur(8px);transition:transform .25s,border-color .25s}
+.c:hover{transform:translateY(-4px);border-color:#FBD57F66}
 .c h3{margin:0 0 6px;font-size:17px}
-.c p{margin:0;color:var(--mut);font-size:15px;line-height:1.7}
-.steps{counter-reset:s;display:grid;gap:12px}
-.steps .c{display:flex;gap:14px;align-items:flex-start}
-.steps .c:before{counter-increment:s;content:counter(s);flex:none;width:30px;height:30px;border-radius:50%;background:var(--act);color:#fff;display:grid;place-items:center;font-weight:700}
-.tags{display:flex;flex-wrap:wrap;gap:8px}
-.tags span{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:3px 14px;font-size:14px;color:var(--mut)}
-pre{direction:ltr;text-align:left;background:var(--hero);color:#cfe0ff;border-radius:14px;padding:16px;overflow:auto;font-size:14px;line-height:1.6}
-footer{margin-top:64px;border-top:1px solid var(--line);padding:24px 0 40px;color:var(--mut);font-size:14px}
+.c p{margin:0;color:var(--mut);font-size:15px;line-height:1.75}
+.c .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#165EF633,#FBD57F22);margin-bottom:12px;font-size:20px}
+.steps{counter-reset:s;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.steps .c:before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--act);color:#fff;font-weight:700;margin-bottom:12px;box-shadow:0 6px 20px #165EF677}
+.tags{display:flex;flex-wrap:wrap;gap:10px}
+.tags span{border:1px solid var(--line);background:var(--glass);border-radius:99px;padding:5px 18px;font-size:15px;color:var(--mut)}
+pre{direction:ltr;text-align:left;background:#050e1c;color:#cfe0ff;border:1px solid var(--line);border-radius:18px;padding:20px;overflow:auto;font-size:14px;line-height:1.7}
+footer{margin-top:88px;border-top:1px solid var(--line);padding:28px 0 44px;color:var(--mut);font-size:14px}
 [data-l]{display:none}
 html[lang=fa] [data-l=fa],html[lang=en] [data-l=en]{display:revert}
 html[lang=fa] span[data-l=fa],html[lang=en] span[data-l=en]{display:inline}
+@media(prefers-reduced-motion:reduce){.rev{opacity:1;transform:none;transition:none}.scroll{animation:none}.tilt{transition:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
 <header>
+<canvas id="gl" aria-hidden="true"></canvas>
 <div class="w">
 <nav>
 <a class="logo" href="#"><i>✍</i>Secure Letter Signing</a>
 <div>
 <button id="lang" type="button" aria-label="Language">EN</button>
-<a class="btn g" href="https://github.com/CtrlAltDevelop/secure-letter-signing">GitHub</a>
+<a class="btn" href="https://github.com/CtrlAltDevelop/secure-letter-signing">GitHub</a>
 </div>
 </nav>
+<div class="hero">
 <h1 data-l="fa">نامه‌های <b>امضاشده</b> و محرمانه،<br>در فضای کاری خودِ شما</h1>
 <h1 data-l="en"><b>Signed</b>, confidential letters<br>in a workspace you host</h1>
 <p data-l="fa">نامه بنویسید، برای مدیر بفرستید، تأیید یا اصلاح بگیرید و پاسخ امضاشده‌ی غیرقابل‌دستکاری دریافت کنید. کنار آن: وظیفه، پروژه و گانت، جلسه، گفتگو، نظرسنجی، CRM، مالی و فروش.</p>
 <p data-l="en">Write a letter, send it to the manager, get an approval or a revision request, and receive a tamper-evident signed reply. Plus tasks, projects with Gantt, meetings, chat, polls, CRM, finance and sales.</p>
 <div class="cta">
 <a class="btn p" href="https://github.com/CtrlAltDevelop/secure-letter-signing#quick-start"><span data-l="fa">شروع سریع</span><span data-l="en">Quick start</span></a>
-<a class="btn g" href="https://github.com/CtrlAltDevelop/secure-letter-signing/blob/main/docs/security.md"><span data-l="fa">مدل امنیتی</span><span data-l="en">Security model</span></a>
+<a class="btn" href="https://github.com/CtrlAltDevelop/secure-letter-signing/blob/main/docs/security.md"><span data-l="fa">مدل امنیتی</span><span data-l="en">Security model</span></a>
 </div>
 </div>
+</div>
+<div class="scroll">↓</div>
 </header>
 
 <main class="w">
-<section>
+<section class="rev">
+<h2 data-l="fa">نگاهی به برنامه</h2><h2 data-l="en">See it in action</h2>
+<p class="lead" data-l="fa">نسخه‌ی آفلاین: نوشتن نامه روی سربرگ شرکت، پیش‌نمایش زنده و آماده‌ی رمزگذاری؛ هم روی دسکتاپ و هم موبایل.</p>
+<p class="lead" data-l="en">The offline edition: write on your company letterhead with a live preview, ready to encrypt, on desktop and phone alike.</p>
+<div class="stage" id="stage">
+<div class="laptop tilt"><div class="dev"><img src="img/employee-desktop.png" alt="Employee letter editor with live preview" loading="lazy"></div>
+<div class="cap" data-l="fa">ویرایشگر نامه و پیش‌نمایش سربرگ‌دار</div><div class="cap" data-l="en">Letter editor and letterhead preview</div></div>
+<div class="phones">
+<div class="phone tilt"><div class="dev"><img src="img/employee-phone.png" alt="Letter preview on a phone" loading="lazy"></div></div>
+<div class="phone tilt"><div class="dev"><img src="img/keygen-phone.png" alt="Key generator on a phone" loading="lazy"></div></div>
+</div>
+</div>
+<div class="shots2">
+<div class="tilt"><div class="dev"><img src="img/manager-desktop.png" alt="Manager page: open, decide and sign" loading="lazy"></div>
+<div class="cap" data-l="fa">پنل مدیر: تأیید، اصلاح یا رد، و امضا</div><div class="cap" data-l="en">Manager panel: approve, revise or reject, and sign</div></div>
+<div class="c" style="align-self:center"><div class="ic">🔏</div>
+<h3 data-l="fa">همه‌چیز روی دستگاه شما</h3><h3 data-l="en">Everything stays on your device</h3>
+<p data-l="fa">این صفحه‌ها سه فایل HTML مستقل‌اند: بدون سرور، بدون CDN، بدون هیچ درخواست شبکه. کلید خصوصی هرگز دستگاه را ترک نمی‌کند.</p>
+<p data-l="en">These pages are three self-contained HTML files: no server, no CDN, no network request. The private key never leaves the device.</p></div>
+</div>
+</section>
+
+<section class="rev">
 <h2 data-l="fa">چرا؟</h2><h2 data-l="en">Why</h2>
-<div class="g3">
-<div class="c"><h3 data-l="fa">امضای قابل‌راستی‌آزمایی</h3><h3 data-l="en">Verifiable signatures</h3>
+<div class="g3" style="margin-top:24px">
+<div class="c"><div class="ic">✅</div><h3 data-l="fa">امضای قابل‌راستی‌آزمایی</h3><h3 data-l="en">Verifiable signatures</h3>
 <p data-l="fa">تغییر یک حرف، امضا را نامعتبر می‌کند. هر امضا روی کل محتوا و سربرگ بسته می‌شود.</p>
 <p data-l="en">Change one character and the signature fails. Every seal covers the whole content and letterhead.</p></div>
-<div class="c"><h3 data-l="fa">رمزگذاری در سرور</h3><h3 data-l="en">Encrypted at rest</h3>
+<div class="c"><div class="ic">🗄️</div><h3 data-l="fa">رمزگذاری در سرور</h3><h3 data-l="en">Encrypted at rest</h3>
 <p data-l="fa">متن نامه‌ها رمزشده ذخیره می‌شود؛ زنجیره‌ی هش برای ممیزی؛ هیچ‌چیز حذف نمی‌شود.</p>
 <p data-l="en">Letter bodies are stored encrypted, the audit log is a hash chain, and nothing is ever deleted.</p></div>
-<div class="c"><h3 data-l="fa">میزبانی شخصی</h3><h3 data-l="en">Self-hosted</h3>
+<div class="c"><div class="ic">🏠</div><h3 data-l="fa">میزبانی شخصی</h3><h3 data-l="en">Self-hosted</h3>
 <p data-l="fa">هر شرکت یک استقرار جدا با پایگاه‌داده، Redis و کلیدهای خودش؛ با Docker در چند دقیقه.</p>
 <p data-l="en">One company per deployment, with its own database, Redis and keys. Docker up in minutes.</p></div>
-<div class="c"><h3 data-l="fa">امضا با PIN یا بیومتریک</h3><h3 data-l="en">PIN or biometric signing</h3>
+<div class="c"><div class="ic">👆</div><h3 data-l="fa">امضا با PIN یا بیومتریک</h3><h3 data-l="en">PIN or biometric signing</h3>
 <p data-l="fa">اپ Flutter برای اندروید، iOS، macOS و ویندوز؛ درخواست امضا از دستگاه دیگر.</p>
 <p data-l="en">Flutter app for Android, iOS, macOS and Windows, with sign requests approved from another device.</p></div>
-<div class="c"><h3 data-l="fa">نسخه‌ی کاملاً آفلاین</h3><h3 data-l="en">A fully offline edition</h3>
+<div class="c"><div class="ic">📴</div><h3 data-l="fa">نسخه‌ی کاملاً آفلاین</h3><h3 data-l="en">A fully offline edition</h3>
 <p data-l="fa">سه فایل HTML مستقل با ECDSA و AES-GCM، بدون هیچ درخواست شبکه.</p>
 <p data-l="en">Three self-contained HTML files using ECDSA and AES-GCM, with zero network requests.</p></div>
-<div class="c"><h3 data-l="fa">فارسی و راست‌به‌چپ</h3><h3 data-l="en">Persian, RTL-first</h3>
+<div class="c"><div class="ic">🌐</div><h3 data-l="fa">فارسی و راست‌به‌چپ</h3><h3 data-l="en">Persian, RTL-first</h3>
 <p data-l="fa">رابط فارسی، تقویم جلالی و فونت وزیرمتن.</p>
 <p data-l="en">Persian UI, Jalali calendar and the Vazirmatn font.</p></div>
 </div>
 </section>
 
-<section>
+<section class="rev">
 <h2 data-l="fa">جریان کار</h2><h2 data-l="en">How it works</h2>
-<div class="steps">
-<div class="c"><div><h3 data-l="fa">کارمند می‌نویسد</h3><h3 data-l="en">Employee drafts</h3><p data-l="fa">موضوع و متن با سربرگ شرکت، پیش‌نمایش و ارسال.</p><p data-l="en">Subject and body on the company letterhead, preview, send.</p></div></div>
-<div class="c"><div><h3 data-l="fa">مدیر تصمیم می‌گیرد</h3><h3 data-l="en">Manager decides</h3><p data-l="fa">تأیید، نیاز به اصلاح (با توضیح) یا رد.</p><p data-l="en">Approve, request a revision (with a note) or reject.</p></div></div>
-<div class="c"><div><h3 data-l="fa">امضا و بازگشت</h3><h3 data-l="en">Signed reply</h3><p data-l="fa">پاسخ مهرشده برمی‌گردد؛ نسخه‌های اصلاحی زنجیره‌ی قابل‌بررسی می‌سازند.</p><p data-l="en">A sealed reply comes back; revisions form a verifiable chain.</p></div></div>
+<div class="steps" style="margin-top:24px">
+<div class="c"><h3 data-l="fa">کارمند می‌نویسد</h3><h3 data-l="en">Employee drafts</h3><p data-l="fa">موضوع و متن با سربرگ شرکت، پیش‌نمایش و ارسال.</p><p data-l="en">Subject and body on the company letterhead, preview, send.</p></div>
+<div class="c"><h3 data-l="fa">مدیر تصمیم می‌گیرد</h3><h3 data-l="en">Manager decides</h3><p data-l="fa">تأیید، نیاز به اصلاح (با توضیح) یا رد.</p><p data-l="en">Approve, request a revision (with a note) or reject.</p></div>
+<div class="c"><h3 data-l="fa">امضا و بازگشت</h3><h3 data-l="en">Signed reply</h3><p data-l="fa">پاسخ مهرشده برمی‌گردد؛ نسخه‌های اصلاحی زنجیره‌ی قابل‌بررسی می‌سازند.</p><p data-l="en">A sealed reply comes back; revisions form a verifiable chain.</p></div>
 </div>
 </section>
 
-<section>
+<section class="rev">
 <h2 data-l="fa">ماژول‌ها</h2><h2 data-l="en">Modules</h2>
-<div class="tags"><span data-l="fa">نامه‌ها</span><span data-l="en">Letters</span><span data-l="fa">وظایف</span><span data-l="en">Tasks</span><span data-l="fa">پروژه و گانت</span><span data-l="en">Projects &amp; Gantt</span><span data-l="fa">جلسات (LiveKit)</span><span data-l="en">Meetings (LiveKit)</span><span data-l="fa">گفتگو</span><span data-l="en">Chat</span><span data-l="fa">نظرسنجی</span><span data-l="en">Polls</span><span data-l="fa">یادداشت</span><span data-l="en">Notes</span><span>CRM</span><span data-l="fa">مالی</span><span data-l="en">Finance</span><span data-l="fa">فروش</span><span data-l="en">Sales</span></div>
+<div class="tags" style="margin-top:20px"><span data-l="fa">نامه‌ها</span><span data-l="en">Letters</span><span data-l="fa">وظایف</span><span data-l="en">Tasks</span><span data-l="fa">پروژه و گانت</span><span data-l="en">Projects &amp; Gantt</span><span data-l="fa">جلسات (LiveKit)</span><span data-l="en">Meetings (LiveKit)</span><span data-l="fa">گفتگو</span><span data-l="en">Chat</span><span data-l="fa">نظرسنجی</span><span data-l="en">Polls</span><span data-l="fa">یادداشت</span><span data-l="en">Notes</span><span>CRM</span><span data-l="fa">مالی</span><span data-l="en">Finance</span><span data-l="fa">فروش</span><span data-l="en">Sales</span></div>
 </section>
 
-<section>
+<section class="rev">
 <h2 data-l="fa">اجرا</h2><h2 data-l="en">Run it</h2>
 <pre>git clone https://github.com/CtrlAltDevelop/secure-letter-signing
 cd secure-letter-signing
@@ -136,5 +193,6 @@ set(q==='en'||q==='fa'?q:s||(navigator.language||'').slice(0,2)==='en'&&'en'||'f
 b.onclick=function(){set(h.lang==='fa'?'en':'fa')};
 })();
 </script>
+<script type="module" src="scene.js"></script>
 </body>
 </html>
